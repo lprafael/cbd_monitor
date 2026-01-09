@@ -2,7 +2,7 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routes import eots, tipo_dia, franjas, cbd_data, performance, performance_detail
+from routes import eots, tipo_dia, franjas, cbd_data, performance, performance_detail, ifo_calcular
 from config.settings import settings
 
 # Crear instancia de FastAPI
@@ -28,6 +28,7 @@ app.include_router(franjas.router)
 app.include_router(cbd_data.router)
 app.include_router(performance.router)
 app.include_router(performance_detail.router)
+app.include_router(ifo_calcular.router)
 
 @app.get("/")
 async def root():
