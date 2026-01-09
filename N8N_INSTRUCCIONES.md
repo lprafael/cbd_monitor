@@ -25,7 +25,13 @@ El workflow ya está configurado para usar:
 - **Método**: POST
 - **Parámetros**:
   - `fecha`: Fecha a procesar (formato YYYY-MM-DD). Por defecto usa el día anterior.
-  - `solo_calculo`: `true` para solo calcular, `false` para incluir detalles de incumplimientos
+  - `solo_calculo`: `false` para incluir detalles de incumplimientos
+  - `verificacion`: `true` para preparar datos para informe al director (equivalente a `--verificacion`)
+
+**Para cambiar el modo:**
+- **Solo cálculo**: `solo_calculo: true`, `verificacion: false`, `notificacion: false`
+- **Con verificación (director)**: `solo_calculo: false`, `verificacion: true`, `notificacion: false`
+- **Con notificación (empresas)**: `solo_calculo: false`, `verificacion: false`, `notificacion: true`
 
 ### 3. Personalizar el Schedule Trigger
 
@@ -68,7 +74,9 @@ Guardar Resultado
   "fecha": "2025-01-08",        // Opcional: fecha específica (YYYY-MM-DD)
   "desde": "2025-01-01",         // Opcional: fecha inicio rango
   "hasta": "2025-01-31",         // Opcional: fecha fin rango
-  "solo_calculo": true           // true: solo calcular, false: incluir detalles
+  "solo_calculo": false,          // true: solo calcular, false: incluir detalles
+  "verificacion": true,           // true: prepara datos para informe al director
+  "notificacion": false           // true: prepara datos para notificar a empresas
 }
 ```
 
@@ -76,6 +84,9 @@ Guardar Resultado
 - Si no especificas `fecha`, `desde` o `hasta`, procesa el día anterior por defecto
 - `solo_calculo=true`: Retorna solo resumen (más rápido)
 - `solo_calculo=false`: Incluye detalles de incumplimientos (más lento)
+- `verificacion=true`: Equivalente a `--verificacion` del script. Prepara datos para informe consolidado al director (incluye todos los datos, no solo incumplimientos)
+- `notificacion=true`: Equivalente a `--notificacion` del script. Prepara datos para notificar a cada empresa con incumplimientos
+- **Importante**: `verificacion` y `notificacion` son mutuamente exclusivos (no puedes usar ambos a la vez)
 
 ### Response (JSON):
 
@@ -88,6 +99,7 @@ Guardar Resultado
   "registros_actualizados": 0,
   "total_registros": 150,
   "incumplimientos_detectados": 5,
+  "modo": "verificacion",
   "resultados": [
     {
       "fecha": "2025-01-08",
@@ -100,10 +112,16 @@ Guardar Resultado
         {
           "eot_nombre": "Empresa XYZ",
           "eot_id": 123,
-          "franja": "07:00-09:00",
-          "ifo_observado": 75.5,
-          "ifo_minimo": 80.0,
-          "diferencia": "-4.50"
+          "eot_vmt_hex": "ABC123",
+          "linea_ramal": "Cat: 123",
+          "indicador": "IFO Franja",
+          "franja_horaria": "07:00-09:00",
+          "id_franja": 1,
+          "umbral_requerido": "80%",
+          "valor_observado": "75.5%",
+          "tipo_infraccion": "IFO Insuficiente",
+          "normativa": "Res. 120/2025",
+          "ajuste_aplicado": "Sin ajuste"
         }
       ]
     }

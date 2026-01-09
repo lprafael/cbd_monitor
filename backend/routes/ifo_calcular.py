@@ -21,6 +21,8 @@ class CalcularIFORequest(BaseModel):
     desde: Optional[str] = None  # YYYY-MM-DD para rango
     hasta: Optional[str] = None  # YYYY-MM-DD para rango
     solo_calculo: bool = True  # Si False, también detecta incumplimientos
+    notificacion: bool = False  # Si True, prepara datos para notificar a empresas
+    verificacion: bool = False  # Si True, prepara datos para informe al director
 
 
 class CalcularIFOResponse(BaseModel):
@@ -32,6 +34,7 @@ class CalcularIFOResponse(BaseModel):
     registros_actualizados: int
     total_registros: int
     incumplimientos_detectados: int
+    modo: Optional[str] = None  # 'notificacion', 'verificacion' o None
     resultados: List[dict] = []
 
 
@@ -67,6 +70,20 @@ async def calcular_ifo(
         else:
             # Por defecto, procesar ayer
             fechas = [date.today() - timedelta(days=1)]
+        
+        # Validar que no se usen ambos modos a la vez
+        if request.notificacion and request.verificacion:
+            raise HTTPException(
+                status_code=400,
+                detail="Los parámetros 'notificacion' y 'verificacion' son mutuamente exclusivos"
+            )
+        
+        # Determinar modo
+        modo = None
+        if request.verificacion:
+            modo = 'verificacion'
+        elif request.notificacion:
+            modo = 'notificacion'
         
         # Procesar cada fecha
         resultados_totales = []
@@ -131,13 +148,24 @@ async def calcular_ifo(
                     })
                     
                     # Detectar incumplimientos
-                    if franja_result.ifo_franja_calculado < franja_result.ifo_minimo_exigido:
+                    # Si es modo verificación (Director), incluimos todo. Si es notificación (Empresa), solo incumplimientos.
+                    es_incumplimiento = franja_result.ifo_franja_calculado < franja_result.ifo_minimo_exigido
+                    incluir_en_reporte = es_incumplimiento or (modo == 'verificacion')
+                    
+                    if incluir_en_reporte:
                         incumplimientos.append({
                             'eot_nombre': eot_nombre,
                             'eot_id': eot_id,
-                            'franja': franja_result.denominacion_franja,
-                            'ifo_observado': franja_result.ifo_franja_calculado,
-                            'ifo_minimo': franja_result.ifo_minimo_exigido
+                            'eot_vmt_hex': id_eot_vmt_hex,
+                            'linea_ramal': f"Cat: {eot_id}",
+                            'indicador': 'IFO Franja',
+                            'franja_horaria': franja_result.denominacion_franja,
+                            'id_franja': franja_result.id_franja,
+                            'umbral_requerido': f"{franja_result.ifo_minimo_exigido:.0f}%",
+                            'valor_observado': f"{franja_result.ifo_franja_calculado:.1f}%",
+                            'tipo_infraccion': franja_result.ifo_estado_cumplimiento,
+                            'normativa': 'Res. 120/2025',
+                            'ajuste_aplicado': franja_result.ajuste_aplicado
                         })
             
             # 4. Guardar en ifo_historico
@@ -175,7 +203,7 @@ async def calcular_ifo(
                 'registros_guardados': save_response.guardados if save_response else 0,
                 'registros_actualizados': save_response.actualizados if save_response else 0,
                 'incumplimientos': len(incumplimientos),
-                'detalle_incumplimientos': incumplimientos if not request.solo_calculo else []
+                'detalle_incumplimientos': incumplimientos if (modo or not request.solo_calculo) else []
             })
         
         # Retornar respuesta consolidada
@@ -189,6 +217,7 @@ async def calcular_ifo(
             registros_actualizados=total_actualizados,
             total_registros=total_guardados + total_actualizados,
             incumplimientos_detectados=total_incumplimientos,
+            modo=modo,
             resultados=resultados_totales
         )
         
