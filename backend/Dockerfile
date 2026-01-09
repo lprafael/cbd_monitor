@@ -11,13 +11,16 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copiar archivo de dependencias
-COPY requirements.txt .
+COPY backend/requirements.txt .
 
 # Instalar dependencias de Python
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copiar el código de la aplicación
-COPY . .
+COPY backend/ .
+
+# Copiar el módulo de envío de correo desde res_120
+COPY res_120/enviar_informe.py utils/enviar_informe.py
 
 # Exponer el puerto
 EXPOSE 5000

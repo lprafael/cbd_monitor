@@ -35,6 +35,8 @@ class CalcularIFOResponse(BaseModel):
     total_registros: int
     incumplimientos_detectados: int
     modo: Optional[str] = None  # 'notificacion', 'verificacion' o None
+    correos_enviados: int = 0
+    errores_envio: List[str] = []
     resultados: List[dict] = []
 
 
@@ -196,6 +198,78 @@ async def calcular_ifo(
             
             total_incumplimientos += len(incumplimientos)
             
+            # 5. Enviar correos si corresponde (solo para modo verificacion o notificacion)
+            correos_enviados = 0
+            errores_envio = []
+            
+            if modo and incumplimientos:
+                try:
+                    # Intentar importar función de envío de correo desde utils
+                    try:
+                        from utils.enviar_informe import enviar_informe_incumplimientos
+                    except ImportError:
+                        # Si no está en utils, intentar desde res_120 (para desarrollo local)
+                        import sys
+                        from pathlib import Path
+                        project_root = Path(__file__).parent.parent.parent
+                        res_120_path = project_root / 'res_120'
+                        if res_120_path.exists():
+                            sys.path.insert(0, str(res_120_path))
+                            from enviar_informe import enviar_informe_incumplimientos
+                        else:
+                            raise ImportError("Módulo enviar_informe no encontrado")
+                    
+                    if modo == 'verificacion':
+                        # Enviar informe consolidado al director
+                        if enviar_informe_incumplimientos(incumplimientos, fecha_procesar):
+                            correos_enviados = 1
+                        else:
+                            errores_envio.append("Error al enviar informe al director")
+                    
+                    elif modo == 'notificacion':
+                        # Agrupar por EOT y enviar a cada empresa
+                        eots_incumplimientos = {}
+                        for inc in incumplimientos:
+                            eot_vmt_hex = inc.get('eot_vmt_hex')
+                            if eot_vmt_hex and eot_vmt_hex not in eots_incumplimientos:
+                                eots_incumplimientos[eot_vmt_hex] = {
+                                    'eot_nombre': inc.get('eot_nombre', ''),
+                                    'incumplimientos': []
+                                }
+                            if eot_vmt_hex:
+                                eots_incumplimientos[eot_vmt_hex]['incumplimientos'].append(inc)
+                        
+                        # Obtener emails de empresas desde BD
+                        cursor = db.get_cursor()
+                        try:
+                            for eot_vmt_hex, data in eots_incumplimientos.items():
+                                try:
+                                    cursor.execute("""
+                                        SELECT email FROM public.eots 
+                                        WHERE id_eot_vmt_hex = %s AND email IS NOT NULL
+                                    """, (eot_vmt_hex,))
+                                    result = cursor.fetchone()
+                                    email_eot = result[0] if result else None
+                                    
+                                    if email_eot:
+                                        if enviar_informe_incumplimientos(data['incumplimientos'], fecha_procesar):
+                                            correos_enviados += 1
+                                        else:
+                                            errores_envio.append(f"Error enviando a {data['eot_nombre']}")
+                                    else:
+                                        errores_envio.append(f"{data['eot_nombre']}: Sin email configurado")
+                                except Exception as e:
+                                    errores_envio.append(f"Error obteniendo email para {data['eot_nombre']}: {str(e)}")
+                        finally:
+                            cursor.close()
+                
+                except ImportError as e:
+                    errores_envio.append(f"Módulo enviar_informe no disponible: {str(e)}")
+                except Exception as e:
+                    errores_envio.append(f"Error en envío de correos: {str(e)}")
+                    import traceback
+                    traceback.print_exc()
+            
             resultados_totales.append({
                 'fecha': fecha_procesar.isoformat(),
                 'tipo_dia': tipo_dia,
@@ -203,11 +277,19 @@ async def calcular_ifo(
                 'registros_guardados': save_response.guardados if save_response else 0,
                 'registros_actualizados': save_response.actualizados if save_response else 0,
                 'incumplimientos': len(incumplimientos),
+                'correos_enviados': correos_enviados,
+                'errores_envio': errores_envio,
                 'detalle_incumplimientos': incumplimientos if (modo or not request.solo_calculo) else []
             })
         
         # Retornar respuesta consolidada
         fecha_principal = fechas[0] if len(fechas) == 1 else None
+        
+        # Calcular totales de correos enviados
+        total_correos_enviados = sum(r.get('correos_enviados', 0) for r in resultados_totales)
+        todos_errores_envio = []
+        for r in resultados_totales:
+            todos_errores_envio.extend(r.get('errores_envio', []))
         
         return CalcularIFOResponse(
             fecha_procesada=fecha_principal.isoformat() if fecha_principal else f"{fechas[0].isoformat()} a {fechas[-1].isoformat()}",
@@ -218,6 +300,8 @@ async def calcular_ifo(
             total_registros=total_guardados + total_actualizados,
             incumplimientos_detectados=total_incumplimientos,
             modo=modo,
+            correos_enviados=total_correos_enviados,
+            errores_envio=todos_errores_envio,
             resultados=resultados_totales
         )
         
