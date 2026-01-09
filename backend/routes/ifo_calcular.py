@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Optional
 from datetime import date, timedelta
 from pydantic import BaseModel
-from routes import eots, performance
+# No necesitamos importar eots y performance aquí, los usamos directamente
 from database.connection import DatabaseConnection, get_db_connection
 from models.performance_schemas import SaveIFORequest, IFOHistoricoItem
 
