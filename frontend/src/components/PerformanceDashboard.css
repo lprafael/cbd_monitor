@@ -1,0 +1,111 @@
+.performance-dashboard {
+  padding: 20px;
+  background-color: var(--bg-secondary);
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin-top: 20px;
+}
+
+.performance-dashboard h2 {
+  color: var(--text-primary);
+  margin-bottom: 20px;
+  border-bottom: 2px solid var(--primary-color);
+  padding-bottom: 10px;
+}
+
+.eot-section {
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  margin-bottom: 30px;
+  overflow: hidden;
+}
+
+.eot-header {
+  background-color: var(--primary-color);
+  color: white;
+  padding: 15px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.eot-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.eot-meta {
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.performance-table-container {
+  overflow-x: auto;
+}
+
+.performance-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.performance-table th,
+.performance-table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.performance-table th {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+}
+
+.performance-table tr:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+/* Compliance Badges */
+.badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  display: inline-block;
+}
+
+.badge-cumple {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.badge-leve {
+  background-color: #fef9c3;
+  color: #854d0e;
+}
+
+.badge-intermedia {
+  background-color: #ffedd5;
+  color: #9a3412;
+}
+
+.badge-grave, .badge-no-cumple {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.metric-value {
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+}
+
+.source-tag {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}

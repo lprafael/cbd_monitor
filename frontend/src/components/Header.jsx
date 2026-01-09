@@ -1,0 +1,207 @@
+/**
+ * Componente Header: Barra superior con controles de selección
+ * - Selector de EOTs (múltiple)
+ * - Selector de fecha
+ * - Radio buttons para modo de visualización (hora/franja)
+ * - Selector de tema
+ * - Botón "Obtener CBD"
+ */
+
+import React from 'react';
+import './Header.css';
+
+const Header = ({
+  eots,
+  selectedEots,
+  setSelectedEots,
+  fecha,
+  setFecha,
+  modoVisualizacion,
+  setModoVisualizacion,
+  viewMode,
+  setViewMode,
+  onObtenerCBD,
+  loading,
+  theme,
+  setTheme
+}) => {
+  const handleEotChange = (e) => {
+    const options = e.target.options;
+    const selected = [];
+    for (let i = 0; i < options.length; i++) {
+      if (options[i].selected) {
+        selected.push(parseInt(options[i].value));
+      }
+    }
+    setSelectedEots(selected);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (selectedEots.length === 0) {
+      alert('Por favor seleccione al menos una EOT');
+      return;
+    }
+    if (!fecha) {
+      alert('Por favor seleccione una fecha');
+      return;
+    }
+    onObtenerCBD();
+  };
+
+  const themes = [
+    { value: 'mopc', label: '🏛️ MOPC', description: 'Tema institucional oficial' },
+    { value: 'institucional', label: '💼 Institucional', description: 'Azul corporativo' },
+    { value: 'ejecutivo', label: '⚫ Ejecutivo', description: 'Gris profesional' },
+    { value: 'claro', label: '⚪ Claro', description: 'Minimalista' },
+    { value: 'nocturno', label: '🌙 Nocturno', description: 'Modo oscuro' }
+  ];
+
+  return (
+    <header className="header">
+      <div className="header-container">
+        <div className="header-top">
+          <h1 className="header-title">
+            🚌 Monitor de Control de Buses Distintos (CBD)
+          </h1>
+
+          {/* Selector de tema */}
+          <div className="theme-selector">
+            <label htmlFor="theme-select" className="theme-label">
+              🎨 Tema:
+            </label>
+            <select
+              id="theme-select"
+              value={theme}
+              onChange={(e) => setTheme(e.target.value)}
+              className="theme-select"
+            >
+              {themes.map(t => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <form className="header-form" onSubmit={handleSubmit}>
+          <div className="form-row">
+            <div className="form-group form-group-eot">
+              <label htmlFor="eot-select">
+                Empresas Operadoras (EOT):
+              </label>
+              <select
+                id="eot-select"
+                multiple
+                value={selectedEots.map(String)}
+                onChange={handleEotChange}
+                className="form-control eot-select"
+                size="5"
+              >
+                {eots.map((eot) => (
+                  <option key={eot.cod_catalogo} value={eot.cod_catalogo}>
+                    {eot.eot_nombre} {eot.gre_nombre ? `(${eot.gre_nombre})` : ''}
+                  </option>
+                ))}
+              </select>
+              <small className="form-hint">
+                Mantén presionado Ctrl (Windows) o Cmd (Mac) para seleccionar múltiples
+              </small>
+            </div>
+
+            <div className="form-controls-column">
+              <div className="form-group">
+                <label htmlFor="fecha-input">
+                  Fecha:
+                </label>
+                <input
+                  id="fecha-input"
+                  type="date"
+                  value={fecha}
+                  onChange={(e) => setFecha(e.target.value)}
+                  className="form-control"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Tipo de Vista:</label>
+                <div className="radio-group">
+                  <label className="radio-label">
+                    <input
+                      type="radio"
+                      name="viewMode"
+                      value="live"
+                      checked={viewMode === 'live'}
+                      onChange={(e) => setViewMode(e.target.value)}
+                    />
+                    <span>📊 Cant. Buses</span>
+                  </label>
+                  <label className="radio-label">
+                    <input
+                      type="radio"
+                      name="viewMode"
+                      value="performance"
+                      checked={viewMode === 'performance'}
+                      onChange={(e) => setViewMode(e.target.value)}
+                    />
+                    <span>📈 Desempeño Diario</span>
+                  </label>
+                  <label className="radio-label">
+                    <input
+                      type="radio"
+                      name="viewMode"
+                      value="indices"
+                      checked={viewMode === 'indices'}
+                      onChange={(e) => setViewMode(e.target.value)}
+                    />
+                    <span>📉 Tablero de Índices</span>
+                  </label>
+                </div>
+              </div>
+
+              {viewMode === 'live' && (
+                <div className="form-group">
+                  <label>Agrupación (En Vivo):</label>
+                  <div className="radio-group">
+                    <label className="radio-label">
+                      <input
+                        type="radio"
+                        name="modo"
+                        value="franja"
+                        checked={modoVisualizacion === 'franja'}
+                        onChange={(e) => setModoVisualizacion(e.target.value)}
+                      />
+                      <span>Por Franja</span>
+                    </label>
+                    <label className="radio-label">
+                      <input
+                        type="radio"
+                        name="modo"
+                        value="hora"
+                        checked={modoVisualizacion === 'hora'}
+                        onChange={(e) => setModoVisualizacion(e.target.value)}
+                      />
+                      <span>Por Hora</span>
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="btn-submit"
+                disabled={loading}
+              >
+                {loading ? '⏳ Cargando...' : '🔍 Obtener CBD'}
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </header>
+  );
+};
+
+export default Header;

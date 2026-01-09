@@ -1,0 +1,299 @@
+/* Estilos del componente CBDTable */
+
+.cbd-table-container {
+  background-color: white;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+/* Header de la tabla */
+.table-header-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.table-header-info h2 {
+  color: #2c3e50;
+  font-size: 1.8rem;
+  margin: 0;
+}
+
+.info-badges {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.badge {
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.badge-date {
+  background-color: #e3f2fd;
+  color: #1976d2;
+}
+
+.badge-tipo-dia {
+  background-color: #f3e5f5;
+  color: #7b1fa2;
+}
+
+.badge-modo {
+  background-color: #e8f5e9;
+  color: #388e3c;
+}
+
+/* Tabla */
+.table-wrapper {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 70vh; /* Adjust height as needed */
+  margin: 1.5rem 0;
+  border: 1px solid #e0e0e0; /* Optional: adds a border around the scrollable area */
+}
+
+.cbd-table {
+  width: 100%;
+  border-collapse: separate; /* Changed from collapse to support sticky better in some cases, but sticking with collapse is usually fine. Let's keep collapse but ensure z-indices. */
+  border-collapse: collapse;
+  font-size: 0.95rem;
+  min-width: 800px;
+}
+
+.cbd-table thead {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.cbd-table th {
+  padding: 1rem 0.75rem;
+  text-align: center;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.cbd-table th.sticky-col,
+.cbd-table td.sticky-col {
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  background-color: white;
+}
+
+.cbd-table th.sticky-col {
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+}
+
+.cbd-table th.sticky-col-2,
+.cbd-table td.sticky-col-2 {
+  position: sticky;
+  left: 200px;
+  z-index: 5;
+  background-color: white;
+}
+
+.cbd-table th.sticky-col-2 {
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+}
+
+.header-group {
+  font-size: 1.1rem;
+  letter-spacing: 1px;
+}
+
+.header-franja {
+  min-width: 100px;
+}
+
+.header-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.header-content small {
+  font-size: 0.75rem;
+  opacity: 0.9;
+  font-weight: 400;
+}
+
+.header-minimo {
+  font-size: 0.7rem;
+  opacity: 0.85;
+  font-weight: 500;
+  margin-top: 0.2rem;
+  padding: 0.15rem 0.4rem;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  display: inline-block;
+}
+
+/* Filas de datos */
+.cbd-table tbody tr {
+  transition: background-color 0.2s;
+}
+
+.cbd-table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+.cbd-table td {
+  padding: 0.75rem;
+  border: 1px solid #e0e0e0;
+  text-align: center;
+}
+
+.eot-name {
+  text-align: left;
+  font-weight: 600;
+  color: #2c3e50;
+  min-width: 200px;
+  background-color: #f8f9fa !important;
+}
+
+.eot-name small {
+  display: block;
+  font-size: 0.85rem;
+  color: #666;
+  font-weight: 400;
+  margin-top: 0.25rem;
+}
+
+.tipo-fila {
+  font-weight: 500;
+  font-size: 0.9rem;
+  min-width: 180px;
+  background-color: #f8f9fa !important;
+}
+
+.fila-servicios .tipo-fila {
+  color: #1976d2;
+}
+
+.fila-cbd .tipo-fila {
+  color: #388e3c;
+}
+
+/* Celdas de datos */
+.celda-datos {
+  position: relative;
+}
+
+.celda-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.cantidad {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.check-icon {
+  color: #4caf50;
+  font-size: 1.3rem;
+  font-weight: bold;
+}
+
+.warning-icon {
+  font-size: 1.1rem;
+}
+
+.parametro-min {
+  display: block;
+  font-size: 0.75rem;
+  color: #666;
+  margin-top: 0.25rem;
+}
+
+.cumple {
+  background-color: #e8f5e9 !important;
+}
+
+.no-cumple {
+  background-color: #ffebee !important;
+}
+
+.total-cell {
+  background-color: #f5f5f5 !important;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #2c3e50;
+}
+
+/* Footer de la tabla */
+.table-footer {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid #e0e0e0;
+}
+
+.legend h3 {
+  color: #2c3e50;
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+}
+
+.legend-items {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  color: #555;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .cbd-table-container {
+    padding: 1rem;
+  }
+
+  .table-header-info {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .cbd-table {
+    font-size: 0.85rem;
+  }
+
+  .cbd-table th,
+  .cbd-table td {
+    padding: 0.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .header-franja {
+    min-width: 80px;
+  }
+
+  .cantidad {
+    font-size: 1rem;
+  }
+
+  .legend-items {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+}

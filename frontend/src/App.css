@@ -1,0 +1,222 @@
+/* Estilos globales de la aplicación con soporte de temas */
+
+/* ========== VARIABLES DE TEMAS ========== */
+
+/* Tema MOPC (Ministerio de Obras Públicas y Comunicaciones) */
+:root[data-theme="mopc"] {
+  --primary-gradient-start: #c41e3a;
+  --primary-gradient-end: #8b0000;
+  --secondary-gradient-start: #2c3e50;
+  --secondary-gradient-end: #34495e;
+  --accent-color: #c41e3a;
+  --accent-hover: #a01729;
+  --success-color: #27ae60;
+  --warning-color: #f39c12;
+  --danger-color: #c41e3a;
+  --background-gradient-start: #ecf0f1;
+  --background-gradient-end: #d5dbdb;
+  --card-background: #ffffff;
+  --text-primary: #2c3e50;
+  --text-secondary: #7f8c8d;
+  --shadow-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Tema Institucional (Azul Corporativo) */
+:root[data-theme="institucional"] {
+  --primary-gradient-start: #1e3a8a;
+  --primary-gradient-end: #1e40af;
+  --secondary-gradient-start: #334155;
+  --secondary-gradient-end: #475569;
+  --accent-color: #2563eb;
+  --accent-hover: #1d4ed8;
+  --success-color: #059669;
+  --warning-color: #d97706;
+  --danger-color: #dc2626;
+  --background-gradient-start: #f8fafc;
+  --background-gradient-end: #e2e8f0;
+  --card-background: #ffffff;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --shadow-color: rgba(30, 58, 138, 0.1);
+}
+
+/* Tema Ejecutivo (Gris Oscuro) */
+:root[data-theme="ejecutivo"] {
+  --primary-gradient-start: #374151;
+  --primary-gradient-end: #1f2937;
+  --secondary-gradient-start: #4b5563;
+  --secondary-gradient-end: #374151;
+  --accent-color: #3b82f6;
+  --accent-hover: #2563eb;
+  --success-color: #10b981;
+  --warning-color: #f59e0b;
+  --danger-color: #ef4444;
+  --background-gradient-start: #f9fafb;
+  --background-gradient-end: #e5e7eb;
+  --card-background: #ffffff;
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --shadow-color: rgba(0, 0, 0, 0.08);
+}
+
+/* Tema Claro (Minimalista) */
+:root[data-theme="claro"] {
+  --primary-gradient-start: #ffffff;
+  --primary-gradient-end: #f5f5f5;
+  --secondary-gradient-start: #e8e8e8;
+  --secondary-gradient-end: #d4d4d4;
+  --accent-color: #0066cc;
+  --accent-hover: #0052a3;
+  --success-color: #16a34a;
+  --warning-color: #ea580c;
+  --danger-color: #dc2626;
+  --background-gradient-start: #fafafa;
+  --background-gradient-end: #f0f0f0;
+  --card-background: #ffffff;
+  --text-primary: #171717;
+  --text-secondary: #525252;
+  --shadow-color: rgba(0, 0, 0, 0.06);
+}
+
+/* Tema Nocturno (Modo Oscuro Profesional) */
+:root[data-theme="nocturno"] {
+  --primary-gradient-start: #1e293b;
+  --primary-gradient-end: #0f172a;
+  --secondary-gradient-start: #334155;
+  --secondary-gradient-end: #1e293b;
+  --accent-color: #3b82f6;
+  --accent-hover: #2563eb;
+  --success-color: #10b981;
+  --warning-color: #f59e0b;
+  --danger-color: #ef4444;
+  --background-gradient-start: #0f172a;
+  --background-gradient-end: #1e293b;
+  --card-background: #1e293b;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --shadow-color: rgba(0, 0, 0, 0.4);
+}
+
+/* ========== ESTILOS GLOBALES ========== */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, var(--background-gradient-start) 0%, var(--background-gradient-end) 100%);
+  min-height: 100vh;
+  transition: background 0.3s ease;
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-content {
+  flex: 1;
+  padding: 2rem;
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Mensaje de error */
+.error-message {
+  background-color: #fee;
+  border: 2px solid var(--danger-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin: 2rem 0;
+  color: var(--danger-color);
+  box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+.error-message h3 {
+  margin-bottom: 0.5rem;
+  font-size: 1.2rem;
+}
+
+/* Loading spinner */
+.loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  color: var(--text-primary);
+  background: var(--card-background);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+.spinner {
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-top: 4px solid var(--accent-color);
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-spinner p {
+  margin-top: 1rem;
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+}
+
+/* Footer */
+.app-footer {
+  background: linear-gradient(135deg, var(--primary-gradient-start) 0%, var(--primary-gradient-end) 100%);
+  color: white;
+  padding: 1.5rem;
+  text-align: center;
+  margin-top: auto;
+  box-shadow: 0 -4px 12px var(--shadow-color);
+}
+
+.app-footer p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+/* Estado vacío */
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  background-color: var(--card-background);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+.empty-state .icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.empty-state p {
+  font-size: 1.2rem;
+  color: var(--text-secondary);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .main-content {
+    padding: 1rem;
+  }
+}

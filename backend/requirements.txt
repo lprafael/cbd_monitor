@@ -1,0 +1,17 @@
+# FastAPI y servidor
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+
+# Base de datos PostgreSQL
+psycopg2-binary==2.9.9
+SQLAlchemy==2.0.23
+
+# Validación de datos
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# Variables de entorno
+python-dotenv==1.0.0
+
+# Utilidades
+python-multipart==0.0.6
