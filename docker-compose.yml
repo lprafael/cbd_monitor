@@ -6,7 +6,7 @@ services:
     container_name: cbd-monitor-backend
     restart: unless-stopped
     ports:
-      - "5000:5000"
+      - "5001:5000"
     environment:
       - DB_HOST=${DB_HOST}
       - DB_PORT=${DB_PORT:-5432}
@@ -31,7 +31,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - REACT_APP_API_URL=${REACT_APP_API_URL:-http://172.16.222.222:5000}
+        - REACT_APP_API_URL=${REACT_APP_API_URL:-http://172.16.222.222:5001}
     container_name: cbd-monitor-frontend
     restart: unless-stopped
     ports:

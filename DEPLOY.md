@@ -77,48 +77,62 @@ DB_USER=tu_usuario_db
 DB_PASSWORD=tu_contraseña_db
 
 # URL de la API para el frontend
-REACT_APP_API_URL=http://172.16.222.222:5000
+REACT_APP_API_URL=http://172.16.222.222:5001
 ```
 
 **⚠️ IMPORTANTE:** 
 - Si tu base de datos está en otro servidor, cambia `DB_HOST` a la IP correspondiente
-- Asegúrate de que el puerto 5000 esté disponible (no está siendo usado por otro servicio)
+- El puerto 5001 está configurado porque el 5000 está ocupado por `validaciones-backend`
 
 ## 🐳 Paso 4: Construir y ejecutar los contenedores
 
+**Nota**: En versiones modernas de Docker, usa `docker compose` (sin guión). Si tu servidor tiene una versión antigua, usa `docker-compose` (con guión).
+
 1. Construir las imágenes Docker:
 ```bash
+# Versión moderna (recomendado)
+docker compose build
+
+# O si no funciona, prueba con:
 docker-compose build
 ```
 
 2. Iniciar los contenedores:
 ```bash
+# Versión moderna
+docker compose up -d
+
+# O si no funciona:
 docker-compose up -d
 ```
 
 3. Verificar que los contenedores estén corriendo:
 ```bash
+# Versión moderna
+docker compose ps
+
+# O si no funciona:
 docker-compose ps
 ```
 
 4. Ver los logs para verificar que todo funcione correctamente:
 ```bash
 # Logs del backend
-docker-compose logs -f cbd-monitor-backend
+docker compose logs -f cbd-monitor-backend
 
 # Logs del frontend
-docker-compose logs -f cbd-monitor-frontend
+docker compose logs -f cbd-monitor-frontend
 
 # Todos los logs
-docker-compose logs -f
+docker compose logs -f
 ```
 
 ## ✅ Paso 5: Verificar el despliegue
 
 1. **Backend**: Abre en tu navegador:
-   - API: http://172.16.222.222:5000
-   - Health check: http://172.16.222.222:5000/health
-   - Documentación: http://172.16.222.222:5000/docs
+   - API: http://172.16.222.222:5001
+   - Health check: http://172.16.222.222:5001/health
+   - Documentación: http://172.16.222.222:5001/docs
 
 2. **Frontend**: Abre en tu navegador:
    - Aplicación: http://172.16.222.222:8080
@@ -129,40 +143,40 @@ docker-compose logs -f
 
 ### Detener los contenedores
 ```bash
-docker-compose down
+docker compose down
 ```
 
 ### Reiniciar los contenedores
 ```bash
-docker-compose restart
+docker compose restart
 ```
 
 ### Ver el estado de los contenedores
 ```bash
-docker-compose ps
+docker compose ps
 ```
 
 ### Ver los logs
 ```bash
-docker-compose logs -f [nombre-servicio]
+docker compose logs -f [nombre-servicio]
 ```
 
 ### Reconstruir después de cambios
 ```bash
 # Detener y eliminar contenedores
-docker-compose down
+docker compose down
 
 # Reconstruir imágenes
-docker-compose build --no-cache
+docker compose build --no-cache
 
 # Iniciar de nuevo
-docker-compose up -d
+docker compose up -d
 ```
 
 ### Actualizar solo el código (sin reconstruir)
 ```bash
 # Si solo cambiaste código Python o React, puedes hacer:
-docker-compose restart
+docker compose restart
 ```
 
 ## 🛠️ Solución de problemas
@@ -178,7 +192,7 @@ psql -h localhost -U tu_usuario -d tu_base_de_datos
 
 3. Verifica los logs:
 ```bash
-docker-compose logs cbd-monitor-backend
+docker compose logs cbd-monitor-backend
 ```
 
 ### El frontend no puede comunicarse con el backend
@@ -186,13 +200,13 @@ docker-compose logs cbd-monitor-backend
 1. Verifica que `REACT_APP_API_URL` en `.env` sea correcta
 2. Verifica que el backend esté corriendo:
 ```bash
-curl http://172.16.222.222:5000/health
+curl http://172.16.222.222:5001/health
 ```
 
 3. Si cambiaste `REACT_APP_API_URL`, necesitas reconstruir el frontend:
 ```bash
-docker-compose build --no-cache cbd-monitor-frontend
-docker-compose up -d cbd-monitor-frontend
+docker compose build --no-cache cbd-monitor-frontend
+docker compose up -d cbd-monitor-frontend
 ```
 
 ### Puerto 80 ya está en uso
@@ -216,9 +230,9 @@ cd /home/user/cbd_monitor
 git pull origin main
 
 # Reconstruir y reiniciar los contenedores
-docker-compose down
-docker-compose build --no-cache
-docker-compose up -d
+docker compose down
+docker compose build --no-cache
+docker compose up -d
 ```
 
 ### Los contenedores muestran "unhealthy"
@@ -231,7 +245,7 @@ docker inspect cbd-monitor-frontend | grep -A 10 Health
 
 2. Revisa los logs para ver qué está fallando:
 ```bash
-docker-compose logs [nombre-servicio]
+docker compose logs [nombre-servicio]
 ```
 
 ## 📝 Notas importantes
