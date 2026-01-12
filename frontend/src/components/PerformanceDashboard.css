@@ -33,11 +33,13 @@
 .eot-header h3 {
   margin: 0;
   font-size: 1.2rem;
+  color: #000;
 }
 
 .eot-meta {
   font-size: 0.9rem;
   opacity: 0.9;
+  color: #000;
 }
 
 .performance-table-container {
