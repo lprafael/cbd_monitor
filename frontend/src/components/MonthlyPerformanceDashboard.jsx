@@ -1,0 +1,112 @@
+import React from 'react';
+import './MonthlyPerformanceDashboard.css';
+
+const MonthlyPerformanceDashboard = ({ data }) => {
+    if (!data) return null;
+
+    const {
+        month,
+        year,
+        eot_nombre,
+        ifo_mensual_eot,
+        ifo_sistema_anterior,
+        umbral_teorico,
+        factor_ajuste,
+        umbral_aplicable,
+        infraccion,
+        sancion,
+        ifo_diarios
+    } = data;
+
+    const getMonthName = (m) => {
+        const date = new Date(year, m - 1);
+        return date.toLocaleString('es-ES', { month: 'long' }).toUpperCase();
+    };
+
+    return (
+        <div className="monthly-dashboard">
+            <div className="monthly-header">
+                <h2>📅 Reporte de Desempeño Mensual</h2>
+                <h3>{eot_nombre}</h3>
+                <p className="period-subtitle">{getMonthName(month)} {year}</p>
+            </div>
+
+            <div className={`status-card ${infraccion ? 'status-danger' : 'status-success'}`}>
+                <div className="status-icon">
+                    {infraccion ? '⚠️' : '✅'}
+                </div>
+                <div className="status-content">
+                    <h4>Estado de Cumplimiento</h4>
+                    <p className="status-result">
+                        {infraccion ? 'INFRACCIÓN DETECTADA' : 'CUMPLE CON EL DESEMPEÑO'}
+                    </p>
+                    <p className="status-sancion">{sancion}</p>
+                </div>
+            </div>
+
+            <div className="metrics-grid">
+                <div className="metric-card primary">
+                    <span className="metric-label">IFO Mensual (EOT)</span>
+                    <span className="metric-value">{ifo_mensual_eot.toFixed(2)}%</span>
+                    <span className="metric-desc">Promedio mensual</span>
+                </div>
+
+                <div className="metric-card secondary">
+                    <span className="metric-label">IFO Sistema (Mes n-1)</span>
+                    <span className="metric-value">{ifo_sistema_anterior.toFixed(2)}%</span>
+                    <span className="metric-desc">Referencia Mercado</span>
+                </div>
+
+                <div className="metric-card">
+                    <span className="metric-label">Umbral Teórico</span>
+                    <span className="metric-value">{umbral_teorico.toFixed(2)}%</span>
+                    <span className="metric-desc">95% del Sistema</span>
+                </div>
+
+                <div className="metric-card">
+                    <span className="metric-label">Factor de Ajuste</span>
+                    <span className="metric-value text-success">-{factor_ajuste}%</span>
+                    <span className="metric-desc">Favorabilidad</span>
+                </div>
+
+                <div className="metric-card highlight">
+                    <span className="metric-label">Umbral Aplicable</span>
+                    <span className="metric-value">{umbral_aplicable.toFixed(2)}%</span>
+                    <span className="metric-desc">Mínimo Requerido</span>
+                </div>
+            </div>
+
+            {ifo_diarios && ifo_diarios.length > 0 && (
+                <div className="daily-detail-section">
+                    <h4>Desglose Diario</h4>
+                    <div className="table-responsive">
+                        <table className="daily-table">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>IFO Diario</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {ifo_diarios.map((d, idx) => (
+                                    <tr key={idx}>
+                                        <td>{d.fecha}</td>
+                                        <td>{d.ifo.toFixed(2)}%</td>
+                                        <td>
+                                            <span className={`badge ${d.ifo < umbral_aplicable ? 'badge-danger' : 'badge-success'}`}>
+                                                {d.ifo < umbral_aplicable ? 'Bajo Umbral' : 'Ok'}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default MonthlyPerformanceDashboard;

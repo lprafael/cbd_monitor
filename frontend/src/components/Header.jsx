@@ -28,6 +28,13 @@ const Header = ({
   const handleEotChange = (e) => {
     const options = e.target.options;
     const selected = [];
+
+    // Si estamos en modo mensual, solo permitimos una selección (aunque el HTML debería controlar esto con 'multiple' prop)
+    if (viewMode === 'monthly') {
+      setSelectedEots([parseInt(e.target.value)]);
+      return;
+    }
+
     for (let i = 0; i < options.length; i++) {
       if (options[i].selected) {
         selected.push(parseInt(options[i].value));
@@ -93,8 +100,8 @@ const Header = ({
               </label>
               <select
                 id="eot-select"
-                multiple
-                value={selectedEots.map(String)}
+                multiple={viewMode !== 'monthly'}
+                value={viewMode === 'monthly' && selectedEots.length > 0 ? selectedEots[0] : selectedEots.map(String)}
                 onChange={handleEotChange}
                 className="form-control eot-select"
                 size="5"
@@ -106,18 +113,20 @@ const Header = ({
                 ))}
               </select>
               <small className="form-hint">
-                Mantén presionado Ctrl (Windows) o Cmd (Mac) para seleccionar múltiples
+                {viewMode === 'monthly'
+                  ? 'Seleccione una sola empresa para el reporte mensual'
+                  : 'Mantén presionado Ctrl (Windows) o Cmd (Mac) para seleccionar múltiples'}
               </small>
             </div>
 
             <div className="form-controls-column">
               <div className="form-group">
                 <label htmlFor="fecha-input">
-                  Fecha:
+                  {viewMode === 'monthly' ? 'Mes y Año:' : 'Fecha:'}
                 </label>
                 <input
                   id="fecha-input"
-                  type="date"
+                  type={viewMode === 'monthly' ? "month" : "date"}
                   value={fecha}
                   onChange={(e) => setFecha(e.target.value)}
                   className="form-control"
@@ -157,6 +166,16 @@ const Header = ({
                       onChange={(e) => setViewMode(e.target.value)}
                     />
                     <span>📉 Tablero de Índices</span>
+                  </label>
+                  <label className="radio-label">
+                    <input
+                      type="radio"
+                      name="viewMode"
+                      value="monthly"
+                      checked={viewMode === 'monthly'}
+                      onChange={(e) => setViewMode(e.target.value)}
+                    />
+                    <span>📅 Desempeño Mensual</span>
                   </label>
                 </div>
               </div>
