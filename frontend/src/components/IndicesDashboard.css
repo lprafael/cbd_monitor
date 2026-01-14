@@ -167,6 +167,16 @@
   cursor: default;
 }
 
+.special-column {
+  border-left: 2px solid rgba(102, 126, 234, 0.5);
+  background: linear-gradient(135deg, #2d3748 0%, #2b3648 100%) !important;
+}
+
+.ifo-dia-cell {
+  border-left: 2px solid rgba(102, 126, 234, 0.3);
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+}
+
 /* ========================================
    POPUP / MODAL DE DESGLOSE
    ======================================== */
@@ -258,6 +268,140 @@
 .close-btn:hover {
   background: rgba(255, 255, 255, 0.3);
   transform: rotate(90deg);
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.action-btn {
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.action-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.email-btn:hover {
+  background: rgba(66, 153, 225, 0.3);
+}
+
+@media print {
+  @page {
+    margin: 1cm;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .detail-modal-overlay {
+    background: none !important;
+    position: static !important;
+    display: block !important;
+  }
+
+  .detail-modal,
+  .detail-modal * {
+    visibility: visible;
+    color: #000 !important;
+  }
+
+  .detail-modal {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    max-width: none !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    border: none !important;
+  }
+
+  .modal-header,
+  .modal-body,
+  .params-section,
+  .calculation-section,
+  .hours-table,
+  .calc-table {
+    background: #fff !important;
+    color: #000 !important;
+    border-color: #000 !important;
+  }
+
+  .modal-header {
+    border-bottom: 2px solid #000 !important;
+    padding-bottom: 10px !important;
+  }
+
+  .modal-header h3 {
+    color: #000 !important;
+  }
+
+  .eot-info {
+    color: #333 !important;
+  }
+
+  .no-print,
+  .close-btn,
+  .modal-actions {
+    display: none !important;
+  }
+
+  .index-cell,
+  .resultado-badge,
+  .ajuste-highlight,
+  .historico-date-tag {
+    background: #fff !important;
+    color: #000 !important;
+    border: 1px solid #000 !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+
+  .hours-table th,
+  .calc-table th {
+    background: #eee !important;
+    color: #000 !important;
+    border: 1px solid #000 !important;
+  }
+
+  .hours-table td,
+  .calc-table td {
+    border: 1px solid #000 !important;
+  }
+
+  .calc-result-row td {
+    background: #eee !important;
+    font-weight: bold !important;
+  }
+
+  /* Forzar blanco y negro */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+    filter: grayscale(100%) !important;
+  }
 }
 
 .modal-body {

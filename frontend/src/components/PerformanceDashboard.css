@@ -33,13 +33,11 @@
 .eot-header h3 {
   margin: 0;
   font-size: 1.2rem;
-  color: #000;
 }
 
 .eot-meta {
   font-size: 0.9rem;
   opacity: 0.9;
-  color: #000;
 }
 
 .performance-table-container {
@@ -96,7 +94,8 @@
   color: #9a3412;
 }
 
-.badge-grave, .badge-no-cumple {
+.badge-grave,
+.badge-no-cumple {
   background-color: #fee2e2;
   color: #991b1b;
 }
@@ -110,4 +109,223 @@
   font-size: 0.75rem;
   color: var(--text-secondary);
   font-style: italic;
+}
+
+.summary-row {
+  background-color: var(--bg-secondary);
+  font-weight: bold;
+}
+
+.summary-label {
+  text-align: right;
+  padding-right: 20px !important;
+  color: var(--text-primary);
+}
+
+.summary-value {
+  color: var(--primary-color);
+  font-size: 1rem;
+}
+
+/* Action Buttons */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.eot-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.action-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  color: white !important;
+  /* Ensure text is white */
+}
+
+.email-btn {
+  background-color: #2b6cb0 !important;
+  border: 1px solid #2c5282 !important;
+}
+
+.email-btn:hover {
+  background-color: #2c5282 !important;
+}
+
+.print-btn {
+  background-color: #4a5568 !important;
+  border: 1px solid #2d3748 !important;
+}
+
+.print-btn:hover {
+  background-color: #2d3748 !important;
+}
+
+.pdf-btn {
+  background-color: #c53030 !important;
+  border: 1px solid #9b2c2c !important;
+}
+
+.pdf-btn:hover {
+  background-color: #9b2c2c !important;
+}
+
+.eot-header h3 {
+  color: #000000 !important;
+  font-weight: 900;
+  text-shadow: none;
+}
+
+.eot-meta {
+  color: #2d3748 !important;
+  font-weight: 700;
+  opacity: 1;
+}
+
+@media print {
+  @page {
+    margin: 1.5cm;
+    size: landscape;
+  }
+
+  /* Hide everything by default */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Show only the performance dashboard and its contents */
+  .performance-dashboard,
+  .performance-dashboard * {
+    visibility: visible;
+  }
+
+  /* Position the dashboard at the top of the page */
+  .performance-dashboard {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #fff !important;
+    box-shadow: none !important;
+  }
+
+  /* Ensure body has white background */
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  /* Style the main heading */
+  .performance-dashboard h2 {
+    color: #000 !important;
+    border-bottom: 2px solid #000 !important;
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
+
+  /* Report metadata */
+  .report-meta p {
+    color: #000 !important;
+  }
+
+  /* EOT sections - avoid page breaks inside */
+  .eot-section {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    border: 1px solid #000 !important;
+    box-shadow: none !important;
+    margin-bottom: 20px !important;
+  }
+
+  /* EOT header */
+  .eot-header {
+    background: #eee !important;
+    color: #000 !important;
+    border-bottom: 1px solid #000 !important;
+  }
+
+  .eot-header h3,
+  .eot-meta {
+    color: #000 !important;
+  }
+
+  /* Table container - remove overflow and scrollbars */
+  .performance-table-container {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+  }
+
+  /* Tables */
+  .performance-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  .performance-table th {
+    background: #ddd !important;
+    color: #000 !important;
+    border: 1px solid #000 !important;
+    padding: 8px !important;
+  }
+
+  .performance-table td {
+    color: #000 !important;
+    border: 1px solid #000 !important;
+    padding: 8px !important;
+  }
+
+  .performance-table tbody,
+  .performance-table tfoot {
+    page-break-inside: auto;
+  }
+
+  .performance-table tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  /* Badges to B&W text */
+  .badge {
+    background: none !important;
+    border: 1px solid #000 !important;
+    color: #000 !important;
+    padding: 2px 6px !important;
+  }
+
+  /* Summary row */
+  .summary-row {
+    background: #eee !important;
+  }
+
+  .summary-label,
+  .summary-value {
+    color: #000 !important;
+  }
+
+  /* Hide buttons and non-printable elements */
+  .no-print,
+  .eot-actions {
+    display: none !important;
+  }
+
+  /* Force Grayscale */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    filter: grayscale(100%) !important;
+  }
 }

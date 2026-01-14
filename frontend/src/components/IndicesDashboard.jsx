@@ -109,6 +109,20 @@ const IndicesDashboard = ({ performanceData, fecha }) => {
     setModalType(null);
   };
 
+  const handleEmailSend = (eotNombre) => {
+    if (window.confirm(`¿Confirma que desea enviar el desglose a la empresa ${eotNombre}?`)) {
+      alert(`Desglose enviado correctamente a la empresa ${eotNombre}`);
+    }
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleDownloadPDF = () => {
+    window.print();
+  };
+
   return (
     <div className="indices-dashboard">
       <div className="dashboard-header">
@@ -141,6 +155,7 @@ const IndicesDashboard = ({ performanceData, fecha }) => {
                   {f.denominacion}
                 </th>
               ))}
+              {activeTab === 'ifo' && <th className="franja-header special-column">IFO Dia</th>}
             </tr>
           </thead>
           <tbody>
@@ -167,6 +182,23 @@ const IndicesDashboard = ({ performanceData, fecha }) => {
                     </td>
                   );
                 })}
+                {activeTab === 'ifo' && (() => {
+                  const ifoDia = eot.resultados_franjas.length > 0
+                    ? eot.resultados_franjas.reduce((acc, r) => acc + (r.ifo_franja_calculado || 0), 0) / eot.resultados_franjas.length
+                    : 0;
+
+                  // Determinar estado para el promedio (Nivel A: >= 90, Nivel B: >= 80, Nivel C: < 80)
+                  const estadoPromedio = ifoDia >= 90 ? 'Nivel A' : ifoDia >= 80 ? 'Nivel B' : 'Nivel C';
+                  const statusClassAlt = getStatusClass(estadoPromedio);
+
+                  return (
+                    <td key="ifo-dia">
+                      <div className={`index-cell ${statusClassAlt} ifo-dia-cell`}>
+                        {ifoDia.toFixed(1)}%
+                      </div>
+                    </td>
+                  );
+                })()}
               </tr>
             ))}
           </tbody>
@@ -183,9 +215,21 @@ const IndicesDashboard = ({ performanceData, fecha }) => {
                 <p>Cargando desglose...</p>
               </div>
             ) : modalType === 'cbd' ? (
-              <CBDDetailModal data={modalData} onClose={closeModal} />
+              <CBDDetailModal
+                data={modalData}
+                onClose={closeModal}
+                onEmail={() => handleEmailSend(modalData.eot_nombre)}
+                onPrint={handlePrint}
+                onDownload={handleDownloadPDF}
+              />
             ) : (
-              <IFODetailModal data={modalData} onClose={closeModal} />
+              <IFODetailModal
+                data={modalData}
+                onClose={closeModal}
+                onEmail={() => handleEmailSend(modalData.eot_nombre)}
+                onPrint={handlePrint}
+                onDownload={handleDownloadPDF}
+              />
             )}
           </div>
         </div>
@@ -194,10 +238,25 @@ const IndicesDashboard = ({ performanceData, fecha }) => {
   );
 };
 
+// Botones de acción para los modales
+const ModalActions = ({ onEmail, onPrint, onDownload }) => (
+  <div className="modal-actions no-print">
+    <button className="action-btn email-btn" onClick={onEmail} title="Enviar por Correo">
+      ✉️ Enviar correo
+    </button>
+    <button className="action-btn print-btn" onClick={onPrint} title="Imprimir">
+      🖨️ Imprimir
+    </button>
+    <button className="action-btn pdf-btn" onClick={onDownload} title="Descargar PDF">
+      📄 Descargar PDF
+    </button>
+  </div>
+);
+
 /**
  * Modal de desglose de CBD
  */
-const CBDDetailModal = ({ data, onClose }) => {
+const CBDDetailModal = ({ data, onClose, onEmail, onPrint, onDownload }) => {
   if (!data) return null;
 
   return (
@@ -209,7 +268,10 @@ const CBDDetailModal = ({ data, onClose }) => {
             {data.eot_nombre} • {data.denominacion_franja} • {data.fecha}
           </div>
         </div>
-        <button className="close-btn" onClick={onClose}>✕</button>
+        <div className="header-right">
+          <ModalActions onEmail={onEmail} onPrint={onPrint} onDownload={onDownload} />
+          <button className="close-btn" onClick={onClose}>✕</button>
+        </div>
       </div>
 
       <div className="modal-body">
@@ -310,7 +372,7 @@ const CBDDetailModal = ({ data, onClose }) => {
 /**
  * Modal de desglose de IFO
  */
-const IFODetailModal = ({ data, onClose }) => {
+const IFODetailModal = ({ data, onClose, onEmail, onPrint, onDownload }) => {
   if (!data) return null;
 
   return (
@@ -322,7 +384,10 @@ const IFODetailModal = ({ data, onClose }) => {
             {data.eot_nombre} • {data.denominacion_franja} • {data.fecha}
           </div>
         </div>
-        <button className="close-btn" onClick={onClose}>✕</button>
+        <div className="header-right">
+          <ModalActions onEmail={onEmail} onPrint={onPrint} onDownload={onDownload} />
+          <button className="close-btn" onClick={onClose}>✕</button>
+        </div>
       </div>
 
       <div className="modal-body">

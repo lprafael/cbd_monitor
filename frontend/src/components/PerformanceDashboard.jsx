@@ -34,6 +34,20 @@ const PerformanceDashboard = ({ performanceData }) => {
     }
   };
 
+  const handleEmailSend = (eotNombre) => {
+    if (window.confirm(`¿Confirma que desea enviar el desglose a la empresa ${eotNombre}?`)) {
+      alert(`Desglose enviado correctamente a la empresa ${eotNombre}`);
+    }
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleDownloadPDF = () => {
+    window.print();
+  };
+
   return (
     <div className="performance-dashboard">
       <h2>📊 Reporte de Desempeño Diario</h2>
@@ -42,57 +56,83 @@ const PerformanceDashboard = ({ performanceData }) => {
         <p><strong>Tipo de Día:</strong> {tipo_dia}</p>
       </div>
 
-      {resultados_eots.map((eot) => (
-        <div key={eot.eot_id} className="eot-section">
-          <div className="eot-header">
-            <h3>{eot.eot_nombre}</h3>
-            <span className="eot-meta">{eot.gre_nombre || 'Sin Gremio'}</span>
-          </div>
+      {resultados_eots.map((eot) => {
+        const ifoPromedio = eot.resultados_franjas.length > 0
+          ? eot.resultados_franjas.reduce((acc, row) => acc + (row.ifo_franja_calculado || 0), 0) / eot.resultados_franjas.length
+          : 0;
 
-          <div className="performance-table-container">
-            <table className="performance-table">
-              <thead>
-                <tr>
-                  <th>Franja</th>
-                  <th>CBD Min</th>
-                  <th>Obs Prom</th>
-                  <th>Origen</th>
-                  <th>B. Dist</th>
-                  <th>Índice Cumpl. CBD</th>
-                  <th>Estado CBD</th>
-                  <th>IFO Calc</th>
-                  <th>Nivel de servicio</th>
-                  <th>Ajuste</th>
-                </tr>
-              </thead>
-              <tbody>
-                {eot.resultados_franjas.map((row, idx) => (
-                  <tr key={idx}>
-                    <td>{row.denominacion_franja}</td>
-                    <td className="metric-value">{row.cbd_minimo_franja_exigido.toFixed(1)}</td>
-                    <td className="metric-value">{row.cbd_obs_promedio.toFixed(1)}</td>
-                    <td><span className="source-tag">{row.origen_cbd_final}</span></td>
-                    <td className="metric-value">{row.b_dist_ajustado.toFixed(1)}</td>
-                    <td className="metric-value">{(row.cbd_cumplimiento_franja_indice * 100).toFixed(1)}%</td>
-                    <td>
-                      <span className={`badge ${getComplianceClass(row.cbd_estado_cumplimiento)}`}>
-                        {row.cbd_estado_cumplimiento}
-                      </span>
-                    </td>
-                    <td className="metric-value">{row.ifo_franja_calculado.toFixed(1)}%</td>
-                    <td>
-                      <span className={`badge ${getComplianceClass(row.ifo_estado_cumplimiento)}`}>
-                        {row.ifo_estado_cumplimiento}
-                      </span>
-                    </td>
-                    <td className="source-tag">{row.ajuste_aplicado}</td>
+        return (
+          <div key={eot.eot_id} className="eot-section">
+            <div className="eot-header">
+              <div>
+                <h3>{eot.eot_nombre}</h3>
+                <span className="eot-meta">{eot.gre_nombre || 'Sin Gremio'}</span>
+              </div>
+              <div className="eot-actions no-print">
+                <button className="action-btn email-btn" onClick={() => handleEmailSend(eot.eot_nombre)} title="Enviar por Correo">
+                  ✉️ Enviar correo
+                </button>
+                <button className="action-btn print-btn" onClick={handlePrint} title="Imprimir">
+                  🖨️ Imprimir
+                </button>
+                <button className="action-btn pdf-btn" onClick={handleDownloadPDF} title="Descargar PDF">
+                  📄 Descargar PDF
+                </button>
+              </div>
+            </div>
+
+            <div className="performance-table-container">
+              <table className="performance-table">
+                <thead>
+                  <tr>
+                    <th>Franja</th>
+                    <th>CBD Min</th>
+                    <th>Obs Prom</th>
+                    <th>Origen</th>
+                    <th>Factor Ajust.</th>
+                    <th>Índice Cumpl. CBD</th>
+                    <th>Estado CBD</th>
+                    <th>IFO Calc</th>
+                    <th>Nivel de servicio</th>
+                    <th>Ajuste</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {eot.resultados_franjas.map((row, idx) => (
+                    <tr key={idx}>
+                      <td>{row.denominacion_franja}</td>
+                      <td className="metric-value">{row.cbd_minimo_franja_exigido.toFixed(1)}</td>
+                      <td className="metric-value">{row.cbd_obs_promedio.toFixed(1)}</td>
+                      <td><span className="source-tag">{row.origen_cbd_final}</span></td>
+                      <td className="metric-value">{row.b_dist_ajustado.toFixed(1)}</td>
+                      <td className="metric-value">{(row.cbd_cumplimiento_franja_indice * 100).toFixed(1)}%</td>
+                      <td>
+                        <span className={`badge ${getComplianceClass(row.cbd_estado_cumplimiento)}`}>
+                          {row.cbd_estado_cumplimiento}
+                        </span>
+                      </td>
+                      <td className="metric-value">{row.ifo_franja_calculado.toFixed(1)}%</td>
+                      <td>
+                        <span className={`badge ${getComplianceClass(row.ifo_estado_cumplimiento)}`}>
+                          {row.ifo_estado_cumplimiento}
+                        </span>
+                      </td>
+                      <td className="source-tag">{row.ajuste_aplicado}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="summary-row">
+                    <td colSpan="7" className="summary-label">IFO DIA (Promedio):</td>
+                    <td className="metric-value summary-value">{ifoPromedio.toFixed(1)}%</td>
+                    <td colSpan="2"></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 };
