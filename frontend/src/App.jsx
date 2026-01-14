@@ -24,7 +24,7 @@ function App() {
   const [performanceData, setPerformanceData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [theme, setTheme] = useState('mopc'); // 'mopc' | 'institucional' | 'ejecutivo' | 'claro' | 'nocturno'
+  const [theme, setTheme] = useState('ejecutivo'); // 'mopc' | 'institucional' | 'ejecutivo' | 'claro' | 'nocturno'
 
   // Cargar EOTs al montar el componente
   useEffect(() => {
@@ -34,7 +34,7 @@ function App() {
     setFecha(today);
 
     // Cargar tema guardado
-    const savedTheme = localStorage.getItem('cbd-theme') || 'mopc';
+    const savedTheme = localStorage.getItem('cbd-theme') || 'ejecutivo';
     setTheme(savedTheme);
     document.documentElement.setAttribute('data-theme', savedTheme);
   }, []);
