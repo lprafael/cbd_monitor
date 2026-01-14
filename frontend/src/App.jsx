@@ -8,6 +8,7 @@ import Header from './components/Header';
 import CBDTable from './components/CBDTable';
 import PerformanceDashboard from './components/PerformanceDashboard';
 import IndicesDashboard from './components/IndicesDashboard';
+import MonthlyPerformanceDashboard from './components/MonthlyPerformanceDashboard';
 import './App.css';
 
 // URL base de la API - Cambiar según el entorno
@@ -22,6 +23,7 @@ function App() {
   const [viewMode, setViewMode] = useState('live'); // 'live' | 'performance' | 'indices'
   const [cbdData, setCbdData] = useState(null);
   const [performanceData, setPerformanceData] = useState(null);
+  const [monthlyData, setMonthlyData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [theme, setTheme] = useState('ejecutivo'); // 'mopc' | 'institucional' | 'ejecutivo' | 'claro' | 'nocturno'
@@ -72,6 +74,7 @@ function App() {
     setError(null);
     setCbdData(null);
     setPerformanceData(null);
+    setMonthlyData(null);
 
     try {
       let endpoint = '';
@@ -89,6 +92,14 @@ function App() {
         body = {
           eot_ids: selectedEots,
           fecha: fecha,
+        };
+      } else if (viewMode === 'monthly') {
+        endpoint = '/api/monthly-performance';
+        const [yearStr, monthStr] = fecha.split('-');
+        body = {
+          eot_id: selectedEots[0],
+          month: parseInt(monthStr),
+          year: parseInt(yearStr)
         };
       }
 
@@ -109,6 +120,8 @@ function App() {
 
       if (viewMode === 'live') {
         setCbdData(data);
+      } else if (viewMode === 'monthly') {
+        setMonthlyData(data);
       } else {
         setPerformanceData(data);
       }
@@ -163,6 +176,10 @@ function App() {
 
         {!loading && !error && viewMode === 'indices' && (
           <IndicesDashboard performanceData={performanceData} fecha={fecha} />
+        )}
+
+        {!loading && !error && viewMode === 'monthly' && (
+          <MonthlyPerformanceDashboard data={monthlyData} />
         )}
       </main>
 
