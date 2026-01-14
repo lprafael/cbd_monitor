@@ -34,6 +34,14 @@ const PerformanceDashboard = ({ performanceData }) => {
     }
   };
 
+  const getCbdStatus = (status) => {
+    const isCompliant = status === 'Cumple' || status === 'Nivel A';
+    return {
+      text: isCompliant ? 'Cumple' : 'Incumple',
+      className: isCompliant ? 'badge-cumple' : 'badge-no-cumple'
+    };
+  };
+
   const handleEmailSend = (eotNombre) => {
     if (window.confirm(`¿Confirma que desea enviar el desglose a la empresa ${eotNombre}?`)) {
       alert(`Desglose enviado correctamente a la empresa ${eotNombre}`);
@@ -86,10 +94,7 @@ const PerformanceDashboard = ({ performanceData }) => {
                 <thead>
                   <tr>
                     <th>Franja</th>
-                    <th>CBD Min</th>
-                    <th>Obs Prom</th>
-                    <th>Origen</th>
-                    <th>Factor Ajust.</th>
+
                     <th>Índice Cumpl. CBD</th>
                     <th>Estado CBD</th>
                     <th>IFO Calc</th>
@@ -101,15 +106,17 @@ const PerformanceDashboard = ({ performanceData }) => {
                   {eot.resultados_franjas.map((row, idx) => (
                     <tr key={idx}>
                       <td>{row.denominacion_franja}</td>
-                      <td className="metric-value">{row.cbd_minimo_franja_exigido.toFixed(1)}</td>
-                      <td className="metric-value">{row.cbd_obs_promedio.toFixed(1)}</td>
-                      <td><span className="source-tag">{row.origen_cbd_final}</span></td>
-                      <td className="metric-value">{row.b_dist_ajustado.toFixed(1)}</td>
+
                       <td className="metric-value">{(row.cbd_cumplimiento_franja_indice * 100).toFixed(1)}%</td>
                       <td>
-                        <span className={`badge ${getComplianceClass(row.cbd_estado_cumplimiento)}`}>
-                          {row.cbd_estado_cumplimiento}
-                        </span>
+                        {(() => {
+                          const status = getCbdStatus(row.cbd_estado_cumplimiento);
+                          return (
+                            <span className={`badge ${status.className}`}>
+                              {status.text}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="metric-value">{row.ifo_franja_calculado.toFixed(1)}%</td>
                       <td>
@@ -123,7 +130,7 @@ const PerformanceDashboard = ({ performanceData }) => {
                 </tbody>
                 <tfoot>
                   <tr className="summary-row">
-                    <td colSpan="7" className="summary-label">IFO DIA (Promedio):</td>
+                    <td colSpan="3" className="summary-label">IFO DIA (Promedio):</td>
                     <td className="metric-value summary-value">{ifoPromedio.toFixed(1)}%</td>
                     <td colSpan="2"></td>
                   </tr>
