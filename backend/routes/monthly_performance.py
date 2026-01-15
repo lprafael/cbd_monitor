@@ -1,184 +1,209 @@
-"""Rutas para obtener resultados de desempeño mensual (IFO mensual)."""
-
 from fastapi import APIRouter, HTTPException, Depends
-from typing import List, Optional
 from datetime import date, timedelta
-from pydantic import BaseModel
+from typing import List, Optional
+import math
+from models.monthly_schemas import MonthlyPerformanceRequest, MonthlyPerformanceResult
 from database.connection import DatabaseConnection, get_db_connection
 
 router = APIRouter(prefix="/api/monthly-performance", tags=["Monthly Performance"])
 
+def get_month_range(year: int, month: int):
+    """Returns start and end date for a given month."""
+    start_date = date(year, month, 1)
+    if month == 12:
+        end_date = date(year + 1, 1, 1) - timedelta(days=1)
+    else:
+        end_date = date(year, month + 1, 1) - timedelta(days=1)
+    return start_date, end_date
 
-class MonthlyPerformanceRequest(BaseModel):
-    eot_id: int
-    month: int
-    year: int
+def get_previous_month(year: int, month: int):
+    """Returns year, month for the previous month."""
+    if month == 1:
+        return year - 1, 12
+    return year, month - 1
 
-
-class IFODiarioItem(BaseModel):
-    fecha: str
-    ifo: float
-
-
-class MonthlyPerformanceResponse(BaseModel):
-    month: int
-    year: int
-    eot_nombre: str
-    ifo_mensual_eot: float
-    ifo_sistema_anterior: float
-    umbral_teorico: float
-    factor_ajuste: float
-    umbral_aplicable: float
-    infraccion: bool
-    sancion: str
-    ifo_diarios: List[IFODiarioItem]
-
-
-@router.post("/", response_model=MonthlyPerformanceResponse)
+@router.post("", response_model=MonthlyPerformanceResult)
 async def get_monthly_performance(
     request: MonthlyPerformanceRequest,
     db: DatabaseConnection = Depends(get_db_connection)
 ):
     """
-    Obtiene el desempeño mensual de IFO para un EOT.
+    Calculates the Monthly IFO Performance for a specific EOT.
     
-    Calcula:
-    - IFO mensual del EOT (promedio de IFO diarios del mes)
-    - IFO del sistema del mes anterior
-    - Umbral teórico (95% del IFO sistema anterior)
-    - Factor de ajuste según el mes
-    - Umbral aplicable
-    - Si hay infracción y la sanción correspondiente
+    Rules:
+    1. IFO Mensual: Average of Daily IFOs (which are average of Franja IFOs).
+       - Excludes Sundays and Holidays.
+       - Excludes 'Madrugada' and 'Nocturna' franjas.
+    2. Comparison: IFO Sistema (Month n-1).
+       - Average of Monthly IFOs of all EOTs in previous month.
+    3. Thresholds:
+       - Umbral Teorico: System(n-1) * 0.95
+       - Umbral Aplicable: Umbral Teorico - 0.49 (percentage points)
+    4. Infraction: IFO Mensual < Umbral Aplicable.
     """
+    cursor = db.get_cursor()
     try:
-        cursor = db.get_cursor()
+        # 1. Get EOT Info (need vmt_hex)
+        cursor.execute("SELECT eot_nombre, id_eot_vmt_hex FROM public.eots WHERE cod_catalogo = %s", (request.eot_id,))
+        eot = cursor.fetchone()
+        if not eot:
+            raise HTTPException(status_code=404, detail="EOT not found")
         
-        # Validar mes y año
-        if not (1 <= request.month <= 12):
-            raise HTTPException(status_code=400, detail="El mes debe estar entre 1 y 12")
+        eot_nombre = eot['eot_nombre']
+        eot_hex = eot['id_eot_vmt_hex']
         
-        if request.year < 2020 or request.year > 2100:
-            raise HTTPException(status_code=400, detail="Año inválido")
+        # Date ranges
+        start_date, end_date = get_month_range(request.year, request.month)
         
-        # Obtener información del EOT
-        cursor.execute("""
-            SELECT cod_catalogo, nombre, id_eot_vmt_hex
-            FROM public.eots
-            WHERE cod_catalogo = %s
-        """, (request.eot_id,))
+        prev_year, prev_month = get_previous_month(request.year, request.month)
+        prev_start, prev_end = get_month_range(prev_year, prev_month)
         
-        eot_info = cursor.fetchone()
-        if not eot_info:
-            raise HTTPException(status_code=404, detail=f"EOT con ID {request.eot_id} no encontrada")
-        
-        eot_nombre = eot_info['nombre']
-        id_eot_vmt_hex = eot_info.get('id_eot_vmt_hex')
-        
-        # Calcular rango de fechas del mes
-        primer_dia = date(request.year, request.month, 1)
-        if request.month == 12:
-            ultimo_dia = date(request.year + 1, 1, 1) - timedelta(days=1)
-        else:
-            ultimo_dia = date(request.year, request.month + 1, 1) - timedelta(days=1)
-        
-        # Obtener IFO diarios del mes desde ifo_historico
-        ifo_diarios = []
-        if id_eot_vmt_hex:
-            cursor.execute("""
-                SELECT fecha, AVG(ifo) as ifo_promedio
-                FROM control_metricas.ifo_historico
-                WHERE id_eot_vmt_hex = %s
-                  AND fecha >= %s
-                  AND fecha <= %s
+        # 2. Calculate IFO Mensual for Target EOT
+        # Note: ifo in DB is 0-1 decimal. We convert to 0-100 for final result.
+        query_ifo_mensual = """
+            SELECT 
+                AVG(daily_ifo) as monthly_ifo
+            FROM (
+                SELECT 
+                    fecha, 
+                    AVG(ifo) as daily_ifo
+                FROM control_metricas.ifo_historico h
+                JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
+                WHERE h.id_eot_vmt_hex = %s
+                  AND h.fecha BETWEEN %s AND %s
+                  AND extract(isodow from h.fecha) < 7 -- Exclude Sundays (7)
+                  AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
+                  AND f.denominacion NOT ILIKE '%%Nocturn%%'
+                  AND f.denominacion NOT ILIKE '%%Madrugada%%'
                 GROUP BY fecha
-                ORDER BY fecha
-            """, (id_eot_vmt_hex, primer_dia, ultimo_dia))
-            
-            resultados = cursor.fetchall()
-            for row in resultados:
-                ifo_diarios.append(IFODiarioItem(
-                    fecha=row['fecha'].strftime('%Y-%m-%d'),
-                    ifo=float(row['ifo_promedio']) * 100 if row['ifo_promedio'] else 0.0
-                ))
+            ) daily_avgs
+        """
+        cursor.execute(query_ifo_mensual, (eot_hex, start_date, end_date))
+        res_eot = cursor.fetchone()
+        ifo_mensual_val = res_eot['monthly_ifo'] if res_eot and res_eot['monthly_ifo'] is not None else 0.0
+        # Convert to percentage
+        ifo_mensual_pct = float(ifo_mensual_val * 100)
         
-        # Calcular IFO mensual del EOT (promedio de IFO diarios)
-        ifo_mensual_eot = 0.0
-        if ifo_diarios:
-            ifo_mensual_eot = sum(d.ifo for d in ifo_diarios) / len(ifo_diarios)
+        # Get details for chart (daily IFOs)
+        query_daily = """
+            SELECT 
+                fecha, 
+                AVG(ifo) as daily_ifo
+            FROM control_metricas.ifo_historico h
+            JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
+            WHERE h.id_eot_vmt_hex = %s
+              AND h.fecha BETWEEN %s AND %s
+              AND extract(isodow from h.fecha) < 7
+              AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
+              AND f.denominacion NOT ILIKE '%%Nocturn%%'
+              AND f.denominacion NOT ILIKE '%%Madrugada%%'
+            GROUP BY fecha
+            ORDER BY fecha
+        """
+        cursor.execute(query_daily, (eot_hex, start_date, end_date))
+        daily_rows = cursor.fetchall()
+        ifo_diarios = [{'fecha': str(r['fecha']), 'ifo': float(r['daily_ifo'] * 100)} for r in daily_rows]
         
-        # Obtener IFO del sistema del mes anterior
-        mes_anterior = request.month - 1
-        año_anterior = request.year
-        if mes_anterior == 0:
-            mes_anterior = 12
-            año_anterior -= 1
+        # 3. Calculate IFO Sistema (Month n-1)
+        query_system_prev = """
+            SELECT 
+                AVG(eot_monthly_ifo) as system_ifo
+            FROM (
+                SELECT 
+                    id_eot_vmt_hex,
+                    AVG(daily_ifo) as eot_monthly_ifo
+                FROM (
+                    SELECT 
+                        id_eot_vmt_hex,
+                        fecha, 
+                        AVG(ifo) as daily_ifo
+                    FROM control_metricas.ifo_historico h
+                    JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
+                    WHERE h.fecha BETWEEN %s AND %s
+                      AND extract(isodow from h.fecha) < 7
+                      AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
+                      AND f.denominacion NOT ILIKE '%%Nocturn%%'
+                      AND f.denominacion NOT ILIKE '%%Madrugada%%'
+                    GROUP BY id_eot_vmt_hex, fecha
+                ) daily_avgs
+                GROUP BY id_eot_vmt_hex
+            ) eot_avgs
+        """
+        cursor.execute(query_system_prev, (prev_start, prev_end))
+        res_sys = cursor.fetchone()
+        system_ifo_val = res_sys['system_ifo'] if res_sys and res_sys['system_ifo'] is not None else 0.0
+        system_ifo_pct = float(system_ifo_val * 100)
         
-        primer_dia_anterior = date(año_anterior, mes_anterior, 1)
-        if mes_anterior == 12:
-            ultimo_dia_anterior = date(año_anterior + 1, 1, 1) - timedelta(days=1)
-        else:
-            ultimo_dia_anterior = date(año_anterior, mes_anterior + 1, 1) - timedelta(days=1)
+        # 4. Thresholds
+        # Umbral Teórico: 95% of System(n-1)
+        umbral_teorico = system_ifo_pct * 0.95
         
-        # Calcular IFO sistema del mes anterior (promedio de todos los EOTs)
-        cursor.execute("""
-            SELECT AVG(ifo) as ifo_sistema
-            FROM control_metricas.ifo_historico
-            WHERE fecha >= %s
-              AND fecha <= %s
-        """, (primer_dia_anterior, ultimo_dia_anterior))
+        # Factor de Ajuste: -0.49
+        factor_ajuste = 0.49
         
-        resultado_sistema = cursor.fetchone()
-        ifo_sistema_anterior = float(resultado_sistema['ifo_sistema']) * 100 if resultado_sistema and resultado_sistema['ifo_sistema'] else 100.0
+        # Umbral Aplicable
+        umbral_aplicable = umbral_teorico - factor_ajuste
         
-        # Umbral teórico = 95% del IFO sistema anterior
-        umbral_teorico = ifo_sistema_anterior * 0.95
+        # Rounding rules: "Redondear resultados finales... al entero superior inmediato"
+        # The prompt says: "Redondeo de Resultados: Todos los valores finales derivados de estas fórmulas... redondearse al entero superior inmediato (ej. 94,51 -> 95)."
+        # It applies to "Umbral Aplicable" specifically? Or all final displayed values?
+        # "Si el IFO Mensual (...) es inferior al Umbral Aplicable (94,50%)..."
+        # Implicitly, the comparison should be done on rounded values?
+        # Example: 94.51 -> 95. If IFO is 94.8 -> Infraction? No, 94.8 < 95 is True.
+        # But wait, "Umbral Aplicable (aprox 94.50%)". If they round 94.50 -> 95.
+        # Let's apply rounding to the Thresholds as requested.
         
-        # Factor de ajuste según el mes (según Resolución 120/2025)
-        factor_ajuste = 0.0
-        if request.month == 1:  # Enero
-            factor_ajuste = 0.80
-        elif request.month == 12:  # Diciembre
-            factor_ajuste = 0.80
-        else:
-            factor_ajuste = 0.0  # Sin ajuste para otros meses
+        umbral_teorico_rounded = math.ceil(umbral_teorico) 
+        # Wait, usually intermediate calculations are precise.
+        # "Todos los valores finales derivados de estas fórmulas... redondearse al número entero superior inmediato"
+        # It probably refers to the final Threshold against which we compare.
+        # Let's round the Umbral Aplicable.
         
-        # Umbral aplicable = umbral teórico * factor de ajuste (si hay factor)
-        # El factor de ajuste es una reducción (0.80 = 80% del umbral teórico)
-        umbral_aplicable = umbral_teorico * (1.0 - factor_ajuste) if factor_ajuste > 0 else umbral_teorico
+        umbral_aplicable_final = math.ceil(umbral_aplicable * 100) / 100.0 # Maybe just integer ceil?
+        # The example says "94.51 -> 95". That is integer ceil.
         
-        # Determinar si hay infracción
-        infraccion = ifo_mensual_eot < umbral_aplicable
+        umbral_aplicable_int = math.ceil(umbral_aplicable)
         
-        # Determinar sanción
-        if infraccion:
-            diferencia = umbral_aplicable - ifo_mensual_eot
-            if diferencia >= 10:
-                sancion = "Infracción Grave - Sanción según normativa vigente"
-            elif diferencia >= 5:
-                sancion = "Infracción Intermedia - Sanción según normativa vigente"
-            else:
-                sancion = "Infracción Leve - Sanción según normativa vigente"
-        else:
-            sancion = "Cumple con el desempeño requerido"
+        # But the prompt also says "Si el IFO Mensual (...) es inferior al Umbral Aplicable (94,50%)..."
+        # The example explicitly mentions 94.50% as a threshold in the text, so maybe it's NOT always rounded to integer?
+        # "Redondeo de Resultados: Todos los valores finales derivados de estas fórmulas... redondearse al número entero superior inmediato (ej. 94,51 -> 95)."
+        # This instruction seems to contradict the "94.50%" text unless 94.50 was just an example of the result BEFORE rounding?
+        # "Factor de Ajuste... para obtener el Umbral Aplicable (aprox. 94,50%)." -> This is the result of calculation.
+        # Then Rule 4 says: "Redondeo... valores finales... redondearse al número entero superior inmediato".
+        # So likely the final threshold IS an integer.
         
-        return MonthlyPerformanceResponse(
+        umbral_aplicable_official = math.ceil(umbral_aplicable)
+
+        # IFO Mensual precision: "mantenerse con al menos 4 decimales" during intermediate.
+        # But for final comparison?
+        # I'll stick to comparing the high precision IFO Mensual against the Rounded Threshold.
+        # But display might round IFO Mensual too?
+        # For safety, I will return the precise values and maybe a rounded version or just let frontend display it.
+        # I'll return the rounded threshold as `umbral_aplicable`.
+        
+        # 5. Infraction
+        # "Si el IFO Mensual (EOT) ... es inferior al Umbral Aplicable"
+        infraccion = ifo_mensual_pct < umbral_aplicable_official
+        sancion = "Infracción Gravísima (173 jornales)" if infraccion else "Sin Infracción"
+        
+        return MonthlyPerformanceResult(
             month=request.month,
             year=request.year,
             eot_nombre=eot_nombre,
-            ifo_mensual_eot=ifo_mensual_eot,
-            ifo_sistema_anterior=ifo_sistema_anterior,
-            umbral_teorico=umbral_teorico,
-            factor_ajuste=factor_ajuste * 100,  # Convertir a porcentaje
-            umbral_aplicable=umbral_aplicable,
+            ifo_mensual_eot=round(ifo_mensual_pct, 4),
+            ifo_sistema_anterior=round(system_ifo_pct, 4),
+            umbral_teorico=round(umbral_teorico, 4),
+            factor_ajuste=factor_ajuste,
+            umbral_aplicable=umbral_aplicable_official,
             infraccion=infraccion,
             sancion=sancion,
             ifo_diarios=ifo_diarios
         )
-        
-    except HTTPException:
-        raise
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al calcular desempeño mensual: {str(e)}")
+        print(f"Error calculating monthly performance: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
     finally:
-        if 'cursor' in locals():
-            cursor.close()
+        cursor.close()
