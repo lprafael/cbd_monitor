@@ -54,7 +54,7 @@ const MonthlyPerformanceDashboard = ({ data }) => {
                 <div className="metric-card secondary">
                     <span className="metric-label">IFO Sistema (Mes n-1)</span>
                     <span className="metric-value">{ifo_sistema_anterior.toFixed(2)}%</span>
-                    <span className="metric-desc">Referencia Mercado</span>
+                    <span className="metric-desc">Referencia Sistema</span>
                 </div>
 
                 <div className="metric-card">

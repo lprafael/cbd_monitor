@@ -596,6 +596,19 @@
   font-size: 0.8rem;
 }
 
+.historico-date-used {
+  background: rgba(72, 187, 120, 0.2);
+  color: #48bb78;
+  border: 1px solid rgba(72, 187, 120, 0.4);
+}
+
+.historico-date-discarded {
+  background: rgba(229, 62, 62, 0.2);
+  color: #f56565;
+  border: 1px solid rgba(229, 62, 62, 0.4);
+  text-decoration: line-through;
+}
+
 /* Factor de ajuste destacado */
 .ajuste-highlight {
   display: flex;
