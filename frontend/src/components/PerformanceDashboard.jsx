@@ -34,13 +34,7 @@ const PerformanceDashboard = ({ performanceData }) => {
     }
   };
 
-  const getCbdStatus = (status) => {
-    const isCompliant = status === 'Cumple' || status === 'Nivel A';
-    return {
-      text: isCompliant ? 'Cumple' : 'Incumple',
-      className: isCompliant ? 'badge-cumple' : 'badge-no-cumple'
-    };
-  };
+
 
   const handleEmailSend = (eotNombre) => {
     if (window.confirm(`¿Confirma que desea enviar el desglose a la empresa ${eotNombre}?`)) {
@@ -94,11 +88,23 @@ const PerformanceDashboard = ({ performanceData }) => {
                 <thead>
                   <tr>
                     <th>Franja</th>
-
-                    <th>Índice Cumpl. CBD</th>
-                    <th>Estado CBD</th>
+                    {/* <th>Índice Cumpl. CBD</th> */}
+                    <th>ICCBDM</th>
                     <th>IFO Calc</th>
-                    <th>Nivel de servicio</th>
+                    <th>
+                      <div className="info-tooltip">
+                        Nivel de servicio
+                        <span style={{ fontSize: '1.1em', marginLeft: '6px' }}>ℹ️</span>
+                        <div className="tooltip-content">
+                          <div style={{ marginBottom: '6px', fontWeight: 'bold', borderBottom: '1px solid rgba(255,255,255,0.2)', paddingBottom: '4px', fontSize: '0.9rem' }}>
+                            Significado del nivel
+                          </div>
+                          <div style={{ marginBottom: '4px' }}><strong>Nivel A:</strong> Cumplimiento del IFO franja superior o igual a 90%.</div>
+                          <div style={{ marginBottom: '4px' }}><strong>Nivel B:</strong> Cumplimiento del IFO franja entre 80% y 89%.</div>
+                          <div><strong>Nivel C:</strong> Cumplimiento del IFO franja inferior a 80%.</div>
+                        </div>
+                      </div>
+                    </th>
                     <th>Ajuste</th>
                   </tr>
                 </thead>
@@ -107,14 +113,16 @@ const PerformanceDashboard = ({ performanceData }) => {
                     <tr key={idx}>
                       <td>{row.denominacion_franja}</td>
 
-                      <td className="metric-value">{(row.cbd_cumplimiento_franja_indice * 100).toFixed(1)}%</td>
                       <td>
                         {(() => {
-                          const status = getCbdStatus(row.cbd_estado_cumplimiento);
+                          const percentage = row.cbd_cumplimiento_franja_indice * 100;
+                          const isComplete = percentage >= 99.95; // Rounding to 1 decimal place means 99.95 rounds to 100.0
+
                           return (
-                            <span className={`badge ${status.className}`}>
-                              {status.text}
-                            </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: isComplete ? '#166534' : '#991b1b', fontWeight: 'bold' }}>
+                              <span style={{ fontFamily: 'Courier New, monospace' }}>{percentage.toFixed(1)}%</span>
+                              <span style={{ fontSize: '1.2em' }}>{isComplete ? '✅' : '⚠️'}</span>
+                            </div>
                           );
                         })()}
                       </td>
@@ -130,7 +138,7 @@ const PerformanceDashboard = ({ performanceData }) => {
                 </tbody>
                 <tfoot>
                   <tr className="summary-row">
-                    <td colSpan="3" className="summary-label">IFO DIA (Promedio):</td>
+                    <td colSpan="2" className="summary-label">IFO DIA (Promedio):</td>
                     <td className="metric-value summary-value">{ifoPromedio.toFixed(1)}%</td>
                     <td colSpan="2"></td>
                   </tr>

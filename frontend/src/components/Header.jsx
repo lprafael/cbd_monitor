@@ -4,7 +4,7 @@
  * - Selector de fecha
  * - Radio buttons para modo de visualización (hora/franja)
  * - Selector de tema
- * - Botón "Obtener CBD"
+ * - Botón "Obtener Datos"
  */
 
 import React from 'react';
@@ -69,7 +69,9 @@ const Header = ({
       <div className="header-container">
         <div className="header-top">
           <h1 className="header-title">
-            🚌 Monitor de Control de Buses Distintos (CBD)
+            {/* 🚌 Monitor de Control de Buses Distintos (CBD) */}
+            {/* iCONO DE ESTADISTICA */}
+            🚌 Monitor de Indicadores de Desempeño (CBD/IFO) 📊
           </h1>
 
           {/* Selector de tema */}
@@ -151,21 +153,21 @@ const Header = ({
                     <input
                       type="radio"
                       name="viewMode"
-                      value="performance"
-                      checked={viewMode === 'performance'}
-                      onChange={(e) => setViewMode(e.target.value)}
-                    />
-                    <span>📈 Desempeño Diario</span>
-                  </label>
-                  <label className="radio-label">
-                    <input
-                      type="radio"
-                      name="viewMode"
                       value="indices"
                       checked={viewMode === 'indices'}
                       onChange={(e) => setViewMode(e.target.value)}
                     />
                     <span>📉 Tablero de Índices</span>
+                  </label>
+                  <label className="radio-label">
+                    <input
+                      type="radio"
+                      name="viewMode"
+                      value="performance"
+                      checked={viewMode === 'performance'}
+                      onChange={(e) => setViewMode(e.target.value)}
+                    />
+                    <span>📈 Desempeño Diario</span>
                   </label>
                   <label className="radio-label">
                     <input
@@ -213,7 +215,7 @@ const Header = ({
                 className="btn-submit"
                 disabled={loading}
               >
-                {loading ? '⏳ Cargando...' : '🔍 Obtener CBD'}
+                {loading ? '⏳ Cargando...' : '🔍 Obtener Datos'}
               </button>
             </div>
           </div>

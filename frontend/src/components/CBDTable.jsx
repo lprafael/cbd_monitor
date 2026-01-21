@@ -12,13 +12,13 @@ const CBDTable = ({ cbdData }) => {
   if (!cbdData) {
     return (
       <div className="empty-state">
-        <p>📊 Seleccione los parámetros y haga clic en "Obtener CBD" para ver los datos</p>
+        <p>📊 Seleccione los parámetros y haga clic en "Obtener Datos" para ver los datos</p>
       </div>
     );
   }
 
   const { fecha, nombre_tipo_dia, modo_visualizacion, franjas_operativas, datos_eots, parametros_minimos } = cbdData;
-  
+
   // Debug: verificar parámetros mínimos
   console.log('=== DEBUG PARÁMETROS MÍNIMOS ===');
   console.log('Parámetros mínimos recibidos:', parametros_minimos);
@@ -64,15 +64,15 @@ const CBDTable = ({ cbdData }) => {
         const horaFin = f.hora_fin === '24:00:00' ? 24 : parseInt(f.hora_fin.split(':')[0]);
         return [horaInicio, horaFin];
       });
-      
+
       const horaMin = Math.min(...horasFranjas);
       const horaMax = Math.max(...horasFranjas);
-      
+
       // Generar solo las horas dentro del rango
       return Array.from({ length: horaMax - horaMin + 1 }, (_, i) => {
         const hora = horaMin + i;
         const horaDisplay = hora === 24 ? '24:00' : `${hora}:00`;
-        
+
         // Buscar el mínimo para esta hora (buscar en las franjas que contengan esta hora)
         let minimo = null;
         if (parametros_minimos) {
@@ -109,7 +109,7 @@ const CBDTable = ({ cbdData }) => {
             }
           }
           if (minimo === null) {
-            console.log(`Hora ${hora}:00 - No se encontró mínimo. Franjas disponibles:`, 
+            console.log(`Hora ${hora}:00 - No se encontró mínimo. Franjas disponibles:`,
               franjas_operativas.map(f => {
                 const hInicio = parseInt(f.hora_inicio.split(':')[0]);
                 let hFin = parseInt(f.hora_fin.split(':')[0]);
@@ -133,7 +133,7 @@ const CBDTable = ({ cbdData }) => {
         } else {
           console.log(`Hora ${hora}:00 - parametros_minimos es null/undefined`);
         }
-        
+
         return {
           key: String(hora),
           label: horaDisplay,
@@ -148,14 +148,14 @@ const CBDTable = ({ cbdData }) => {
   // Renderizar celda con datos (individual)
   const renderCelda = (dato, cumpleConjunto = null) => {
     console.log('Datos en renderCelda:', dato); // Para depuración
-    
+
     // Si no hay dato, usar 0 como valor por defecto
     const cantidad = (dato && dato.cantidad_buses !== undefined) ? dato.cantidad_buses : 0;
     const parametroMinimo = dato ? dato.parametro_minimo : null;
-    
+
     // Determinar si esta celda individual cumple (para el icono)
     const cumpleIndividual = dato && dato.cumple_parametro === true;
-    
+
     // Usar cumpleConjunto para el color (si está definido), sino usar el individual
     const claseColor = (cumpleConjunto !== null ? cumpleConjunto : cumpleIndividual) ? 'cumple' : 'no-cumple';
 
@@ -182,7 +182,7 @@ const CBDTable = ({ cbdData }) => {
     const cumpleCbd = datoCbd && datoCbd.cumple_parametro === true;
     // Si al menos una cumple, ambas verdes; si ninguna cumple, ambas rojas
     const cumpleConjunto = cumpleServicios || cumpleCbd;
-    
+
     return {
       celdaServicios: renderCelda(datoServicios, cumpleConjunto),
       celdaCbd: renderCelda(datoCbd, cumpleConjunto)
@@ -281,11 +281,11 @@ const CBDTable = ({ cbdData }) => {
           <div className="legend-items">
             <div className="legend-item">
               <span className="check-icon">✓</span>
-              <span>Cumple parámetro mínimo</span>
+              <span>Cumple parámetro CBD Mínimo</span>
             </div>
             <div className="legend-item">
               <span className="warning-icon">⚠️</span>
-              <span>No cumple parámetro mínimo</span>
+              <span>No cumple parámetro CBD Mínimo</span>
             </div>
           </div>
         </div>

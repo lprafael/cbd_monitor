@@ -134,7 +134,7 @@ const IndicesDashboard = ({ performanceData, fecha }) => {
             className={`tab-btn ${activeTab === 'cbd' ? 'active' : ''}`}
             onClick={() => setActiveTab('cbd')}
           >
-            📈 Índice CBD
+            📈 Índice CCBDM
           </button>
           <button
             className={`tab-btn ${activeTab === 'ifo' ? 'active' : ''}`}
@@ -168,7 +168,16 @@ const IndicesDashboard = ({ performanceData, fecha }) => {
                 {eot.resultados_franjas.map(resultado => {
                   const valor = getIndexValue(resultado);
                   const estado = getEstado(resultado);
-                  const statusClass = getStatusClass(estado);
+
+                  let statusClass;
+                  if (activeTab === 'cbd') {
+                    // CBD: 100% es verde (Cumple), cualquier cosa menor es rojo (No Cumple)
+                    // Usamos 0.9995 para que coincida con el redondeo a 1 decimal (99.95% -> 100.0%)
+                    statusClass = valor >= 0.9995 ? 'cumple' : 'no-cumple';
+                  } else {
+                    // IFO: Mantiene lógica de 3 colores
+                    statusClass = getStatusClass(estado);
+                  }
 
                   return (
                     <td key={resultado.id_franja}>
@@ -356,7 +365,7 @@ const CBDDetailModal = ({ data, onClose, onEmail, onPrint, onDownload }) => {
               <tr className="calc-result-row">
                 <td colSpan="3">ÍNDICE DE CUMPLIMIENTO CBD</td>
                 <td>
-                  <span className={`resultado-badge ${data.indice_cbd >= 1 ? 'cumple' : 'no-cumple'}`}>
+                  <span className={`resultado-badge ${data.indice_cbd >= 0.99995 ? 'cumple' : 'no-cumple'}`}>
                     {((data.indice_cbd || 0) * 100).toFixed(2)}%
                   </span>
                 </td>
@@ -375,11 +384,15 @@ const CBDDetailModal = ({ data, onClose, onEmail, onPrint, onDownload }) => {
 const IFODetailModal = ({ data, onClose, onEmail, onPrint, onDownload }) => {
   if (!data) return null;
 
+  const fechasHistoricasOrdenadas = (data.fechas_historicas || [])
+    .slice()
+    .sort((a, b) => new Date(a) - new Date(b));
+
   return (
     <>
       <div className="modal-header">
         <div>
-          <h3>📉 Desglose del IFO (Índice de Frecuencia Operativa)</h3>
+          <h3>📉 Desglose del IFO (Índice de Flota Operativa)</h3>
           <div className="eot-info">
             {data.eot_nombre} • {data.denominacion_franja} • {data.fecha}
           </div>
@@ -418,11 +431,19 @@ const IFODetailModal = ({ data, onClose, onEmail, onPrint, onDownload }) => {
 
         {/* Fechas históricas */}
         <div className="historico-section">
-          <h5>📅 Fechas históricas utilizadas (4 semanas anteriores, mismo día)</h5>
+          <h5>📅 Fechas históricas (verdes usadas • rojas descartadas)</h5>
           <div className="historico-dates">
-            {data.fechas_historicas.map((fecha, idx) => (
-              <span key={idx} className="historico-date-tag">{fecha}</span>
-            ))}
+            {(data.fechas_historicas_todas || data.fechas_historicas.map(fecha => ({ fecha, usada: true })))
+              .slice()
+              .sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+              .map((item, idx) => (
+                <span
+                  key={idx}
+                  className={`historico-date-tag ${item.usada ? 'historico-date-used' : 'historico-date-discarded'}`}
+                >
+                  {item.fecha}
+                </span>
+              ))}
           </div>
         </div>
 
@@ -443,7 +464,7 @@ const IFODetailModal = ({ data, onClose, onEmail, onPrint, onDownload }) => {
                   <th rowSpan="2">IFO Hora<br />(%)</th>
                 </tr>
                 <tr>
-                  {data.fechas_historicas.map((fecha, idx) => (
+                  {fechasHistoricasOrdenadas.map((fecha, idx) => (
                     <th key={idx} style={{ fontSize: '0.75rem', background: 'rgba(246, 173, 85, 0.1)' }}>
                       {fecha}
                     </th>
@@ -457,23 +478,22 @@ const IFODetailModal = ({ data, onClose, onEmail, onPrint, onDownload }) => {
                     ? hora.historico_detalle.reduce((sum, h) => sum + h.cbd_observado, 0) / hora.historico_detalle.length
                     : 0;
 
+                  const historicoPorFecha = (hora.historico_detalle || []).reduce((acc, hist) => {
+                    acc[hist.fecha] = hist.cbd_observado;
+                    return acc;
+                  }, {});
+
                   return (
                     <tr key={hora.hora}>
                       <td><strong>{hora.hora}:00</strong></td>
                       <td style={{ background: 'rgba(102, 126, 234, 0.1)', fontWeight: 'bold' }}>
                         {hora.cbd_dia_analizado}
                       </td>
-                      {hora.historico_detalle && hora.historico_detalle.map((hist, idx) => (
+                      {fechasHistoricasOrdenadas.map((fecha, idx) => (
                         <td key={idx} style={{ background: 'rgba(246, 173, 85, 0.05)' }}>
-                          {hist.cbd_observado}
+                          {historicoPorFecha[fecha] ?? '-'}
                         </td>
                       ))}
-                      {/* Si no hay historico_detalle, mostrar celdas vacías */}
-                      {(!hora.historico_detalle || hora.historico_detalle.length === 0) &&
-                        data.fechas_historicas.map((_, idx) => (
-                          <td key={idx} style={{ background: 'rgba(246, 173, 85, 0.05)' }}>-</td>
-                        ))
-                      }
                       <td>{(promedioSinAjuste || 0).toFixed(2)}</td>
                       <td>{(hora.b_dist_ajustado || 0).toFixed(0)}</td>
                       <td>

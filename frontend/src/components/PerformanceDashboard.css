@@ -18,7 +18,7 @@
   border: 1px solid var(--border-color);
   border-radius: 8px;
   margin-bottom: 30px;
-  overflow: hidden;
+  /* overflow: hidden; Removed to allow tooltip to show */
 }
 
 .eot-header {
@@ -41,7 +41,8 @@
 }
 
 .performance-table-container {
-  overflow-x: auto;
+  overflow: visible;
+  /* Changed from overflow-x: auto to allow tooltip to escape vertically */
 }
 
 .performance-table {
@@ -63,6 +64,8 @@
   font-weight: 600;
   position: sticky;
   top: 0;
+  z-index: 10;
+  /* Ensure header stays above content */
 }
 
 .performance-table tr:hover {
@@ -193,6 +196,61 @@
   opacity: 1;
 }
 
+/* Custom Tooltip Styles */
+.info-tooltip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: help;
+}
+
+.info-tooltip .tooltip-content {
+  visibility: hidden;
+  width: 320px;
+  background-color: rgba(30, 41, 59, 0.98);
+  color: #fff;
+  text-align: left;
+  border-radius: 8px;
+  padding: 12px;
+  position: absolute;
+  z-index: 1000;
+  top: 100%;
+  /* Position below */
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 12px;
+  /* Slight spacing from header */
+  opacity: 0;
+  transition: opacity 0.3s, transform 0.3s;
+  font-weight: normal;
+  font-size: 0.85rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
+  white-space: normal;
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  line-height: 1.5;
+}
+
+.info-tooltip:hover .tooltip-content {
+  visibility: visible;
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.info-tooltip .tooltip-content::after {
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  /* Arrow at top */
+  left: 50%;
+  margin-left: -6px;
+  border-width: 6px;
+  border-style: solid;
+  border-color: transparent transparent rgba(30, 41, 59, 0.98) transparent;
+  /* Pointing up */
+}
+
 @media print {
   @page {
     margin: 1.5cm;
@@ -226,6 +284,8 @@
   body {
     background: #fff !important;
     color: #000 !important;
+    padding: 0;
+    margin: 0;
   }
 
   /* Style the main heading */
@@ -318,8 +378,15 @@
 
   /* Hide buttons and non-printable elements */
   .no-print,
-  .eot-actions {
+  .eot-actions,
+  .info-tooltip .tooltip-content,
+  .info-tooltip span {
     display: none !important;
+  }
+
+  /* Ensure header text is still visible in print */
+  .info-tooltip {
+    display: inline !important;
   }
 
   /* Force Grayscale */
