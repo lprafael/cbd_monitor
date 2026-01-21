@@ -29,6 +29,7 @@ async def get_eots(db: DatabaseConnection = Depends(get_db_connection)):
             FROM public.eots e
             LEFT JOIN public.gremios g ON e.gre_id = g.gre_id
             WHERE e.permisionario IS TRUE
+            AND e.cod_catalogo NOT IN (75)
             ORDER BY e.eot_nombre
         """
         

@@ -44,7 +44,7 @@ async def get_monthly_performance(
     cursor = db.get_cursor()
     try:
         # 1. Get EOT Info (need vmt_hex)
-        cursor.execute("SELECT eot_nombre, id_eot_vmt_hex FROM public.eots WHERE cod_catalogo = %s", (request.eot_id,))
+        cursor.execute("SELECT eot_nombre, id_eot_vmt_hex FROM public.eots WHERE cod_catalogo = %s AND cod_catalogo NOT IN (72)", (request.eot_id,))
         eot = cursor.fetchone()
         if not eot:
             raise HTTPException(status_code=404, detail="EOT not found")
@@ -66,15 +66,20 @@ async def get_monthly_performance(
             FROM (
                 SELECT 
                     fecha, 
-                    AVG(ifo) as daily_ifo
-                FROM control_metricas.ifo_historico h
-                JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
-                WHERE h.id_eot_vmt_hex = %s
-                  AND h.fecha BETWEEN %s AND %s
-                  AND extract(isodow from h.fecha) < 7 -- Exclude Sundays (7)
-                  AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
-                  AND f.denominacion NOT ILIKE '%%Nocturn%%'
-                  AND f.denominacion NOT ILIKE '%%Madrugada%%'
+                    AVG(franja_avg) as daily_ifo
+                FROM (
+                    SELECT 
+                        fecha, 
+                        h.id_franja,
+                        AVG(ifo) as franja_avg
+                    FROM control_metricas.ifo_historico h
+                    JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
+                    WHERE h.id_eot_vmt_hex = %s
+                      AND h.fecha BETWEEN %s AND %s
+                      AND extract(isodow from h.fecha) < 7 -- Exclude Sundays (7)
+                      AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
+                    GROUP BY fecha, h.id_franja
+                ) franja_level
                 GROUP BY fecha
             ) daily_avgs
         """
@@ -88,15 +93,20 @@ async def get_monthly_performance(
         query_daily = """
             SELECT 
                 fecha, 
-                AVG(ifo) as daily_ifo
-            FROM control_metricas.ifo_historico h
-            JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
-            WHERE h.id_eot_vmt_hex = %s
-              AND h.fecha BETWEEN %s AND %s
-              AND extract(isodow from h.fecha) < 7
-              AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
-              AND f.denominacion NOT ILIKE '%%Nocturn%%'
-              AND f.denominacion NOT ILIKE '%%Madrugada%%'
+                AVG(franja_avg) as daily_ifo
+            FROM (
+                SELECT 
+                    fecha, 
+                    h.id_franja,
+                    AVG(ifo) as franja_avg
+                FROM control_metricas.ifo_historico h
+                JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
+                WHERE h.id_eot_vmt_hex = %s
+                  AND h.fecha BETWEEN %s AND %s
+                  AND extract(isodow from h.fecha) < 7
+                  AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
+                GROUP BY fecha, h.id_franja
+            ) franja_level
             GROUP BY fecha
             ORDER BY fecha
         """
@@ -116,14 +126,20 @@ async def get_monthly_performance(
                     SELECT 
                         id_eot_vmt_hex,
                         fecha, 
-                        AVG(ifo) as daily_ifo
-                    FROM control_metricas.ifo_historico h
-                    JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
-                    WHERE h.fecha BETWEEN %s AND %s
-                      AND extract(isodow from h.fecha) < 7
-                      AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
-                      AND f.denominacion NOT ILIKE '%%Nocturn%%'
-                      AND f.denominacion NOT ILIKE '%%Madrugada%%'
+                        AVG(franja_avg) as daily_ifo
+                    FROM (
+                        SELECT 
+                            id_eot_vmt_hex,
+                            fecha, 
+                            h.id_franja,
+                            AVG(ifo) as franja_avg
+                        FROM control_metricas.ifo_historico h
+                        JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
+                        WHERE h.fecha BETWEEN %s AND %s
+                          AND extract(isodow from h.fecha) < 7
+                          AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
+                        GROUP BY id_eot_vmt_hex, fecha, h.id_franja
+                    ) franja_level
                     GROUP BY id_eot_vmt_hex, fecha
                 ) daily_avgs
                 GROUP BY id_eot_vmt_hex

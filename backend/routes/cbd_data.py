@@ -262,6 +262,7 @@ def get_cbd_detalle_buses_data(db: DatabaseConnection, eot_ids: List[int], fecha
         FROM public.eots 
         WHERE cod_catalogo = ANY(%s)
             AND id_eot_vmt_hex IS NOT NULL
+            AND cod_catalogo NOT IN (72)
     """
     cursor.execute(query_map, (eot_ids,))
     eot_mapping = {row['cod_catalogo']: row['id_eot_vmt_hex'] for row in cursor.fetchall()}
@@ -388,6 +389,7 @@ def get_eot_info(db: DatabaseConnection, eot_ids: List[int]) -> Dict:
         FROM public.eots e
         LEFT JOIN public.gremios g ON e.gre_id = g.gre_id
         WHERE e.cod_catalogo = ANY(%s)
+        AND e.cod_catalogo NOT IN (75)
     """
     
     cursor.execute(query, (eot_ids,))

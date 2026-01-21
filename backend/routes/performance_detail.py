@@ -68,6 +68,12 @@ class IFOHoraData(BaseModel):
     ifo_hora: float  # (cbd_dia / b_dist_ajustado * 100)
 
 
+class IFOFechaHistorica(BaseModel):
+    """Fecha histórica con estado de uso."""
+    fecha: date
+    usada: bool
+
+
 class IFODetailResponse(BaseModel):
     """Respuesta con desglose de IFO por franja."""
     fecha: date
@@ -80,12 +86,33 @@ class IFODetailResponse(BaseModel):
     factor_ajuste: float
     # Fechas usadas en el cálculo histórico
     fechas_historicas: List[date]
+    fechas_historicas_todas: List[IFOFechaHistorica]
     horas_data: List[IFOHoraData]
     # IFO franja
     ifo_franja: float  # promedio de ifo_hora
 
 
-def get_fechas_referencia(fecha: date) -> list:
+def _es_fecha_atipica(cursor, fecha: date) -> bool:
+    cursor.execute(
+        """
+        SELECT 1
+        FROM control_metricas.dias_atipicos
+        WHERE fecha = %s
+        LIMIT 1
+        """,
+        (fecha,)
+    )
+    return cursor.fetchone() is not None
+
+
+def _ajustar_fecha_no_atipica(cursor, fecha: date, fechas_usadas: set) -> date:
+    fecha_ajustada = fecha
+    while _es_fecha_atipica(cursor, fecha_ajustada) or fecha_ajustada in fechas_usadas:
+        fecha_ajustada -= timedelta(weeks=1)
+    return fecha_ajustada
+
+
+def _get_fechas_base_referencia(fecha: date) -> list:
     """
     Determina las 4 fechas de referencia para el cálculo de IFO.
     - Enero/Marzo: Usa Noviembre del año anterior.
@@ -105,9 +132,52 @@ def get_fechas_referencia(fecha: date) -> list:
         d = date(ref_year, ref_month, 1)
         while d.weekday() != weekday: d += timedelta(days=1)
         while len(fechas) < 4 and d.month == ref_month:
-            fechas.append(d); d += timedelta(weeks=1)
-        if len(fechas) >= 4: return fechas[:4]
+            fechas.append(d)
+            d += timedelta(weeks=1)
+        if len(fechas) >= 4:
+            return fechas[:4]
     return [fecha - timedelta(weeks=i) for i in range(1, 5)]
+
+
+def get_fechas_referencia(cursor, fecha: date) -> list:
+    fechas_base = _get_fechas_base_referencia(fecha)
+    fechas_ajustadas = []
+    fechas_usadas = set()
+    for fecha_ref in fechas_base:
+        fecha_ajustada = _ajustar_fecha_no_atipica(cursor, fecha_ref, fechas_usadas)
+        fechas_ajustadas.append(fecha_ajustada)
+        fechas_usadas.add(fecha_ajustada)
+    return fechas_ajustadas
+
+
+def get_fechas_referencia_detalle(cursor, fecha: date) -> tuple:
+    fechas_base = _get_fechas_base_referencia(fecha)
+    fechas_ajustadas = []
+    fechas_usadas = set()
+    detalle = []
+    index_map = {}
+
+    def _agregar_detalle(fecha_item: date, usada: bool) -> None:
+        if fecha_item in index_map:
+            idx = index_map[fecha_item]
+            if usada and not detalle[idx].usada:
+                detalle[idx].usada = True
+            return
+        index_map[fecha_item] = len(detalle)
+        detalle.append(IFOFechaHistorica(fecha=fecha_item, usada=usada))
+
+    for fecha_ref in fechas_base:
+        fecha_ajustada = _ajustar_fecha_no_atipica(cursor, fecha_ref, fechas_usadas)
+        fechas_ajustadas.append(fecha_ajustada)
+        fechas_usadas.add(fecha_ajustada)
+
+        if fecha_ajustada == fecha_ref:
+            _agregar_detalle(fecha_ref, True)
+        else:
+            _agregar_detalle(fecha_ref, False)
+            _agregar_detalle(fecha_ajustada, True)
+
+    return fechas_ajustadas, detalle
 
 
 def get_factores_ajuste_acumulados(cursor, fecha: date) -> tuple:
@@ -131,9 +201,12 @@ def get_factores_ajuste_acumulados(cursor, fecha: date) -> tuple:
         post = any(f[0] == fecha_ant if isinstance(f, (list, tuple)) else f['fecha'] == fecha_ant for f in feriados_cercanos)
         if post: factor_total *= 0.70; ajustes.append("Post-Feriado (0.70)")
         if pre: factor_total *= 0.70; ajustes.append("Pre-Feriado (0.70)")
-    cursor.execute("SELECT mm_caidos FROM control_metricas.t_casuisticas_lluvia WHERE fecha_evento=%s AND registro_comprobado=TRUE AND mm_caidos > 5 LIMIT 1", (fecha,))
+    cursor.execute("SELECT mm_caidos FROM control_metricas.t_casuisticas_lluvia WHERE fecha_evento=%s AND mm_caidos > 5 ORDER BY mm_caidos DESC LIMIT 1", (fecha,))
     lluvia = cursor.fetchone()
-    if lluvia: factor_total *= 0.50; ajustes.append(f"Lluvia {lluvia[0]}mm (0.50)")
+    if lluvia:
+        factor_total *= 0.50
+        precipitacion = lluvia['mm_caidos'] if isinstance(lluvia, dict) else lluvia[0]
+        ajustes.append(f"Lluvia {precipitacion}mm (0.50)")
     return round(factor_total, 2), ajustes
 
 
@@ -154,6 +227,7 @@ async def get_cbd_detail(
             SELECT eot_id, cod_catalogo, eot_nombre, id_eot_vmt_hex 
             FROM public.eots 
             WHERE cod_catalogo = %s
+            AND cod_catalogo NOT IN (72)
         """, (request.eot_id,))
         eot_info = cursor.fetchone()
         if not eot_info:
@@ -330,7 +404,7 @@ async def get_ifo_detail(
         hora_fin = franja_info['hora_fin'].hour
         
         # 3. Determinar tipo de día y factores de ajuste (Resolución 120/2025)
-        fechas_historicas = get_fechas_referencia(request.fecha)
+        fechas_historicas, fechas_historicas_todas = get_fechas_referencia_detalle(cursor, request.fecha)
         factor_ajuste, lista_ajustes = get_factores_ajuste_acumulados(cursor, request.fecha)
         ajuste_aplicado = ", ".join(lista_ajustes) if lista_ajustes else 'Ninguno'
         factor_ajuste = round(factor_ajuste, 2)
@@ -448,6 +522,7 @@ async def get_ifo_detail(
             ajuste_aplicado=ajuste_aplicado,
             factor_ajuste=factor_ajuste,
             fechas_historicas=fechas_historicas,
+            fechas_historicas_todas=fechas_historicas_todas,
             horas_data=horas_data,
             ifo_franja=round(ifo_franja, 2)
         )

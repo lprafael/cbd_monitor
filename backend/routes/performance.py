@@ -112,7 +112,32 @@ def calculate_cbd_index(cursor, eot_id: int, eot_vmt_hex: str, fecha, franja_inf
     }
 
 
-def get_fechas_referencia(fecha: date) -> list:
+def _es_fecha_atipica(cursor, fecha: date) -> bool:
+    cursor.execute(
+        """
+        SELECT 1
+        FROM control_metricas.dias_atipicos
+        WHERE fecha = %s
+        LIMIT 1
+        """,
+        (fecha,)
+    )
+    return cursor.fetchone() is not None
+
+
+def _ajustar_fecha_no_atipica(cursor, fecha: date, fechas_usadas: set) -> date:
+    fecha_ajustada = fecha
+    original = fecha
+    while _es_fecha_atipica(cursor, fecha_ajustada) or fecha_ajustada in fechas_usadas:
+        fecha_ajustada -= timedelta(weeks=1)
+    
+    if fecha_ajustada != original:
+        print(f"  [INFO] Fecha referencia ajustada: {original} -> {fecha_ajustada} (Atípica o Repetida)")
+        
+    return fecha_ajustada
+
+
+def get_fechas_referencia(cursor, fecha: date) -> list:
     """
     Determina las 4 fechas de referencia para el cálculo de IFO.
     - Enero/Marzo: Usa Noviembre del año anterior.
@@ -150,10 +175,23 @@ def get_fechas_referencia(fecha: date) -> list:
             d += timedelta(weeks=1)
             
         if len(fechas) >= 4:
-            return fechas[:4]
+            fechas_ajustadas = []
+            fechas_usadas = set()
+            for fecha_ref in fechas[:4]:
+                fecha_ajustada = _ajustar_fecha_no_atipica(cursor, fecha_ref, fechas_usadas)
+                fechas_ajustadas.append(fecha_ajustada)
+                fechas_usadas.add(fecha_ajustada)
+            return fechas_ajustadas
 
     # Por defecto: 4 semanas anteriores
-    return [fecha - timedelta(weeks=i) for i in range(1, 5)]
+    fechas_base = [fecha - timedelta(weeks=i) for i in range(1, 5)]
+    fechas_ajustadas = []
+    fechas_usadas = set()
+    for fecha_ref in fechas_base:
+        fecha_ajustada = _ajustar_fecha_no_atipica(cursor, fecha_ref, fechas_usadas)
+        fechas_ajustadas.append(fecha_ajustada)
+        fechas_usadas.add(fecha_ajustada)
+    return fechas_ajustadas
 
 
 def get_factores_ajuste_acumulados(cursor, fecha: date) -> tuple:
@@ -212,14 +250,16 @@ def get_factores_ajuste_acumulados(cursor, fecha: date) -> tuple:
     # 3. Factor Climático (Capa 3 - Lluvia > 5mm)
     cursor.execute("""
         SELECT mm_caidos FROM control_metricas.t_casuisticas_lluvia
-        WHERE fecha_evento = %s AND registro_comprobado = TRUE
+        WHERE fecha_evento = %s
         AND mm_caidos > 5
-        LIMIT 1
+        ORDER BY mm_caidos DESC LIMIT 1
     """, (fecha,))
     lluvia = cursor.fetchone()
     if lluvia:
         factor_total *= 0.50
-        ajustes.append(f"Lluvia {lluvia[0]}mm (0.50)")
+        # Usar acceso por nombre de columna para evitar KeyError
+        precipitacion = lluvia['mm_caidos'] if isinstance(lluvia, dict) else lluvia[0]
+        ajustes.append(f"Lluvia {precipitacion}mm (0.50)")
         
     return round(factor_total, 2), ajustes
 
@@ -233,7 +273,7 @@ def calculate_ifo_index(cursor, eot_id: int, eot_vmt_hex: str, fecha, franja_inf
     hora_fin = franja_info['hora_fin'].hour
     
     # Determinar fechas históricas
-    fechas_historicas = get_fechas_referencia(fecha)
+    fechas_historicas = get_fechas_referencia(cursor, fecha)
     
     # Determinar factores de ajuste acumulados
     factor_ajuste, lista_ajustes = get_factores_ajuste_acumulados(cursor, fecha)
@@ -316,6 +356,7 @@ async def get_performance_data(
             SELECT eot_id, cod_catalogo, eot_nombre, id_eot_vmt_hex, gre_id
             FROM public.eots
             WHERE cod_catalogo = ANY(%s)
+            AND cod_catalogo NOT IN (72)
             ORDER BY cod_catalogo
         """, (request.eot_ids,))
         eots = cursor.fetchall()
