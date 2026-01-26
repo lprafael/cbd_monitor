@@ -9,6 +9,7 @@ import CBDTable from './components/CBDTable';
 import PerformanceDashboard from './components/PerformanceDashboard';
 import IndicesDashboard from './components/IndicesDashboard';
 import MonthlyPerformanceDashboard from './components/MonthlyPerformanceDashboard';
+import Verify290Dashboard from './components/Verify290Dashboard';
 import './App.css';
 
 // URL base de la API - Cambiar según el entorno
@@ -24,6 +25,7 @@ function App() {
   const [cbdData, setCbdData] = useState(null);
   const [performanceData, setPerformanceData] = useState(null);
   const [monthlyData, setMonthlyData] = useState(null);
+  const [verify290Data, setVerify290Data] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [theme, setTheme] = useState('ejecutivo'); // 'mopc' | 'institucional' | 'ejecutivo' | 'claro' | 'nocturno'
@@ -75,6 +77,7 @@ function App() {
     setCbdData(null);
     setPerformanceData(null);
     setMonthlyData(null);
+    setVerify290Data(null);
 
     try {
       let endpoint = '';
@@ -95,6 +98,14 @@ function App() {
         };
       } else if (viewMode === 'monthly') {
         endpoint = '/api/monthly-performance';
+        const [yearStr, monthStr] = fecha.split('-');
+        body = {
+          eot_id: selectedEots[0],
+          month: parseInt(monthStr),
+          year: parseInt(yearStr)
+        };
+      } else if (viewMode === 'verify290') {
+        endpoint = '/api/verify-290';
         const [yearStr, monthStr] = fecha.split('-');
         body = {
           eot_id: selectedEots[0],
@@ -122,6 +133,8 @@ function App() {
         setCbdData(data);
       } else if (viewMode === 'monthly') {
         setMonthlyData(data);
+      } else if (viewMode === 'verify290') {
+        setVerify290Data(data);
       } else {
         setPerformanceData(data);
       }
@@ -181,12 +194,18 @@ function App() {
         {!loading && !error && viewMode === 'monthly' && (
           <MonthlyPerformanceDashboard data={monthlyData} />
         )}
+
+        {!loading && !error && viewMode === 'verify290' && (
+          <Verify290Dashboard data={verify290Data} />
+        )}
       </main>
 
       <footer className="app-footer">
         <p>
-          Monitor de CBD - Control de Buses Distintos |
-          Desarrollado con FastAPI + React
+          {/* Monitor de CBD - Control de Buses Distintos |
+          Desarrollado con FastAPI + React */}
+          {/* Sistema Integral de Control y Monitoreo | CID - Viceministerio de Transporte | Res. GVMT Nº 120/2025 */}
+          Monitoreo de Indicadores de Desempeño (CBD/IFO) | Resolución GVMT Nº 120/2025 | CID - VMT
         </p>
       </footer>
     </div>

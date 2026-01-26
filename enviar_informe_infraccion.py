@@ -9,18 +9,25 @@ import psycopg2
 from typing import Optional, Dict, Any
 
 def get_db_connection():
-    """Establece conexión con la base de datos utilizando rutas absolutas para el .env"""
-    import os
+    """Establece conexión con la base de datos"""
+    # Buscar .env en backend/.env primero, luego en el directorio actual
+    import os as os_module
     from pathlib import Path
     
-    # Ruta absoluta al .env del backend
+    # Obtener la ruta del directorio actual (res_120)
     current_dir = Path(__file__).parent.absolute()
+    # Ir al directorio padre y luego a backend
     backend_env = current_dir.parent / 'backend' / '.env'
+    local_env = current_dir / '.env'
     
+    # Intentar cargar desde backend/.env primero
     if backend_env.exists():
-        load_dotenv(dotenv_path=backend_env, override=True)
+        load_dotenv(dotenv_path=backend_env)
+    elif local_env.exists():
+        load_dotenv(dotenv_path=local_env)
     else:
-        load_dotenv(override=True)
+        # Último recurso: buscar en cualquier parte
+        load_dotenv()
     
     DB_CONFIG = {
         'host': os.getenv('DB_HOST'),
@@ -33,10 +40,8 @@ def get_db_connection():
     try:
         conn = psycopg2.connect(**DB_CONFIG)
         return conn
-    except Exception as e:
-        print(f"✗ Error crítico al conectar a la base de datos: {e}")
-        # Mostrar variables detectadas (sin password) para diagnóstico
-        print(f"  Config detectada: Host={DB_CONFIG['host']}, DB={DB_CONFIG['database']}, User={DB_CONFIG['user']}")
+    except psycopg2.Error as e:
+        print(f"✗ Error al conectar a la base de datos: {e}")
         return None
 
 def formatear_fecha_con_dia(fecha_obj):
@@ -108,7 +113,7 @@ def get_tipo_dia_id(fecha_obj):
 def obtener_datos_mensuales_eot(id_eot_vmt_hex: str, fecha_referencia: date):
     """
     Obtiene los datos mensuales de IFO para un EOT desde el primer día del mes hasta la fecha de referencia.
-    Agrupa los datos por tipo de día (Laboral, Sábado, Domingo/Feriado).
+    Agrupa los datos por tipo de día (Laboral, Sábado, Domingo).
     También obtiene el índice CBD para cada franja desde la API.
     
     Returns:
@@ -125,7 +130,7 @@ def obtener_datos_mensuales_eot(id_eot_vmt_hex: str, fecha_referencia: date):
                     'dias': {fecha: {'franjas': {...}, 'ifo_diario': ...}}
                 },
                 7: {  # NO LABORAL
-                    'nombre': 'Domingo/Feriado',
+                    'nombre': 'Domingo',
                     'franjas': {id_franja: nombre_franja},
                     'dias': {fecha: {'franjas': {...}, 'ifo_diario': ...}}
                 }
@@ -152,7 +157,7 @@ def obtener_datos_mensuales_eot(id_eot_vmt_hex: str, fecha_referencia: date):
         tipos_dia_info = {
             5: {'nombre': 'Día Laboral', 'franjas': {}, 'dias': {}},
             6: {'nombre': 'Sábado', 'franjas': {}, 'dias': {}},
-            7: {'nombre': 'Domingo/Feriado', 'franjas': {}, 'dias': {}}
+            7: {'nombre': 'Domingo', 'franjas': {}, 'dias': {}}
         }
         
         # Obtener franjas para cada tipo de día con información completa
@@ -340,73 +345,97 @@ def obtener_parametros_ifo_resumen(fecha_referencia):
     finally:
         conn.close()
 
-def obtener_clima(fecha: date) -> Optional[Dict[str, Any]]:
+def obtener_clima(fecha: datetime) -> Optional[Dict[str, Any]]:
     """
-    Obtiene la descripción e ícono de Open-Meteo, pero el valor de lluvia de la DB.
+    Obtiene datos climáticos históricos para el departamento Central, Paraguay.
+    
+    Args:
+        fecha: Fecha para la que se desea obtener el clima
+        
+    Returns:
+        dict: Datos climáticos o None si hay un error
     """
-    # 1. Obtener Descripción e Ícono de Open-Meteo
-    latitud, longitud = -25.3, -57.6
+    # Coordenadas aproximadas del departamento Central, Paraguay
+    latitud = -25.3
+    longitud = -57.6
+    
+    # Formatear la fecha para la API
     fecha_str = fecha.strftime("%Y-%m-%d")
-    desc_final = "Despejado"
-    icon_final = "☀️"
-    viento_final = 0
     
     try:
+        # Parámetros para la API de Open-Meteo
         params = {
-            'latitude': latitud, 'longitude': longitud,
-            'start_date': fecha_str, 'end_date': fecha_str,
-            'daily': ['weathercode', 'windspeed_10m_max'],
-            'timezone': 'America/Asuncion'
+            'latitude': latitud,
+            'longitude': longitud,
+            'start_date': fecha_str,
+            'end_date': fecha_str,
+            'daily': ['weathercode', 'precipitation_sum', 'windspeed_10m_max'],
+            'timezone': 'America/Asuncion',
+            'precipitation_unit': 'mm'
         }
-        res = requests.get('https://archive-api.open-meteo.com/v1/archive', params=params, timeout=5)
-        if res.status_code == 200:
-            data = res.json()
-            if 'daily' in data and data['daily']['weathercode']:
-                code = data['daily']['weathercode'][0]
-                viento_final = data['daily']['windspeed_10m_max'][0]
-                weather_codes = {
-                    0: ('Despejado', '☀️'), 1: ('Mayormente despejado', '🌤️'), 
-                    2: ('Parcialmente nublado', '⛅'), 3: ('Nublado', '☁️'),
-                    45: ('Niebla', '🌫️'), 51: ('Llovizna', '🌦️'), 
-                    61: ('Lluvia débil', '🌧️'), 63: ('Lluvia moderada', '🌧️'),
-                    65: ('Lluvia fuerte', '🌧️💦'), 80: ('Chubascos', '🌧️'),
-                    95: ('Tormenta', '⛈️'), 96: ('Tormenta con granizo', '⛈️🌨️')
-                }
-                desc_final, icon_final = weather_codes.get(code, ('Condición variable', '🌡️'))
+        
+        # Hacer la petición a la API
+        response = requests.get(
+            'https://archive-api.open-meteo.com/v1/archive',
+            params=params,
+            timeout=10
+        )
+        response.raise_for_status()
+        
+        data = response.json()
+        
+        # Mapeo de códigos de clima a descripciones e íconos
+        weather_codes = {
+            0: {'desc': 'Despejado', 'icon': '☀️'},
+            1: {'desc': 'Mayormente despejado', 'icon': '🌤️'},
+            2: {'desc': 'Parcialmente nublado', 'icon': '⛅'},
+            3: {'desc': 'Nublado', 'icon': '☁️'},
+            45: {'desc': 'Niebla', 'icon': '🌫️'},
+            48: {'desc': 'Niebla con escarcha', 'icon': '❄️🌫️'},
+            51: {'desc': 'Llovizna ligera', 'icon': '🌧️'},
+            53: {'desc': 'Llovizna moderada', 'icon': '🌧️'},
+            55: {'desc': 'Llovizna intensa', 'icon': '🌧️'},
+            56: {'desc': 'Llovizna helada ligera', 'icon': '🌨️'},
+            57: {'desc': 'Llovizna helada densa', 'icon': '🌨️'},
+            61: {'desc': 'Lluvia débil', 'icon': '🌧️'},
+            63: {'desc': 'Lluvia moderada', 'icon': '🌧️'},
+            65: {'desc': 'Lluvia fuerte', 'icon': '🌧️💦'},
+            66: {'desc': 'Lluvia helada', 'icon': '🌨️'},
+            67: {'desc': 'Lluvia helada intensa', 'icon': '🌨️💦'},
+            71: {'desc': 'Nieve débil', 'icon': '❄️'},
+            73: {'desc': 'Nieve moderada', 'icon': '❄️'},
+            75: {'desc': 'Nieve fuerte', 'icon': '❄️❄️'},
+            77: {'desc': 'Granizo', 'icon': '🌨️'},
+            80: {'desc': 'Ligeras precipitaciones', 'icon': '🌧️'},
+            81: {'desc': 'Precipitaciones moderadas', 'icon': '🌧️💧'},
+            82: {'desc': 'Precipitaciones intensas', 'icon': '🌧️💦'},
+            85: {'desc': 'Nevadas ligeras', 'icon': '❄️'},
+            86: {'desc': 'Nevadas intensas', 'icon': '❄️❄️'},
+            95: {'desc': 'Tormenta eléctrica', 'icon': '⛈️'},
+            96: {'desc': 'Tormenta con granizo ligero', 'icon': '⛈️🌨️'},
+            99: {'desc': 'Tormenta con granizo fuerte', 'icon': '⛈️🌨️💥'}
+        }
+        
+        # Procesar los datos de la respuesta
+        if 'daily' in data and data['daily'] and data['daily']['time']:
+            weather_code = data['daily']['weathercode'][0]
+            precipitation = data['daily']['precipitation_sum'][0]
+            wind_speed = data['daily']['windspeed_10m_max'][0]
+            
+            weather_info = weather_codes.get(weather_code, {'desc': 'Condición desconocida', 'icon': '❓'})
+            return {
+                'fecha': fecha_str,
+                'descripcion': weather_info['desc'],
+                'icono': weather_info['icon'],
+                'precipitacion': precipitation,
+                'viento': wind_speed,
+                'codigo_clima': weather_code
+            }
+    
     except Exception as e:
-        print(f"⚠️ Error consultando Open-Meteo: {e}")
-
-    # 2. Obtener Valor de Lluvia de la Base de Datos (Fuente de verdad para ajustes)
-    mm_caidos = 0
-    comprobado = False
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor()
-            cur.execute("""
-                SELECT mm_caidos, registro_comprobado
-                FROM control_metricas.t_casuisticas_lluvia
-                WHERE fecha_evento = %s
-                ORDER BY mm_caidos DESC LIMIT 1
-            """, (fecha,))
-            row = cur.fetchone()
-            if row:
-                mm_caidos = float(row[0]) if row[0] is not None else 0.0
-                comprobado = row[1]
-            cur.close()
-            conn.close()
-        except Exception as e:
-            print(f"⚠️ Error al obtener lluvia de la DB: {e}")
-            if conn: conn.close()
-
-    return {
-        'fecha': fecha_str,
-        'descripcion': desc_final,
-        'icono': icon_final,
-        'precipitacion': mm_caidos,
-        'viento': viento_final,
-        'comprobado': comprobado
-    }
+        print(f"⚠️ No se pudo obtener datos climáticos: {str(e)}")
+    
+    return None
 
 def analizar_infracciones_res_120(eot_nombre, datos_mensuales, fecha_referencia):
     """
@@ -541,19 +570,18 @@ def analizar_infracciones_res_120(eot_nombre, datos_mensuales, fecha_referencia)
             'fecha': f['fecha'].strftime('%d/%m'),
             'base': f['base'],
             'desc': f['desc'],
-        'jornales': f['jornales']
+            'jornales': f['jornales']
         })
         
     return sanciones
 
-def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None, incluir_resumen_infracciones=True):
+def generar_html_informe(datos_incumplimientos, fecha_referencia):
     """
     Genera el contenido HTML del informe de incumplimientos.
     
     Args:
         datos_incumplimientos (list): Lista de diccionarios con los datos de incumplimientos
         fecha_referencia (date): Fecha de referencia para el informe (D-1)
-        email_cc (str, optional): Lista de correos en CC para mostrar en el encabezado
     
     Returns:
         str: Contenido HTML del informe
@@ -730,10 +758,10 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
         secciones_eot_html += f"""
         <div style="margin-top: 30px; page-break-inside: avoid;">
             <h4 style="color: #004a99; margin-bottom: 10px;">{eot_nombre}</h4>
-            <p style="margin-bottom: 15px;"><strong>IFO MES(Acumulado):</strong> {ifo_mes:.2f}%</p>
+            <p style="margin-bottom: 15px;"><strong>IFO MES:</strong> {ifo_mes:.2f}%</p>
         """
         
-        # Generar tabla para cada tipo de día (5=Laboral, 6=Sábado, 7=Domingo/Feriado)
+        # Generar tabla para cada tipo de día (5=Laboral, 6=Sábado, 7=Domingo)
         for id_tipo_dia in [5, 6, 7]:
             tipo_data = tipos_dia.get(id_tipo_dia, {'nombre': '', 'franjas': {}, 'dias': {}})
             nombre_tipo = tipo_data['nombre']
@@ -759,7 +787,7 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
                     <th style="border: 1px solid #ccc; padding: 8px; text-align: center; vertical-align: top;">
                         <div style="font-weight: bold;">{nombre}</div>
                         <div style="font-size: 10px; color: #666;">{hora_inicio} - {hora_fin}</div>
-                        <div style="font-size: 10px; color: #cc0000;">CBD Mín: {cbd_min if cbd_min else '-'}</div>
+                        <div style="font-size: 10px; color: #cc0000;">Mín: {cbd_min if cbd_min else '-'}</div>
                     </th>
                 """
             
@@ -812,7 +840,7 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
                             bg_color = "#ffffe6" # Amarillo
                             color_text = "#999900"
                             
-                        fila_ifo += f"<td style=\"border: 1px solid #ccc; padding: 8px; text-align: center; background-color: {bg_color}; color: {color_text};\">{ifo_val:.2f}%</td>"
+                        fila_ifo += f"<td style=\"border: 1px solid #ccc; padding: 8px; text-align: center; background-color: {bg_color}; color: {color_text};\">{ifo_val:.2f}</td>"
                     else:
                         fila_ifo += "<td style=\"border: 1px solid #ccc; padding: 8px; text-align: center;\">-</td>"
                 
@@ -827,7 +855,7 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
                         bg_color_d = "#ffffe6"
                         color_text_d = "#999900"
                         
-                    fila_ifo += f"<td style=\"border: 1px solid #ccc; padding: 8px; text-align: center; background-color: {bg_color_d}; color: {color_text_d};\"><strong>{ifo_diario:.2f}%</strong></td>"
+                    fila_ifo += f"<td style=\"border: 1px solid #ccc; padding: 8px; text-align: center; background-color: {bg_color_d}; color: {color_text_d};\"><strong>{ifo_diario:.2f}</strong></td>"
                 else:
                     fila_ifo += "<td style=\"border: 1px solid #ccc; padding: 8px; text-align: center;\">-</td>"
                 fila_ifo += "</tr>"
@@ -990,7 +1018,7 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
             <p style="font-size: 12px;"><strong>DE:</strong> Coordinación de Innovación y Desarrollo (CID)</p>
             <p style="font-size: 12px;"><strong>PARA:</strong> Ing. ROLANDO GONZÁLEZ, Director (Dirección Metropolitana de Transporte - DMT)</p>
             <p style="font-size: 12px;"><strong>FECHA:</strong> {fecha_envio}</p>
-            {f'<p style="font-size: 12px;"><strong>CC:</strong> {email_cc}</p>' if email_cc else ''}
+            # <p style="font-size: 12px;"><strong>CC:</strong> Coordinación de Transporte Área Metropolitana (CTAM), Coordinación Jurídica (GVMT)</p>
 
             <hr style="border-top: 1px solid #004a99;">
 
@@ -998,21 +1026,11 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
                 <p>Estimado Ing. ROLANDO GONZÁLEZ, Director (Dirección Metropolitana de Transporte - DMT):</p>
                 <p>La <strong>Coordinación de Innovación y Desarrollo (CID),</strong> a través de la Central de Control y Monitoreo (CCM), eleva el presente <strong>Informe Diario de Control y Monitoreo</strong> correspondiente a la operación del día <strong>{fecha_formato}</strong>.</p>
                 
-                <p>Se deja constancia de que este reporte se emite en el marco del periodo de socialización y capacitación establecido en el <strong>Artículo 22 de la Resolución GVMT N° 120/2025</strong>, el cual precede a la entrada en vigencia formal de la normativa el próximo 1 de febrero.</p>
-                
-                <p><strong>Propósito de esta fase previa:</strong> A diferencia de los reportes previstos en el Art. 14, esta comunicación diaria tiene un carácter estrictamente interno y técnico, orientado a:</p>
-                <ul style="margin: 10px 0; padding-left: 20px;">
-                    <li><strong>Ajustes de Control y Monitoreo:</strong> Facilitar el ajuste de los sistemas de recolección y procesamiento de datos (GPS y Billetaje) antes del inicio de la Etapa 1.</li>
-                    <li><strong>Conocimiento de las Autoridades:</strong> Permitir que la Dirección analice el comportamiento real de la flota y los indicadores (IFO y CBD) en un entorno de prueba.</li>
-                    <li><strong>Validación y Feedback:</strong> Obtener observaciones y correcciones necesarias por parte de la autoridad superior sobre la visualización y precisión de los datos presentados.</li>
-                    <li><strong>Análisis de Comportamiento:</strong> Identificar de manera temprana variaciones significativas en la operatividad de las EOT que requieran atención técnica o normativa.</li>
-                </ul>
-                
-                <p>Este flujo de información diaria servirá para consolidar la herramienta de cálculo y garantizar que, al llegar a la Etapa de adaptación operativa el 1 de febrero, el sistema cuente con la robustez técnica necesaria para el reporte oficial a los permisionarios.</p>
-
                 {seccion_clima}
 
                 {seccion_ajuste}
+                
+                <p>Este informe se basa en el procesamiento de datos de monitoreo (GPS y billetaje electrónico), conforme a los nuevos conceptos y criterios de desempeño establecidos en la Resolución GVMT N° 120/2025 y el procedimiento correspondiente.</p>
 
                 <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin: 20px 0; font-size: 12px;">
                     <h4 style="margin-top: 0; color: #1e40af; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">Glosario y Referencia de Colores</h4>
@@ -1050,26 +1068,19 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
                 {secciones_eot_html}
 
                 <div class="note">
-                    <p><strong>Nota: Niveles de Servicio y Régimen Sancionatorio del IFO</strong></p>
-                    <p>De acuerdo con la Resolución GVMT N° 120/2025, los niveles de rendimiento para el Índice de Flota Operativa (IFO) se categorizan y sancionan de la siguiente manera:</p>
+                    <p><strong>Nota:</strong> Los niveles de servicio para el IFO por franja operativa se clasifican y sancionan de la siguiente manera:</p>
                     <ul style="margin: 10px 0; padding-left: 20px;">
-                        <li><strong>Nivel de Servicio B (Cumplimiento entre 80% y 89%):</strong> Clasificado como Infracción Leve. Genera una multa de 10 jornales al acumular cinco (5) franjas en este nivel dentro de un mes calendario.</li>
-                        <li><strong>Nivel de Servicio C (Cumplimiento inferior al 80%):</strong> Clasificado como Infracción Intermedia. Genera una multa de 20 jornales por cada día en que se registre al menos una franja en este nivel.</li>
+                        <li><strong>Nivel de Servicio B (Cumplimiento entre 80% y 89%):</strong> Constituye una Infracción Leve (Multa de 10 jornales).</li>
+                        <li><strong>Nivel de Servicio C (Cumplimiento inferior al 80%):</strong> Constituye una Infracción Intermedia (Multa de 20 jornales).</li>
                     </ul>
-                    <p><strong>Ámbito de Aplicación por Franjas:</strong> Según lo establecido en los numerales 15.2 al 15.5 de la resolución, estas sanciones por IFO son aplicables exclusivamente a las franjas:</p>
-                    <ol style="margin: 10px 0; padding-left: 20px;">
-                        <li><strong>Pico:</strong> Mañana, Tarde y Sábado.</li>
-                        <li><strong>Pos Pico:</strong> Entre picos, Tarde, Sábado y Domingos/Feriados.</li>
-                    </ol>
-                    <p><strong>Importante:</strong> Las franjas Madrugada y Nocturna, si bien son monitoreadas para el cumplimiento de buses mínimos (CBD), no están contempladas taxativamente para las sanciones por niveles de rendimiento IFO (B o C) en el Artículo 15.</p>
+                    <p>Estas disposiciones son aplicables a todas las franjas operativas reguladas: Madrugada, Pico (Mañana y Tarde), Pos Pico (Entre picos y Tarde) y Nocturna para días laborales y sábados; y la franja Pos Pico para domingos y feriados.</p>
                 </div>
 
                 <h3 class="section-title">PROCEDIMIENTO Y BASE LEGAL</h3>
                 <ul>
-                    <li><strong>Alerta Automática:</strong> El sistema genera este informe de manera automatizada al detectar rendimientos en niveles B o C, conforme a la metodología de cálculo que incluye el redondeo al entero superior inmediato.</li>
-                    <li><strong>Generación de Acta:</strong> Tras la validación técnica de la Coordinación de Innovación y Desarrollo (CID), se emitirá el Acta de Comprobación con validez de infracción, según el Artículo 19.</li>
-                    <li><strong>Vigencia Gradual:</strong> Conforme al Artículo 21, durante la Etapa 1 (febrero y marzo de 2026), los incumplimientos se reportarán únicamente a efectos informativos, sin aplicación de multas. Las sanciones efectivas iniciarán en la Etapa 2 (abril de 2026) solo para picos y pos picos de lunes a sábado.</li>
-                    <li><strong>Marco Regulatorio:</strong> Todo el proceso se rige por el Capítulo IV de la Resolución GVMT N° 120/2025.</li>
+                    <li><strong>Alerta Automática:</strong> El sistema ha generado este informe interno de manera automatizada tras la detección de niveles de servicio tipo B o C en la operación evaluada.</li>
+                    <li><strong>Generación de Acta:</strong> Tras la validación técnica del incumplimiento, la Coordinación de Innovación y Desarrollo (CID) procederá a la emisión del Acta de Comprobación correspondiente, conforme al Artículo 19.</li>
+                    <li><strong>Marco Regulatorio:</strong> Las sanciones y reincidencias se aplicarán estrictamente según lo establecido en el Capítulo IV de la Resolución GVMT N° 120/2025.</li>
                 </ul>
 
                 {f'''
@@ -1099,7 +1110,7 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
                         * El valor del jornal utilizado para el cálculo es de 111,502 Gs. Los montos son estimaciones preliminares sujetas a confirmación técnica.
                     </p>
                 </div>
-                ''' if resumen_infracciones_lista and incluir_resumen_infracciones else ''}
+                ''' if resumen_infracciones_lista else ''}
             </div>
 
             <div class="signature">
@@ -1114,14 +1125,13 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
     
     return html
 
-def enviar_informe_incumplimientos(datos_incumplimientos, fecha_referencia=None, email_destino=None, incluir_resumen_infracciones=True):
+def enviar_informe_incumplimientos(datos_incumplimientos, fecha_referencia=None):
     """
     Envía por correo electrónico el informe de incumplimientos.
     
     Args:
         datos_incumplimientos (list): Lista de diccionarios con los datos de incumplimientos
         fecha_referencia (date, optional): Fecha de referencia para el informe. Si es None, usa el día anterior.
-        email_destino (str, optional): Dirección de correo de destino. Si se omite, usa EMAIL_TO del .env
     """
     # Cargar variables de entorno desde backend/.env
     from pathlib import Path
@@ -1136,73 +1146,43 @@ def enviar_informe_incumplimientos(datos_incumplimientos, fecha_referencia=None,
     else:
         load_dotenv()
     
-    # Cargar variables de entorno (forzar actualización)
-    from pathlib import Path
-    current_dir = Path(__file__).parent.absolute()
-    backend_env = current_dir.parent / 'backend' / '.env'
-    
-    if backend_env.exists():
-        load_dotenv(dotenv_path=backend_env, override=True)
-    else:
-        load_dotenv(override=True)
-    
-    # Configuración del correo
+    # Configuración del correo desde .env
+    # Configuración de correo
     SMTP_SERVER = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
     SMTP_PORT = int(os.getenv('EMAIL_PORT', 587))
     SMTP_USER = os.getenv('EMAIL_HOST_USER', 'billetajevmt@gmail.com')
     SMTP_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', 'qlju dhxo jbon exlg')
     EMAIL_FROM = os.getenv('EMAIL_FROM', 'billetajevmt@gmail.com')
-    
-    # Determinar destinatario
-    if email_destino:
-        EMAIL_TO = email_destino
-    else:
-        EMAIL_TO = os.getenv('EMAIL_TO', 'transporte.mopc@gmail.com')
-
-    # Tomamos el CC del .env, si no hay nada usamos None
-    EMAIL_CC = os.getenv('EMAIL_CC')
-    
+    EMAIL_TO = os.getenv('EMAIL_TO', 'lprafael1710@gmail.com')
+    EMAIL_CC = os.getenv('EMAIL_CC', 'dgeec2011@gmail.com')
     USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() in ('true', '1', 't')
     
-    # Debug para el usuario
-    print(f"  ℹ Configuración de correos detectada:")
-    print(f"    - PARA: {EMAIL_TO}")
-    print(f"    - CC: {EMAIL_CC if EMAIL_CC else '(No configurado o deshabilitado por override)'}")
-
     if not all([SMTP_SERVER, SMTP_USER, SMTP_PASSWORD, EMAIL_FROM, EMAIL_TO]):
-        print("✗ Error: Faltan configuraciones de correo electrónico críticas")
+        print("✗ Error: Faltan configuraciones de correo electrónico en el archivo .env")
+        print(f"SMTP_SERVER: {SMTP_SERVER}")
+        print(f"SMTP_USER: {SMTP_USER}")
+        print(f"EMAIL_FROM: {EMAIL_FROM}")
+        print(f"EMAIL_TO: {EMAIL_TO}")
+        print(f"SMTP_PASSWORD: {'*' * 8 if SMTP_PASSWORD else 'No configurada'}")
         return False
     
     # Establecer fecha de referencia (por defecto, el día anterior)
     if fecha_referencia is None:
         fecha_referencia = datetime.now().date() - timedelta(days=1)
     
-    # Configurar destinatarios (Soporta listas separadas por comas)
-    destinatarios_to = [e.strip() for e in EMAIL_TO.split(',') if e.strip()]
-    destinatarios_cc = [e.strip() for e in EMAIL_CC.split(',') if e.strip()] if EMAIL_CC else []
-    
-    all_recipients = destinatarios_to + destinatarios_cc
-
     try:
         # Crear el mensaje
         msg = MIMEMultipart()
         msg['From'] = EMAIL_FROM
-        msg['To'] = ", ".join(destinatarios_to)
-        if destinatarios_cc:
-            msg['Cc'] = ", ".join(destinatarios_cc)
+        msg['To'] = EMAIL_TO
+        msg['Subject'] = f'[DMT] Reporte Diario - Métricas IFO/ICCBDM - {fecha_referencia.strftime("%Y-%m-%d")}'
         
-        # msg['Subject'] = f'[DMT] Reporte Diario - Métricas IFO/ICCBDM - {fecha_referencia.strftime("%Y-%m-%d")}'
-        
-        # Ajustar asunto si es simulación
-        prefix = "[SIMULACIÓN EMPRESA]" if email_destino else "[BORRADOR]" 
-        msg['Subject'] = f'{prefix} Reporte Diario - Métricas IFO/ICCBDM - {fecha_referencia.strftime("%Y-%m-%d")}'
-        
-        # Generar el contenido HTML del informe (incluyendo visualización de CC)
-        html_content = generar_html_informe(datos_incumplimientos, fecha_referencia, EMAIL_CC, incluir_resumen_infracciones=incluir_resumen_infracciones)
+        # Generar el contenido HTML del informe
+        html_content = generar_html_informe(datos_incumplimientos, fecha_referencia)
         msg.attach(MIMEText(html_content, 'html'))
         
         # Configurar conexión SMTP
-        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=60)
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=10)
         
         # Iniciar conexión segura si es necesario
         if USE_TLS:
@@ -1211,19 +1191,21 @@ def enviar_informe_incumplimientos(datos_incumplimientos, fecha_referencia=None,
         # Iniciar sesión
         server.login(SMTP_USER, SMTP_PASSWORD.strip())
         
-        # Enviar correo a todos los destinatarios (To + Cc)
-        server.send_message(msg, to_addrs=all_recipients)
+        # Configurar destinatarios
+        destinatarios = [EMAIL_TO]
+        if EMAIL_CC:
+            destinatarios.extend([email.strip() for email in EMAIL_CC.split(',')])
+            msg['Cc'] = EMAIL_CC
+        
+        # Enviar correo
+        server.send_message(msg, to_addrs=destinatarios)
         server.quit()
         
-        print(f"✓ Correo enviado a: {msg['To']}")
-        if destinatarios_cc:
-            print(f"✓ CC enviado a: {msg['Cc']}")
+        print(f"✓ Correo de incumplimientos enviado correctamente a {EMAIL_TO}")
         return True
     
     except Exception as e:
         print(f"✗ Error al enviar el correo: {str(e)}")
-        import traceback
-        traceback.print_exc()
         return False
 
 if __name__ == "__main__":

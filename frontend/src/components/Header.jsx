@@ -29,8 +29,8 @@ const Header = ({
     const options = e.target.options;
     const selected = [];
 
-    // Si estamos en modo mensual, solo permitimos una selección (aunque el HTML debería controlar esto con 'multiple' prop)
-    if (viewMode === 'monthly') {
+    // Si estamos en modo mensual o verificar 290, solo permitimos una selección
+    if (viewMode === 'monthly' || viewMode === 'verify290') {
       setSelectedEots([parseInt(e.target.value)]);
       return;
     }
@@ -102,8 +102,8 @@ const Header = ({
               </label>
               <select
                 id="eot-select"
-                multiple={viewMode !== 'monthly'}
-                value={viewMode === 'monthly' && selectedEots.length > 0 ? selectedEots[0] : selectedEots.map(String)}
+                multiple={viewMode !== 'monthly' && viewMode !== 'verify290'}
+                value={(viewMode === 'monthly' || viewMode === 'verify290') && selectedEots.length > 0 ? selectedEots[0] : selectedEots.map(String)}
                 onChange={handleEotChange}
                 className="form-control eot-select"
                 size="5"
@@ -115,8 +115,8 @@ const Header = ({
                 ))}
               </select>
               <small className="form-hint">
-                {viewMode === 'monthly'
-                  ? 'Seleccione una sola empresa para el reporte mensual'
+                {(viewMode === 'monthly' || viewMode === 'verify290')
+                  ? 'Seleccione una sola empresa para el reporte'
                   : 'Mantén presionado Ctrl (Windows) o Cmd (Mac) para seleccionar múltiples'}
               </small>
             </div>
@@ -124,11 +124,11 @@ const Header = ({
             <div className="form-controls-column">
               <div className="form-group">
                 <label htmlFor="fecha-input">
-                  {viewMode === 'monthly' ? 'Mes y Año:' : 'Fecha:'}
+                  {viewMode === 'monthly' || viewMode === 'verify290' ? 'Mes y Año:' : 'Fecha:'}
                 </label>
                 <input
                   id="fecha-input"
-                  type={viewMode === 'monthly' ? "month" : "date"}
+                  type={viewMode === 'monthly' || viewMode === 'verify290' ? "month" : "date"}
                   value={fecha}
                   onChange={(e) => setFecha(e.target.value)}
                   className="form-control"
@@ -178,6 +178,16 @@ const Header = ({
                       onChange={(e) => setViewMode(e.target.value)}
                     />
                     <span>📅 Desempeño Mensual</span>
+                  </label>
+                  <label className="radio-label">
+                    <input
+                      type="radio"
+                      name="viewMode"
+                      value="verify290"
+                      checked={viewMode === 'verify290'}
+                      onChange={(e) => setViewMode(e.target.value)}
+                    />
+                    <span>📋 Verificar 290</span>
                   </label>
                 </div>
               </div>

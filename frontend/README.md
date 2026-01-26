@@ -125,7 +125,7 @@ Selecciona cómo quieres visualizar los datos:
 
 ### 4. Obtener Datos
 
-Haz clic en el botón **"Obtener CBD"** para cargar los datos.
+Haz clic en el botón **"Obtener Datos"** para cargar los datos.
 
 ### 5. Interpretar la Tabla
 

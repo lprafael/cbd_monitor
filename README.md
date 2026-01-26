@@ -197,7 +197,7 @@ Esto permite comparar ambas fuentes de información.
 - Selector múltiple de EOTs
 - Selector de fecha
 - Radio buttons para modo de visualización
-- Botón "Obtener CBD"
+- Botón "Obtener Datos"
 
 ### Tabla de Datos
 - Dos filas por EOT (servicios_diarios y cbd_detalle_buses)

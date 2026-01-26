@@ -297,8 +297,8 @@ def calculate_ifo_index(cursor, eot_id: int, eot_vmt_hex: str, fecha, franja_inf
         
         promedio_historico = sum_historico / count_historico if count_historico > 0 else 0
         
-        # Aplicar factores y Regla de Oro con Redondeo al Superior (Hacia el entero superior)
-        promedio_ajustado = math.ceil(max(promedio_historico * factor_ajuste, cbd_min_hora))
+        # Aplicar factores y Regla de Oro con 2 decimales (Sin redondeo al superior)
+        promedio_ajustado = round(max(promedio_historico * factor_ajuste, cbd_min_hora), 2)
         
         # IFO hora (sin tope del 100%)
         ifo_hora = (cbd_dia / promedio_ajustado * 100) if promedio_ajustado > 0 else 0

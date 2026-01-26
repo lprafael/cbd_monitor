@@ -186,7 +186,7 @@ const IndicesDashboard = ({ performanceData, fecha }) => {
                         onClick={() => handleCellClick(eot, resultado)}
                         title={`Click para ver desglose - ${estado}`}
                       >
-                        {(valor * 100).toFixed(1)}%
+                        {(valor * 100).toFixed(2)}%
                       </div>
                     </td>
                   );
@@ -203,7 +203,7 @@ const IndicesDashboard = ({ performanceData, fecha }) => {
                   return (
                     <td key="ifo-dia">
                       <div className={`index-cell ${statusClassAlt} ifo-dia-cell`}>
-                        {ifoDia.toFixed(1)}%
+                        {ifoDia.toFixed(2)}%
                       </div>
                     </td>
                   );
@@ -495,14 +495,14 @@ const IFODetailModal = ({ data, onClose, onEmail, onPrint, onDownload }) => {
                         </td>
                       ))}
                       <td>{(promedioSinAjuste || 0).toFixed(2)}</td>
-                      <td>{(hora.b_dist_ajustado || 0).toFixed(0)}</td>
+                      <td>{(hora.b_dist_ajustado || 0).toFixed(2)}</td>
                       <td>
                         <span style={{
                           color: hora.ifo_hora >= 90 ? '#48bb78' :
                             hora.ifo_hora >= 80 ? '#ecc94b' : '#fc8181',
                           fontWeight: 'bold'
                         }}>
-                          {((hora.ifo_hora || 0)).toFixed(1)}%
+                          {((hora.ifo_hora || 0)).toFixed(2)}%
                         </span>
                       </td>
                     </tr>

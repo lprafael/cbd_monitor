@@ -9,22 +9,22 @@ EJEMPLOS DE USO:
 python calcular_ifo.py
 
 # 2. Calcular y guardar para una fecha específica
-python calcular_ifo.py --fecha 2025-11-25
+python calcular_ifo.py --fecha 2026-01-14
 
 # 3. Calcular y guardar para un rango de fechas
-python calcular_ifo.py --desde 2025-11-01 --hasta 2025-11-30
+python calcular_ifo.py --desde 2026-01-14 --hasta 2026-01-14
 
 # 4. Calcular, guardar y enviar notificación a cada empresa con incumplimientos
-python calcular_ifo.py --fecha 2025-11-25 --notificacion
+python calcular_ifo.py --fecha 2026-01-14 --notificacion
 
 # 5. Calcular, guardar y enviar informe consolidado al director
-python calcular_ifo.py --fecha 2025-11-25 --verificacion
+python calcular_ifo.py --fecha 2026-01-14 --verificacion
 
 # 6. Procesar rango de fechas y enviar notificaciones a empresas
-python calcular_ifo.py --desde 2025-11-01 --hasta 2025-11-30 --notificacion
+python calcular_ifo.py --desde 2026-01-14 --hasta 2026-01-14 --notificacion
 
 # 7. Procesar rango y enviar informe al director
-python calcular_ifo.py --desde 2025-11-01 --hasta 2025-11-30 --verificacion
+python calcular_ifo.py --desde 2026-01-14 --hasta 2026-01-14 --verificacion
 
 NOTAS:
 - Si no se especifican parámetros, procesa el día anterior (D-1)
@@ -43,6 +43,7 @@ import argparse
 from dotenv import load_dotenv
 import os
 import concurrent.futures
+import time
 
 try:
     from enviar_informe import enviar_informe_incumplimientos, get_db_connection
@@ -199,6 +200,7 @@ def procesar_fecha(fecha: date, modo_notificacion: str = None):
     """
     Procesa una fecha específica: obtiene datos de la API, guarda en BD y detecta incumplimientos.
     """
+    inicio_calculo = time.time()
     try:
         # 1. Obtener EOTs desde la API
         eots_list = get_eots()
@@ -268,7 +270,8 @@ def procesar_fecha(fecha: date, modo_notificacion: str = None):
                         'valor_observado': f"{ifo_val:.1f}%",
                         'tipo_infraccion': franja_result.get('ifo_estado_cumplimiento', 'IFO Insuficiente'),
                         'normativa': 'Res. 120/2025',
-                        'ajuste_aplicado': franja_result.get('ajuste_aplicado', '')
+                        'ajuste_aplicado': franja_result.get('ajuste_aplicado', ''),
+                        'factor_ajuste': franja_result.get('b_dist_ajustado', 1.0)
                     })
         
         # 5. Guardar resultados en la BD a través de la API
@@ -285,6 +288,9 @@ def procesar_fecha(fecha: date, modo_notificacion: str = None):
         
         if datos_incumplimientos:
             print(f"  ⚠ {len(datos_incumplimientos)} incumplimientos detectados")
+            
+        fin_calculo = time.time()
+        print(f"  ⏱ Tiempo de cálculo y guardado: {fin_calculo - inicio_calculo:.2f} segundos")
         
     except Exception as e:
         print(f"  ✗ Error procesando fecha {fecha}: {e}")
@@ -292,11 +298,13 @@ def procesar_fecha(fecha: date, modo_notificacion: str = None):
         raise
 
 
+import random
+
 def enviar_notificaciones(datos_incumplimientos: list, fecha: date, modo: str):
     """
     Envía notificaciones según el modo:
     - --notificacion: envía a cada empresa con incumplimientos (requiere BD para obtener emails)
-    - --verificacion: envía solo al director
+    - --verificacion: envía solo al director (consolidado + 1 simulación aleatoria)
     """
     if modo == 'notificacion':
         # Agrupar por EOT
@@ -330,6 +338,7 @@ def enviar_notificaciones(datos_incumplimientos: list, fecha: date, modo: str):
                         cursor.execute("""
                             SELECT email FROM public.eots 
                             WHERE id_eot_vmt_hex = %s AND email IS NOT NULL
+                            AND e.cod_catalogo NOT IN (75)
                         """, (eot_vmt_hex,))
                         result = cursor.fetchone()
                         email_eot = result[0] if result else None
@@ -352,8 +361,10 @@ def enviar_notificaciones(datos_incumplimientos: list, fecha: date, modo: str):
                 def procesar_envio(tarea):
                     try:
                         incumplimientos_eot = tarea['data']['incumplimientos']
-                        enviar_informe_incumplimientos(incumplimientos_eot, fecha)
-                        return f"    ✓ {tarea['data']['eot_nombre']}: {len(incumplimientos_eot)} incumplimientos - Enviado a {tarea['email']}"
+                        if enviar_informe_incumplimientos(incumplimientos_eot, fecha, incluir_resumen_infracciones=False):
+                            return f"    ✓ {tarea['data']['eot_nombre']}: {len(incumplimientos_eot)} incumplimientos - Enviado a {tarea['email']}"
+                        else:
+                            return f"    ✗ {tarea['data']['eot_nombre']}: Falló el envío a {tarea['email']}"
                     except Exception as e:
                         return f"    ✗ {tarea['data']['eot_nombre']}: Error enviando - {e}"
 
@@ -375,14 +386,40 @@ def enviar_notificaciones(datos_incumplimientos: list, fecha: date, modo: str):
             print(f"  ⚠ Error obteniendo emails de empresas: {e}")
         
     elif modo == 'verificacion':
-        # Enviar consolidado al director
+        # 1. Enviar consolidado al director
         print(f"\n  Enviando informe consolidado al director...")
+        director_email = os.getenv('EMAIL_TO', 'transporte.mopc@gmail.com')
+
         if datos_incumplimientos:
             try:
-                enviar_informe_incumplimientos(datos_incumplimientos, fecha)
-                print(f"  ✓ Informe enviado correctamente")
+                # Add SMTP server info print before attempting to send
+                print(f"  Enviando informe consolidado al director ({director_email})...")
+                # Assuming SMTP_SERVER and SMTP_PORT are imported or globally available
+                # If not, this line might cause a NameError.
+                # For this file, we'll assume they are accessible, as per the instruction.
+                print(f"    - Servidor SMTP: {os.getenv('SMTP_SERVER')}:{os.getenv('SMTP_PORT')}") # Assuming these are env vars
+                if enviar_informe_incumplimientos(datos_incumplimientos, fecha):
+                    print(f"  ✓ Informe consolidado enviado correctamente")
+                else:
+                    print(f"  ✗ Falló el envío del informe consolidado")
+
+                # 2. Enviar simulación de una empresa aleatoria (Solo al director)
+                # Agrupar por EOT para elegir una
+                eots_disponibles = list(set(d['eot_vmt_hex'] for d in datos_incumplimientos))
+                
+                if eots_disponibles:
+                    eot_random_hex = random.choice(eots_disponibles)
+                    incumplimientos_random = [d for d in datos_incumplimientos if d['eot_vmt_hex'] == eot_random_hex]
+                    nombre_empresa = incumplimientos_random[0]['eot_nombre']
+                    
+                    print(f"  Enviando simulación de empresa ({nombre_empresa}) al Director ({director_email})...")
+                    if enviar_informe_incumplimientos(incumplimientos_random, fecha, email_destino=director_email, incluir_resumen_infracciones=False):
+                        print(f"  ✓ Simulación enviada correctamente")
+                    else:
+                        print(f"  ✗ Falló el envío de la simulación")
+                
             except Exception as e:
-                print(f"  ✗ Error enviando informe: {e}")
+                print(f"  ✗ Error enviando informes: {e}")
 
 
 def main():
@@ -429,6 +466,7 @@ def main():
         sys.exit(1)
     
     try:
+        inicio_total = time.time()
         # Procesar cada fecha
         delta = end - start
         for i in range(delta.days + 1):
@@ -442,7 +480,8 @@ def main():
             if modo_notificacion and datos_incumplimientos:
                 enviar_notificaciones(datos_incumplimientos, dia, modo_notificacion)
         
-        print(f"\n=== Proceso completado ===")
+        fin_total = time.time()
+        print(f"\n=== Proceso completado en {fin_total - inicio_total:.2f} segundos ===")
         
     except Exception as e:
         print(f"\n✗ Error en el proceso: {e}")

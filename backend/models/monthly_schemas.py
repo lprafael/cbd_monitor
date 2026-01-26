@@ -1,32 +1,26 @@
-"""Modelos Pydantic para el módulo de desempeño mensual."""
-
 from pydantic import BaseModel
-from typing import List
-
-class IFODiario(BaseModel):
-    """Modelo para IFO diario en el desempeño mensual."""
-    fecha: str
-    ifo: float
+from typing import List, Optional
 
 class MonthlyPerformanceRequest(BaseModel):
-    """Payload para solicitud de desempeño mensual."""
     eot_id: int
-    year: int
     month: int
+    year: int
 
 class MonthlyPerformanceResult(BaseModel):
-    """Resultado del cálculo de desempeño mensual."""
     month: int
     year: int
     eot_nombre: str
-    ifo_mensual_eot: float
-    ifo_sistema_anterior: float
-    umbral_teorico: float
-    factor_ajuste: float
-    umbral_aplicable: float
-    infraccion: bool
-    sancion: str
-    ifo_diarios: List[IFODiario]
-
-    class Config:
-        from_attributes = True
+    
+    # Calculation Metrics
+    ifo_mensual_eot: float  # The calculated IFO for the EOT in the selected month
+    ifo_sistema_anterior: float  # Average IFO of all EOTs in month n-1
+    umbral_teorico: float  # ifo_sistema_anterior * 0.95
+    factor_ajuste: float  # -0.49
+    umbral_aplicable: float  # umbral_teorico - factor_ajuste
+    
+    # Final Result
+    infraccion: bool  # True if ifo_mensual_eot < umbral_aplicable
+    sancion: str  # "Infracción Gravísima (173 jornales)" if infraction else "Sin Infracción"
+    
+    # Details (optional, maybe for a chart?)
+    ifo_diarios: List[dict]  # list of {fecha: str, ifo: float}

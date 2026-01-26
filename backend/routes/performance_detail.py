@@ -491,8 +491,8 @@ async def get_ifo_detail(
             
             promedio_historico_raw = sum_historico / count_historico if count_historico > 0 else 0
             
-            # Aplicar factor de ajuste y Regla de Oro con Redondeo al entero superior (math.ceil)
-            promedio_ajustado = math.ceil(max(promedio_historico_raw * factor_ajuste, cbd_min_hora))
+            # Aplicar factor de ajuste y mantener 2 decimales (Sin redondeo al entero superior)
+            promedio_ajustado = round(max(promedio_historico_raw * factor_ajuste, cbd_min_hora), 2)
             
             # IFO hora (sin tope del 100%)
             ifo_hora = (cbd_dia / promedio_ajustado * 100) if promedio_ajustado > 0 else 0
