@@ -179,7 +179,7 @@ const Header = ({
                     />
                     <span>📅 Desempeño Mensual</span>
                   </label>
-                  <label className="radio-label">
+                  {/* <label className="radio-label">
                     <input
                       type="radio"
                       name="viewMode"
@@ -188,7 +188,7 @@ const Header = ({
                       onChange={(e) => setViewMode(e.target.value)}
                     />
                     <span>📋 Verificar 290</span>
-                  </label>
+                  </label> */}
                 </div>
               </div>
 

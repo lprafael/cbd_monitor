@@ -18,9 +18,11 @@ class FranjaResult(BaseModel):
     rendimiento_normalizado: float # Capped at 100%
     dias_contabilizados: int
     dias_lluvia: int
+    dias_equivalentes: float
     proyeccion_requerida: Optional[float] = None
     dias_restantes: Optional[int] = None
     desglose_diario: Optional[List[Dict]] = None  # [{fecha, hora, servicios}, ...]
+    detalle_horario: Optional[List[Dict]] = None  # [{hora, servicios, dias_equivalentes, requerido_por_hora, denominador, rendimiento, rendimiento_topeado, necesario_bh_restante}, ...]
     cumple: bool
     estado: str  # "CUMPLE" / "NO CUMPLE"
 

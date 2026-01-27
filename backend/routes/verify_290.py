@@ -128,7 +128,7 @@ async def verify_290(
         limit_date = end_date
         is_current_month = (request.year == today.year and request.month == today.month)
         if is_current_month:
-            limit_date = today
+            limit_date = today - timedelta(days=1)
 
         # 3. Get Special Days (Holidays & Rain)
         cursor.execute("SELECT fecha FROM public.feriados WHERE fecha BETWEEN %s AND %s", (start_date, limit_date))
@@ -143,6 +143,7 @@ async def verify_290(
         
         # 4. Calculate Common Denominators (Requirements) and metrics
         req_map = {}
+        day_count_map = {} # Track actual day counts with rain factor
         for dt_code, franja_dict in R290_RANGES.items():
             for fname in franja_dict.keys():
                 req_map[(dt_code, fname)] = {
@@ -150,13 +151,14 @@ async def verify_290(
                     'count_days': 0,
                     'count_rain': 0
                 }
+                day_count_map[(dt_code, fname)] = 0.0
 
         day_type_map = {} 
         for d in all_month_days:
             dt = get_day_type(d, holidays)
             day_type_map[d] = dt
             is_rain = d in rainy_days
-            req_factor = 0.5 if is_rain else 1.0
+            day_factor = 0.5 if is_rain else 1.0  # Tu criterio: días de lluvia valen 0.5
             
             ranges = R290_RANGES.get(dt, {})
             reqs_def = REQUIREMENTS.get(dt, {})
@@ -166,12 +168,13 @@ async def verify_290(
                 hours_count = 0
                 for (start, end) in hour_intervals:
                     hours_count += (end - start + 1)
-                daily_req_total = base_hourly * hours_count * req_factor
+                daily_req_total = base_hourly * hours_count * day_factor
                 if (dt, fname) in req_map:
                     req_map[(dt, fname)]['sum_req'] += float(daily_req_total)
                     req_map[(dt, fname)]['count_days'] += 1
-                    if is_rain:
-                        req_map[(dt, fname)]['count_rain'] += 1
+                    req_map[(dt, fname)]['count_rain'] += 1 if is_rain else 0
+                    # Tu criterio: contar días con factor de lluvia
+                    day_count_map[(dt, fname)] += day_factor
 
         # Calculate Remaining Days for Projection
         remaining_days_req = {} 
@@ -179,7 +182,7 @@ async def verify_290(
             cursor.execute("SELECT fecha FROM public.feriados WHERE fecha BETWEEN %s AND %s", (start_date, end_date))
             full_holidays = set([row['fecha'] for row in cursor.fetchall()])
             all_days = get_days_in_month(request.year, request.month)
-            remaining_days = [d for d in all_days if d > today]
+            remaining_days = [d for d in all_days if d >= today]
             for d in remaining_days:
                 dt = get_day_type(d, full_holidays)
                 ranges = R290_RANGES.get(dt, {})
@@ -220,6 +223,8 @@ async def verify_290(
             res_results = {}
             for k in req_map.keys():
                 res_results[k] = 0.0
+
+            sum_hourly_map = {}  # (dt, fname, hour) -> sum servicios en el periodo
             
             query_services = """
                 SELECT 
@@ -238,34 +243,47 @@ async def verify_290(
             cursor.execute(query_services, tuple(params))
             rows_serv = cursor.fetchall()
             
-            for r in rows_serv:
-                d = r['fecha']
-                h = r['hora']
-                cnt = r['servicios']
-                dt = day_type_map.get(d)
-                if dt is None: continue 
-                fname = get_franja_name_for_hour(dt, h)
-                if fname and (dt, fname) in res_results:
-                    res_results[(dt, fname)] += float(cnt)
-            
-            # Build breakdown map for detailed view
             breakdown_map = {}
             for r in rows_serv:
                 d = r['fecha']
                 h = r['hora']
                 cnt = r['servicios']
                 dt = day_type_map.get(d)
-                if dt is None: continue
+                if dt is None:
+                    continue
                 fname = get_franja_name_for_hour(dt, h)
-                if fname:
-                    key = (dt, fname)
-                    if key not in breakdown_map:
-                        breakdown_map[key] = []
-                    breakdown_map[key].append({
-                        'fecha': str(d),
-                        'hora': int(h),
-                        'servicios': int(cnt)
-                    })
+                if not fname:
+                    continue
+
+                key = (dt, fname)
+                hour_key = (dt, fname, int(h))
+
+                if key not in breakdown_map:
+                    breakdown_map[key] = []
+                breakdown_map[key].append({
+                    'fecha': str(d),
+                    'hora': int(h),
+                    'servicios': int(cnt)
+                })
+
+                if (dt, fname) in res_results:
+                    res_results[(dt, fname)] += float(cnt)
+
+                if hour_key not in sum_hourly_map:
+                    sum_hourly_map[hour_key] = 0.0
+                sum_hourly_map[hour_key] += float(cnt)
+
+            hourly_performance_map = {}
+            for (dt, fname, h), sum_cnt in sum_hourly_map.items():
+                required_services = REQUIREMENTS.get(dt, {}).get(fname, 0)
+                if required_services <= 0:
+                    continue
+                dias_eq = float(day_count_map.get((dt, fname), 0.0))
+                if dias_eq <= 0:
+                    continue
+                denom = dias_eq * float(required_services)
+                pct_h = (sum_cnt / denom * 100.0) if denom > 0 else 0.0
+                hourly_performance_map[(dt, fname, h)] = float(min(pct_h, 100.0))
             
             franjas_list_with_meta = [] # (sort_weight, FranjaResult)
             for (dt, fname), req_data in req_map.items():
@@ -275,15 +293,66 @@ async def verify_290(
                 if count == 0: continue
                 sum_serv = float(res_results.get((dt, fname), 0.0))
                 
+                # Tu criterio: calcular rendimiento por franja como promedio de rendimientos horarios
                 franja_ranges = R290_RANGES.get(dt, {}).get(fname, [])
+                hourly_performances = []
+                detalle_horario = []
+
+                dias_eq = float(day_count_map.get((dt, fname), 0.0))
+                req_por_hora = float(REQUIREMENTS.get(dt, {}).get(fname, 0))
+                
+                for (start, end) in franja_ranges:
+                    for hour in range(start, end + 1):
+                        hour_key = (dt, fname, hour)
+                        pct_h = float(hourly_performance_map.get(hour_key, 0.0))
+                        hourly_performances.append(pct_h)
+
+                        servicios_h = float(sum_hourly_map.get(hour_key, 0.0))
+                        denom_h = float(dias_eq * req_por_hora) if dias_eq > 0 and req_por_hora > 0 else 0.0
+                        pct_h_raw = float((servicios_h / denom_h * 100.0) if denom_h > 0 else 0.0)
+
+                        needed_bh = None
+                        if is_current_month:
+                            rem = remaining_days_req.get((dt, fname))
+                            d_restantes_local = int(rem['count_days']) if rem else 0
+                            if d_restantes_local > 0 and req_por_hora > 0:
+                                target_total = (float(THRESHOLDS.get(dt, {}).get(fname, 0)) / 100.0) * ((dias_eq + d_restantes_local) * req_por_hora)
+                                needed_total = float(target_total - servicios_h)
+                                needed_bh = float(max(0.0, needed_total / d_restantes_local))
+
+                        detalle_horario.append({
+                            'hora': int(hour),
+                            'servicios': round(servicios_h, 2),
+                            'dias_equivalentes': round(dias_eq, 2),
+                            'requerido_por_hora': round(req_por_hora, 2),
+                            'denominador': round(denom_h, 2),
+                            'rendimiento': round(pct_h_raw, 2),
+                            'rendimiento_topeado': round(pct_h, 2),
+                            'necesario_bh_restante': round(needed_bh, 2) if needed_bh is not None else None
+                        })
+                
+                # Calcular rendimiento de la franja como promedio de rendimientos horarios
+                if hourly_performances:
+                    franja_rendimiento = sum(hourly_performances) / len(hourly_performances)
+                else:
+                    # Si no hay datos horarios, usar método tradicional como fallback
+                    franja_rendimiento = float((sum_serv / sum_req * 100) if sum_req > 0 else (100 if sum_serv > 0 else 0))
+                
+                # Mantener cálculos tradicionales para display
                 hours_duration = 0
                 for (start, end) in franja_ranges:
                     hours_duration += (end - start + 1)
                 if hours_duration == 0: hours_duration = 1
+
+                total_horas_equiv = float(dias_eq * hours_duration) if dias_eq > 0 else float(count * hours_duration)
+                if total_horas_equiv <= 0:
+                    total_horas_equiv = 1.0
+
+                avg_serv_per_hour = float(sum_serv / total_horas_equiv)
+                avg_req_per_hour = float(sum_req / total_horas_equiv) if sum_req > 0 else float(req_por_hora)
                 
-                avg_serv_per_hour = float(sum_serv / (count * hours_duration))
-                avg_req_per_hour = float(sum_req / (count * hours_duration))
-                pct = float((sum_serv / sum_req * 100) if sum_req > 0 else (100 if sum_serv > 0 else 0))
+                # Usar el nuevo cálculo de rendimiento
+                pct = franja_rendimiento
                 threshold = float(THRESHOLDS.get(dt, {}).get(fname, 0))
                 cumple = bool(pct >= threshold)
                 
@@ -309,16 +378,18 @@ async def verify_290(
                     nombre_franja=f"{fname} ({labels_dt[dt]})",
                     servicios_realizados=round(avg_serv_per_hour, 2),
                     sum_servicios=float(sum_serv),
-                    total_horas=float(count * hours_duration),
+                    total_horas=float(round(total_horas_equiv, 2)),
                     exigencia=round(avg_req_per_hour, 2),
                     umbral=float(threshold),
                     rendimiento=round(pct, 2),
                     rendimiento_normalizado=round(min(pct, 100.0), 2),
                     dias_contabilizados=int(count),
                     dias_lluvia=int(count_rain),
+                    dias_equivalentes=float(round(dias_eq, 2)),
                     proyeccion_requerida=round(proj_val, 2) if proj_val is not None else None,
                     dias_restantes=d_restantes,
                     desglose_diario=desglose,
+                    detalle_horario=detalle_horario,
                     cumple=cumple,
                     estado="CUMPLE" if cumple else "NO CUMPLE"
                 )

@@ -358,6 +358,69 @@
   border-radius: 6px;
 }
 
+.matrix-wrapper {
+  margin-bottom: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  overflow: auto;
+  max-height: 420px;
+}
+
+.matrix-table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  background-color: #ffffff;
+}
+
+.matrix-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.matrix-table th,
+.matrix-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #e5e7eb;
+  border-right: 1px solid #f1f5f9;
+  white-space: nowrap;
+}
+
+.matrix-table th {
+  background-color: #f3f4f6;
+  color: #374151;
+  font-weight: 700;
+  border-bottom: 2px solid #d1d5db;
+}
+
+.matrix-day {
+  min-width: 34px;
+  text-align: center;
+}
+
+.matrix-cell {
+  min-width: 34px;
+}
+
+.matrix-summary {
+  background-color: #f8fafc;
+  min-width: 78px;
+}
+
+.matrix-sticky-col {
+  position: sticky;
+  left: 0;
+  z-index: 25;
+  background-color: #ffffff;
+  border-right: 2px solid #e5e7eb;
+}
+
+.matrix-table thead .matrix-sticky-col {
+  background-color: #f3f4f6;
+}
+
 .desglose-table {
   width: 100%;
   border-collapse: collapse;

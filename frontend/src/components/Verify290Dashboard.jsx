@@ -22,6 +22,41 @@ const Verify290Dashboard = ({ data }) => {
         return date.toLocaleString('es-ES', { month: 'long' }).toUpperCase();
     };
 
+    const getDaysToShow = () => {
+        const lastDay = new Date(year, month, 0).getDate();
+        const now = new Date();
+        const isCurrentMonthLocal = (now.getFullYear() === year && (now.getMonth() + 1) === month);
+        const endDay = isCurrentMonthLocal ? Math.max(1, now.getDate() - 1) : lastDay;
+        return Array.from({ length: endDay }, (_, i) => i + 1);
+    };
+
+    const buildHourMatrix = (row) => {
+        const days = getDaysToShow();
+        const horas = (row?.detalle_horario || [])
+            .map(h => h?.hora)
+            .filter(h => h !== null && h !== undefined)
+            .sort((a, b) => a - b);
+
+        const map = {};
+        horas.forEach(h => {
+            map[h] = {};
+            days.forEach(d => { map[h][d] = 0; });
+        });
+
+        (row?.desglose_diario || []).forEach(item => {
+            const hora = item?.hora;
+            const fecha = item?.fecha;
+            const servicios = Number(item?.servicios || 0);
+            if (hora === null || hora === undefined || !fecha) return;
+            const dayNum = Number(String(fecha).slice(8, 10));
+            if (!Number.isFinite(dayNum)) return;
+            if (!map[hora] || map[hora][dayNum] === undefined) return;
+            map[hora][dayNum] += servicios;
+        });
+
+        return { days, horas, map };
+    };
+
     const toggleDesglose = (troncalIdx, franjaIdx) => {
         const key = `${troncalIdx}-${franjaIdx}`;
         setExpandedFranja(expandedFranja === key ? null : key);
@@ -116,10 +151,11 @@ const Verify290Dashboard = ({ data }) => {
                                                     <div className="sub-value-meta">Umbral: {(row.umbral || 0)}%</div>
                                                 </td>
                                                 <td className="numeric-cell">
-                                                    <div className="main-value">{(row.dias_contabilizados || 0)}d</div>
+                                                    <div className="main-value">{((row.dias_equivalentes ?? row.dias_contabilizados) || 0).toFixed(1)}d</div>
                                                     {row.dias_lluvia > 0 && (
                                                         <div className="sub-value-lluvia">🌧️ {row.dias_lluvia} días</div>
                                                     )}
+                                                    <div className="sub-value-meta">Calendario: {(row.dias_contabilizados || 0)}d</div>
                                                 </td>
                                                 <td className="numeric-cell">
                                                     <div className="rend-container">
@@ -161,39 +197,141 @@ const Verify290Dashboard = ({ data }) => {
                                                     </button>
                                                 </td>
                                             </tr>
-                                            {isExpanded && row.desglose_diario && row.desglose_diario.length > 0 && (
+                                            {isExpanded && ((row.desglose_diario && row.desglose_diario.length > 0) || (row.detalle_horario && row.detalle_horario.length > 0)) && (
                                                 <tr className="desglose-row">
                                                     <td colSpan="7">
                                                         <div className="desglose-container">
                                                             <h5>📊 Desglose Detallado: {row.nombre_franja}</h5>
-                                                            <div className="desglose-table-wrapper">
-                                                                <table className="desglose-table">
-                                                                    <thead>
-                                                                        <tr>
-                                                                            <th>Fecha</th>
-                                                                            <th>Hora</th>
-                                                                            <th>Servicios</th>
-                                                                        </tr>
-                                                                    </thead>
-                                                                    <tbody>
-                                                                        {row.desglose_diario.map((d, dIdx) => (
-                                                                            <tr key={dIdx}>
-                                                                                <td>{d.fecha}</td>
-                                                                                <td>{d.hora}:00</td>
-                                                                                <td className="numeric-cell"><strong>{d.servicios}</strong></td>
+
+                                                            {row.detalle_horario && row.detalle_horario.length > 0 && (() => {
+                                                                const { days, horas, map } = buildHourMatrix(row);
+                                                                const diasEq = Number(row.dias_equivalentes ?? row.dias_contabilizados ?? 0);
+                                                                const umbral = Number(row.umbral || 0);
+
+                                                                const reqPorHoraMap = {};
+                                                                (row.detalle_horario || []).forEach(h => {
+                                                                    if (h && h.hora !== null && h.hora !== undefined) {
+                                                                        reqPorHoraMap[h.hora] = Number(h.requerido_por_hora || 0);
+                                                                    }
+                                                                });
+
+                                                                return (
+                                                                    <div className="matrix-wrapper">
+                                                                        <table className="matrix-table">
+                                                                            <thead>
+                                                                                <tr>
+                                                                                    <th className="matrix-sticky-col">Hora</th>
+                                                                                    {days.map(d => (
+                                                                                        <th key={d} className="matrix-day">{d}</th>
+                                                                                    ))}
+                                                                                    <th className="matrix-summary">Σ</th>
+                                                                                    <th className="matrix-summary">Días</th>
+                                                                                    <th className="matrix-summary">A</th>
+                                                                                    <th className="matrix-summary">Req mes</th>
+                                                                                    <th className="matrix-summary">B</th>
+                                                                                    <th className="matrix-summary">Rend.</th>
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody>
+                                                                                {horas.map(h => {
+                                                                                    const sum = days.reduce((acc, d) => acc + (map[h]?.[d] || 0), 0);
+                                                                                    const reqPorHora = Number(reqPorHoraMap[h] || 0);
+                                                                                    const A = diasEq > 0 ? (sum / diasEq) : 0;
+                                                                                    const reqMes = diasEq > 0 ? (diasEq * reqPorHora) : 0;
+                                                                                    const B = diasEq > 0 ? (reqMes / diasEq) : 0;
+                                                                                    const rendRatioRaw = (B > 0) ? (A / B) : 0;
+                                                                                    const rendRatio = Math.min(rendRatioRaw, 1);
+                                                                                    const rendPct = rendRatio * 100;
+                                                                                    const umbralRatio = (Number.isFinite(umbral) ? (umbral / 100) : 0);
+                                                                                    const rendClass = rendRatio >= umbralRatio ? 'text-success' : 'text-danger';
+
+                                                                                    return (
+                                                                                        <tr key={h}>
+                                                                                            <td className="matrix-sticky-col"><strong>{h}:00</strong></td>
+                                                                                            {days.map(d => (
+                                                                                                <td key={d} className="matrix-cell numeric-cell">{(map[h]?.[d] || 0) === 0 ? '' : (map[h]?.[d] || 0)}</td>
+                                                                                            ))}
+                                                                                            <td className="matrix-summary numeric-cell"><strong>{sum}</strong></td>
+                                                                                            <td className="matrix-summary numeric-cell">{diasEq ? diasEq.toFixed(1) : '-'}</td>
+                                                                                            <td className="matrix-summary numeric-cell">{A.toFixed(2)}</td>
+                                                                                            <td className="matrix-summary numeric-cell">{reqMes.toFixed(2)}</td>
+                                                                                            <td className="matrix-summary numeric-cell">{B.toFixed(2)}</td>
+                                                                                            <td className={`matrix-summary numeric-cell ${rendClass}`} title={`Rendimiento=A/B (tope 1): ${rendRatio.toFixed(3)}`}><strong>{rendPct.toFixed(1)}%</strong></td>
+                                                                                        </tr>
+                                                                                    );
+                                                                                })}
+                                                                            </tbody>
+                                                                        </table>
+                                                                    </div>
+                                                                );
+                                                            })()}
+
+                                                            {/* <div className="desglose-table-wrapper">
+                                                                {row.desglose_diario && row.desglose_diario.length > 0 && (
+                                                                    <table className="desglose-table">
+                                                                        <thead>
+                                                                            <tr>
+                                                                                <th>Fecha</th>
+                                                                                <th>Hora</th>
+                                                                                <th>Servicios</th>
                                                                             </tr>
-                                                                        ))}
-                                                                    </tbody>
-                                                                    <tfoot>
-                                                                        <tr className="desglose-total">
-                                                                            <td colSpan="2"><strong>TOTAL</strong></td>
-                                                                            <td className="numeric-cell">
-                                                                                <strong>{row.desglose_diario.reduce((sum, d) => sum + d.servicios, 0)}</strong>
-                                                                            </td>
-                                                                        </tr>
-                                                                    </tfoot>
-                                                                </table>
-                                                            </div>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            {row.desglose_diario.map((d, dIdx) => (
+                                                                                <tr key={dIdx}>
+                                                                                    <td>{d.fecha}</td>
+                                                                                    <td>{d.hora}:00</td>
+                                                                                    <td className="numeric-cell"><strong>{d.servicios}</strong></td>
+                                                                                </tr>
+                                                                            ))}
+                                                                        </tbody>
+                                                                        <tfoot>
+                                                                            <tr className="desglose-total">
+                                                                                <td colSpan="2"><strong>TOTAL</strong></td>
+                                                                                <td className="numeric-cell">
+                                                                                    <strong>{row.desglose_diario.reduce((sum, d) => sum + d.servicios, 0)}</strong>
+                                                                                </td>
+                                                                            </tr>
+                                                                        </tfoot>
+                                                                    </table>
+                                                                )}
+                                                            </div> */}
+
+                                                            {row.detalle_horario && row.detalle_horario.length > 0 && (
+                                                                <>
+                                                                    <h5 style={{ marginTop: '16px' }}>🕒 Rendimiento por Hora (mes)</h5>
+                                                                    <div className="desglose-table-wrapper">
+                                                                        <table className="desglose-table">
+                                                                            <thead>
+                                                                                <tr>
+                                                                                    <th>Hora</th>
+                                                                                    <th className="numeric-cell">Servicios (mes)</th>
+                                                                                    <th className="numeric-cell">Denominador</th>
+                                                                                    <th className="numeric-cell">Rend.</th>
+                                                                                    <th className="numeric-cell">Rend. (tope)</th>
+                                                                                    <th className="numeric-cell">Días restantes</th>
+                                                                                    <th className="numeric-cell">Buses necesarios (resto)</th>
+                                                                                    <th className="numeric-cell">Necesario resto (b/día)</th>
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody>
+                                                                                {row.detalle_horario.map((hRow, hIdx) => (
+                                                                                    <tr key={hIdx}>
+                                                                                        <td>{hRow.hora}:00</td>
+                                                                                        <td className="numeric-cell">{(hRow.servicios || 0).toFixed(0)}</td>
+                                                                                        <td className="numeric-cell">{(hRow.denominador || 0).toFixed(2)}</td>
+                                                                                        <td className="numeric-cell">{(hRow.rendimiento || 0).toFixed(1)}%</td>
+                                                                                        <td className="numeric-cell"><strong>{(hRow.rendimiento_topeado || 0).toFixed(1)}%</strong></td>
+                                                                                        <td className="numeric-cell">{row.dias_restantes !== null && row.dias_restantes !== undefined ? row.dias_restantes : '-'}</td>
+                                                                                        <td className="numeric-cell">{(row.dias_restantes !== null && row.dias_restantes !== undefined && hRow.necesario_bh_restante !== null && hRow.necesario_bh_restante !== undefined) ? (hRow.necesario_bh_restante * row.dias_restantes).toFixed(0) : '-'}</td>
+                                                                                        <td className="numeric-cell">{hRow.necesario_bh_restante !== null && hRow.necesario_bh_restante !== undefined ? hRow.necesario_bh_restante.toFixed(2) : '-'}</td>
+                                                                                    </tr>
+                                                                                ))}
+                                                                            </tbody>
+                                                                        </table>
+                                                                    </div>
+                                                                </>
+                                                            )}
                                                         </div>
                                                     </td>
                                                 </tr>
