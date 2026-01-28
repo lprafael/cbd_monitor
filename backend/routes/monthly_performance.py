@@ -37,8 +37,8 @@ async def get_monthly_performance(
     2. Comparison: IFO Sistema (Month n-1).
        - Average of Monthly IFOs of all EOTs in previous month.
     3. Thresholds:
-       - Umbral Teorico: System(n-1) * 0.95
-       - Umbral Aplicable: Umbral Teorico - 0.49 (percentage points)
+       - Umbral Teorico: System(n-1) - 5 percentage points
+       - Umbral Aplicable: Ceil(Umbral Teorico)
     4. Infraction: IFO Mensual < Umbral Aplicable.
     """
     cursor = db.get_cursor()
@@ -157,14 +157,11 @@ async def get_monthly_performance(
         
         # 4. Thresholds
         # Umbral Teórico: System(n-1) - 5 percentage points
-        print(f"DEBUG: system_ifo_pct={system_ifo_pct}")
         umbral_teorico = system_ifo_pct - 5
-        print(f"DEBUG: umbral_teorico={umbral_teorico}")
         
         # Umbral Aplicable
         # "Redondear resultados finales... al entero superior inmediato"
         umbral_aplicable_official = math.ceil(umbral_teorico)
-        print(f"DEBUG: umbral_aplicable_official={umbral_aplicable_official}")
 
         # 5. Infraction
         # "Si el IFO Mensual (EOT) ... es inferior al Umbral Aplicable"
