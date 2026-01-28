@@ -62,7 +62,42 @@ load_dotenv()
 API_BASE_URL = os.getenv('CBD_API_URL', 'http://localhost:8000')
 API_URL = f"{API_BASE_URL}/api"
 
+# Configuración de procesamiento
+TAMANO_LOTE = 50  # Aumentado para aprovechar la optimización de batch del backend
+MAX_WORKERS = 3   # Menos workers para no saturar la BD, ya que cada batch es más eficiente
+
 datos_incumplimientos = []
+
+
+def registrar_alerta(descripcion: str, id_tipo_alerta: int = 1):
+    """
+    Registra una alerta en la tabla alertas.control_alertas cuando ocurre un error.
+    
+    Args:
+        descripcion: Descripción del error/incidente
+        id_tipo_alerta: ID del tipo de alerta (por defecto 1)
+    """
+    try:
+        conn = get_db_connection()
+        if not conn:
+            print(f"  ⚠ No se pudo conectar a BD para registrar alerta: {descripcion[:50]}...")
+            return False
+        
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO alertas.control_alertas 
+            (fuente, fechahora_alerta, id_tipo_alerta, verificado, corregido, descripcion_incidente)
+            VALUES (%s, NOW(), %s, false, false, %s)
+        """, ('script_calcular_ifo.py', id_tipo_alerta, descripcion))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        print(f"  ℹ Alerta registrada en control_alertas")
+        return True
+    except Exception as e:
+        print(f"  ⚠ Error al registrar alerta en BD: {e}")
+        return False
 
 
 def get_eots():
@@ -72,19 +107,20 @@ def get_eots():
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
-        print(f"✗ Error obteniendo EOTs de la API: {e}")
+        error_msg = f"Error obteniendo EOTs de la API: {e}. API URL: {API_BASE_URL}"
+        print(f"✗ {error_msg}")
         print(f"  Verifique que la API esté ejecutándose en {API_BASE_URL}")
+        registrar_alerta(error_msg)
         return None
 
 
 def get_performance_data(fecha, eot_ids, max_retries=2):
     """
     Obtiene datos de performance desde la API para una fecha y lista de EOTs.
-    Procesa en lotes si hay muchos EOTs para evitar timeouts.
+    Procesa en lotes para evitar timeouts y saturación.
     """
     try:
-        # Si hay muchos EOTs, procesar en lotes de 10
-        TAMANO_LOTE = 5
+        # Si hay muchos EOTs, procesar en lotes
         if len(eot_ids) > TAMANO_LOTE:
             print(f"  Procesando {len(eot_ids)} EOTs en lotes de {TAMANO_LOTE}...")
             resultados_combinados = {
@@ -93,71 +129,89 @@ def get_performance_data(fecha, eot_ids, max_retries=2):
                 'resultados_eots': []
             }
             
-            def procesar_lote(lote_actual):
+            def procesar_lote(lote_actual, num_lote):
                 for intento in range(max_retries):
                     try:
                         payload = {
                             "fecha": fecha.strftime("%Y-%m-%d"),
                             "eot_ids": lote_actual
                         }
-                        # Timeout más largo para cada lote: 120 segundos
-                        response = requests.post(f"{API_URL}/performance", json=payload, timeout=120)
-                        response.raise_for_status()
+                        # Timeout para batch: 150 segundos
+                        response = requests.post(f"{API_URL}/performance", json=payload, timeout=150)
+                        
+                        if response.status_code != 200:
+                            print(f"      ⚠ Lote {num_lote} (intento {intento+1}): Server Error {response.status_code}")
+                            if intento < max_retries - 1: continue
+                            return None
+                            
                         return response.json()
                     except requests.exceptions.Timeout:
-                        if intento < max_retries - 1:
-                            continue
+                        print(f"      ⚠ Lote {num_lote} (intento {intento+1}): Timeout")
+                        if intento < max_retries - 1: continue
                     except Exception as e:
-                        print(f"      ✗ Error en lote: {e}")
+                        print(f"      ✗ Lote {num_lote}: Error inesperado: {e}")
+                        break
                 return None
 
             lotes = [eot_ids[i:i + TAMANO_LOTE] for i in range(0, len(eot_ids), TAMANO_LOTE)]
             
-            with concurrent.futures.ThreadPoolExecutor(max_workers=6) as executor:
-                future_to_lote = {executor.submit(procesar_lote, lote): i for i, lote in enumerate(lotes)}
+            with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+                # Pasar el número de lote para mejor logging
+                future_to_lote = {executor.submit(procesar_lote, lote, i+1): i for i, lote in enumerate(lotes)}
                 
                 for future in concurrent.futures.as_completed(future_to_lote):
                     i = future_to_lote[future]
                     try:
                         data_lote = future.result()
                         if data_lote:
-                            print(f"    ✓ Lote {i+1}/{len(lotes)} procesado")
+                            print(f"    ✓ Lote {i+1}/{len(lotes)} procesado con éxito")
                             if resultados_combinados['tipo_dia'] is None:
                                 resultados_combinados['tipo_dia'] = data_lote.get('tipo_dia')
                             resultados_combinados['resultados_eots'].extend(data_lote.get('resultados_eots', []))
                         else:
-                            print(f"    ✗ Lote {i+1}/{len(lotes)} falló después de reintentos")
+                            error_msg = f"Lote {i+1}/{len(lotes)} falló definitivamente en fecha {fecha}"
+                            print(f"    ✗ {error_msg}")
+                            registrar_alerta(error_msg)
                     except Exception as exc:
-                        print(f"    ✗ Lote {i+1} generó una excepción: {exc}")
+                        error_msg = f"Excepción en Lote {i+1} ({fecha}): {exc}"
+                        print(f"    ✗ {error_msg}")
+                        registrar_alerta(error_msg)
 
             return resultados_combinados
         else:
-            # Procesar todos los EOTs de una vez si son pocos
+            # Procesar todos los EOTs de una vez
             for intento in range(max_retries):
                 try:
                     payload = {
                         "fecha": fecha.strftime("%Y-%m-%d"),
                         "eot_ids": eot_ids
                     }
-                    # Timeout más largo: 120 segundos para todos los EOTs
-                    timeout_segundos = max(60, len(eot_ids) * 3)  # 3 segundos por EOT, mínimo 60
+                    # Timeout dinámico: 60s base + 2s por EOT
+                    timeout_segundos = 60 + (len(eot_ids) * 2)
                     response = requests.post(f"{API_URL}/performance", json=payload, timeout=timeout_segundos)
-                    response.raise_for_status()
-                    return response.json()
-                except requests.exceptions.Timeout:
-                    if intento < max_retries - 1:
-                        print(f"  ⚠ Timeout en intento {intento + 1}/{max_retries}, reintentando...")
-                        continue
+                    
+                    if response.status_code == 200:
+                        return response.json()
                     else:
-                        print(f"  ✗ Timeout después de {max_retries} intentos (timeout configurado: {timeout_segundos}s)")
-                        return None
-                except requests.exceptions.RequestException as e:
-                    print(f"  ✗ Error consultando API de performance para {fecha}: {e}")
-                    return None
+                        print(f"  ⚠ Intento {intento+1}: Error API {response.status_code}")
+                except requests.exceptions.Timeout:
+                    print(f"  ⚠ Intento {intento+1}: Timeout ({timeout_segundos}s)")
+                except Exception as e:
+                    print(f"  ⚠ Intento {intento+1}: Error - {e}")
+                
+                if intento < max_retries - 1:
+                    time.sleep(2) # Pequeña espera antes de reintentar
+                else:
+                    error_msg = f"Fallo total obteniendo performance para {fecha} después de {max_retries} intentos"
+                    print(f"  ✗ {error_msg}")
+                    registrar_alerta(error_msg)
+            return None
             
     except Exception as e:
-        print(f"  ✗ Error inesperado obteniendo datos de performance: {e}")
+        error_msg = f"Error general en get_performance_data: {e}"
+        print(f"  ✗ {error_msg}")
         traceback.print_exc()
+        registrar_alerta(error_msg)
         return None
 
 
@@ -192,7 +246,9 @@ def save_ifo_historico(resultados_ifo):
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
-        print(f"  ✗ Error guardando resultados en la API: {e}")
+        error_msg = f"Error guardando resultados en la API: {e}"
+        print(f"  ✗ {error_msg}")
+        registrar_alerta(error_msg)
         return None
 
 
@@ -205,7 +261,9 @@ def procesar_fecha(fecha: date, modo_notificacion: str = None):
         # 1. Obtener EOTs desde la API
         eots_list = get_eots()
         if not eots_list:
-            print(f"  ✗ No se pudieron obtener EOTs de la API")
+            error_msg = f"No se pudieron obtener EOTs de la API para fecha {fecha}"
+            print(f"  ✗ {error_msg}")
+            registrar_alerta(error_msg)
             return
         
         eot_ids = [e['cod_catalogo'] for e in eots_list]
@@ -214,7 +272,9 @@ def procesar_fecha(fecha: date, modo_notificacion: str = None):
         # 2. Obtener datos de performance desde la API
         data = get_performance_data(fecha, eot_ids)
         if not data:
-            print(f"  ✗ No se pudieron obtener datos de performance de la API")
+            error_msg = f"No se pudieron obtener datos de performance de la API para fecha {fecha}"
+            print(f"  ✗ {error_msg}")
+            registrar_alerta(error_msg)
             return
         
         tipo_dia = data.get('tipo_dia', 'Desconocido')
@@ -282,7 +342,9 @@ def procesar_fecha(fecha: date, modo_notificacion: str = None):
                       f"{resultado_guardado['actualizados']} actualizados "
                       f"(total: {resultado_guardado['total']})")
             else:
-                print(f"  ✗ No se pudieron guardar los resultados")
+                error_msg = f"No se pudieron guardar los resultados de IFO para fecha {fecha}"
+                print(f"  ✗ {error_msg}")
+                registrar_alerta(error_msg)
         else:
             print(f"  ⚠ No hay resultados para guardar")
         
@@ -293,8 +355,10 @@ def procesar_fecha(fecha: date, modo_notificacion: str = None):
         print(f"  ⏱ Tiempo de cálculo y guardado: {fin_calculo - inicio_calculo:.2f} segundos")
         
     except Exception as e:
-        print(f"  ✗ Error procesando fecha {fecha}: {e}")
+        error_msg = f"Error procesando fecha {fecha}: {e}"
+        print(f"  ✗ {error_msg}")
         traceback.print_exc()
+        registrar_alerta(error_msg)
         raise
 
 
@@ -484,8 +548,10 @@ def main():
         print(f"\n=== Proceso completado en {fin_total - inicio_total:.2f} segundos ===")
         
     except Exception as e:
-        print(f"\n✗ Error en el proceso: {e}")
+        error_msg = f"Error crítico en el proceso de cálculo IFO: {e}"
+        print(f"\n✗ {error_msg}")
         traceback.print_exc()
+        registrar_alerta(error_msg)
         sys.exit(1)
 
 
@@ -496,5 +562,7 @@ if __name__ == "__main__":
         print("\n⚠ Proceso interrumpido por el usuario")
         sys.exit(0)
     except Exception as e:
+        error_msg = f"Error fatal en script calcular_ifo.py: {e}"
         traceback.print_exc()
+        registrar_alerta(error_msg)
         sys.exit(1)

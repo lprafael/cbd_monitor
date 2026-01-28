@@ -1,0 +1,103 @@
+{
+    "fecha_analisis":  "2026-01-23",
+    "tipo_dia":  "LABORAL",
+    "resultados_eots":  [
+                            {
+                                "eot_id":  44,
+                                "eot_nombre":  "16 DE NOVIEMBRE SRL",
+                                "gre_nombre":  "CETRAPAM",
+                                "resultados_franjas":  [
+                                                           {
+                                                               "id_franja":  40,
+                                                               "denominacion_franja":  "Madrugada",
+                                                               "cbd_obs_promedio":  8.0,
+                                                               "cbd_minimo_franja_exigido":  2.0,
+                                                               "cbd_cumplimiento_franja_indice":  1.0,
+                                                               "cbd_estado_cumplimiento":  "Cumple",
+                                                               "origen_cbd_final":  "Calculado con batch cache",
+                                                               "b_dist_ajustado":  0.8,
+                                                               "ifo_franja_calculado":  148.15,
+                                                               "ifo_minimo_exigido":  80.0,
+                                                               "ifo_estado_cumplimiento":  "Nivel A",
+                                                               "ajuste_aplicado":  "Mes Enero (0.80)",
+                                                               "cant_horas":  1
+                                                           },
+                                                           {
+                                                               "id_franja":  30,
+                                                               "denominacion_franja":  "Pico Ma??ana",
+                                                               "cbd_obs_promedio":  15.0,
+                                                               "cbd_minimo_franja_exigido":  12.0,
+                                                               "cbd_cumplimiento_franja_indice":  1.0,
+                                                               "cbd_estado_cumplimiento":  "Cumple",
+                                                               "origen_cbd_final":  "Calculado con batch cache",
+                                                               "b_dist_ajustado":  0.8,
+                                                               "ifo_franja_calculado":  150.25,
+                                                               "ifo_minimo_exigido":  80.0,
+                                                               "ifo_estado_cumplimiento":  "Nivel A",
+                                                               "ajuste_aplicado":  "Mes Enero (0.80)",
+                                                               "cant_horas":  3
+                                                           },
+                                                           {
+                                                               "id_franja":  31,
+                                                               "denominacion_franja":  "Pos Pico (entre picos)",
+                                                               "cbd_obs_promedio":  15.0,
+                                                               "cbd_minimo_franja_exigido":  9.0,
+                                                               "cbd_cumplimiento_franja_indice":  1.0,
+                                                               "cbd_estado_cumplimiento":  "Cumple",
+                                                               "origen_cbd_final":  "Calculado con batch cache",
+                                                               "b_dist_ajustado":  0.8,
+                                                               "ifo_franja_calculado":  121.04,
+                                                               "ifo_minimo_exigido":  90.0,
+                                                               "ifo_estado_cumplimiento":  "Nivel A",
+                                                               "ajuste_aplicado":  "Mes Enero (0.80)",
+                                                               "cant_horas":  8
+                                                           },
+                                                           {
+                                                               "id_franja":  32,
+                                                               "denominacion_franja":  "Pico Tarde",
+                                                               "cbd_obs_promedio":  13.0,
+                                                               "cbd_minimo_franja_exigido":  12.0,
+                                                               "cbd_cumplimiento_franja_indice":  1.0,
+                                                               "cbd_estado_cumplimiento":  "Cumple",
+                                                               "origen_cbd_final":  "Calculado con batch cache",
+                                                               "b_dist_ajustado":  0.8,
+                                                               "ifo_franja_calculado":  109.77,
+                                                               "ifo_minimo_exigido":  80.0,
+                                                               "ifo_estado_cumplimiento":  "Nivel A",
+                                                               "ajuste_aplicado":  "Mes Enero (0.80)",
+                                                               "cant_horas":  3
+                                                           },
+                                                           {
+                                                               "id_franja":  33,
+                                                               "denominacion_franja":  "Pos Pico Tarde",
+                                                               "cbd_obs_promedio":  12.0,
+                                                               "cbd_minimo_franja_exigido":  6.0,
+                                                               "cbd_cumplimiento_franja_indice":  1.0,
+                                                               "cbd_estado_cumplimiento":  "Cumple",
+                                                               "origen_cbd_final":  "Calculado con batch cache",
+                                                               "b_dist_ajustado":  0.8,
+                                                               "ifo_franja_calculado":  115.07,
+                                                               "ifo_minimo_exigido":  90.0,
+                                                               "ifo_estado_cumplimiento":  "Nivel A",
+                                                               "ajuste_aplicado":  "Mes Enero (0.80)",
+                                                               "cant_horas":  2
+                                                           },
+                                                           {
+                                                               "id_franja":  34,
+                                                               "denominacion_franja":  "Nocturno Laboral",
+                                                               "cbd_obs_promedio":  5.0,
+                                                               "cbd_minimo_franja_exigido":  4.0,
+                                                               "cbd_cumplimiento_franja_indice":  1.0,
+                                                               "cbd_estado_cumplimiento":  "Cumple",
+                                                               "origen_cbd_final":  "Calculado con batch cache",
+                                                               "b_dist_ajustado":  0.8,
+                                                               "ifo_franja_calculado":  97.54,
+                                                               "ifo_minimo_exigido":  90.0,
+                                                               "ifo_estado_cumplimiento":  "Nivel A",
+                                                               "ajuste_aplicado":  "Mes Enero (0.80)",
+                                                               "cant_horas":  2
+                                                           }
+                                                       ]
+                            }
+                        ]
+}

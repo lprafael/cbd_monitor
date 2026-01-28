@@ -21,8 +21,8 @@ class PerformanceResult(BaseModel):
     ifo_franja_calculado: float
     ifo_minimo_exigido: float
     ifo_estado_cumplimiento: str
-    
     ajuste_aplicado: str
+    cant_horas: int
 
     class Config:
         from_attributes = True

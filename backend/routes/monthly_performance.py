@@ -117,11 +117,13 @@ async def get_monthly_performance(
         # 3. Calculate IFO Sistema (Month n-1)
         query_system_prev = """
             SELECT 
-                AVG(eot_monthly_ifo) as system_ifo
+                AVG(eot_monthly_ifo) as system_ifo,
+                AVG(eot_monthly_ifo_topeado) as system_ifo_topeado
             FROM (
                 SELECT 
                     id_eot_vmt_hex,
-                    AVG(daily_ifo) as eot_monthly_ifo
+                    AVG(daily_ifo) as eot_monthly_ifo,
+                    AVG(LEAST(daily_ifo, 1.05)) as eot_monthly_ifo_topeado
                 FROM (
                     SELECT 
                         id_eot_vmt_hex,
@@ -150,53 +152,20 @@ async def get_monthly_performance(
         system_ifo_val = res_sys['system_ifo'] if res_sys and res_sys['system_ifo'] is not None else 0.0
         system_ifo_pct = float(system_ifo_val * 100)
         
-        # 4. Thresholds
-        # Umbral Teórico: 95% of System(n-1)
-        umbral_teorico = system_ifo_pct * 0.95
+        system_ifo_topeado_val = res_sys['system_ifo_topeado'] if res_sys and res_sys['system_ifo_topeado'] is not None else 0.0
+        system_ifo_topeado_pct = float(system_ifo_topeado_val * 100)
         
-        # Factor de Ajuste: -0.49
-        factor_ajuste = 0.49
+        # 4. Thresholds
+        # Umbral Teórico: System(n-1) - 5 percentage points
+        print(f"DEBUG: system_ifo_pct={system_ifo_pct}")
+        umbral_teorico = system_ifo_pct - 5
+        print(f"DEBUG: umbral_teorico={umbral_teorico}")
         
         # Umbral Aplicable
-        umbral_aplicable = umbral_teorico - factor_ajuste
-        
-        # Rounding rules: "Redondear resultados finales... al entero superior inmediato"
-        # The prompt says: "Redondeo de Resultados: Todos los valores finales derivados de estas fórmulas... redondearse al entero superior inmediato (ej. 94,51 -> 95)."
-        # It applies to "Umbral Aplicable" specifically? Or all final displayed values?
-        # "Si el IFO Mensual (...) es inferior al Umbral Aplicable (94,50%)..."
-        # Implicitly, the comparison should be done on rounded values?
-        # Example: 94.51 -> 95. If IFO is 94.8 -> Infraction? No, 94.8 < 95 is True.
-        # But wait, "Umbral Aplicable (aprox 94.50%)". If they round 94.50 -> 95.
-        # Let's apply rounding to the Thresholds as requested.
-        
-        umbral_teorico_rounded = math.ceil(umbral_teorico) 
-        # Wait, usually intermediate calculations are precise.
-        # "Todos los valores finales derivados de estas fórmulas... redondearse al número entero superior inmediato"
-        # It probably refers to the final Threshold against which we compare.
-        # Let's round the Umbral Aplicable.
-        
-        umbral_aplicable_final = math.ceil(umbral_aplicable * 100) / 100.0 # Maybe just integer ceil?
-        # The example says "94.51 -> 95". That is integer ceil.
-        
-        umbral_aplicable_int = math.ceil(umbral_aplicable)
-        
-        # But the prompt also says "Si el IFO Mensual (...) es inferior al Umbral Aplicable (94,50%)..."
-        # The example explicitly mentions 94.50% as a threshold in the text, so maybe it's NOT always rounded to integer?
-        # "Redondeo de Resultados: Todos los valores finales derivados de estas fórmulas... redondearse al número entero superior inmediato (ej. 94,51 -> 95)."
-        # This instruction seems to contradict the "94.50%" text unless 94.50 was just an example of the result BEFORE rounding?
-        # "Factor de Ajuste... para obtener el Umbral Aplicable (aprox. 94,50%)." -> This is the result of calculation.
-        # Then Rule 4 says: "Redondeo... valores finales... redondearse al número entero superior inmediato".
-        # So likely the final threshold IS an integer.
-        
-        umbral_aplicable_official = math.ceil(umbral_aplicable)
+        # "Redondear resultados finales... al entero superior inmediato"
+        umbral_aplicable_official = math.ceil(umbral_teorico)
+        print(f"DEBUG: umbral_aplicable_official={umbral_aplicable_official}")
 
-        # IFO Mensual precision: "mantenerse con al menos 4 decimales" during intermediate.
-        # But for final comparison?
-        # I'll stick to comparing the high precision IFO Mensual against the Rounded Threshold.
-        # But display might round IFO Mensual too?
-        # For safety, I will return the precise values and maybe a rounded version or just let frontend display it.
-        # I'll return the rounded threshold as `umbral_aplicable`.
-        
         # 5. Infraction
         # "Si el IFO Mensual (EOT) ... es inferior al Umbral Aplicable"
         infraccion = ifo_mensual_pct < umbral_aplicable_official
@@ -208,8 +177,8 @@ async def get_monthly_performance(
             eot_nombre=eot_nombre,
             ifo_mensual_eot=round(ifo_mensual_pct, 4),
             ifo_sistema_anterior=round(system_ifo_pct, 4),
+            ifo_sistema_anterior_topeado=round(system_ifo_topeado_pct, 4),
             umbral_teorico=round(umbral_teorico, 4),
-            factor_ajuste=factor_ajuste,
             umbral_aplicable=umbral_aplicable_official,
             infraccion=infraccion,
             sancion=sancion,

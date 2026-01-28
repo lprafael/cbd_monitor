@@ -196,14 +196,29 @@ const IndicesDashboard = ({ performanceData, fecha }) => {
                     ? eot.resultados_franjas.reduce((acc, r) => acc + (r.ifo_franja_calculado || 0), 0) / eot.resultados_franjas.length
                     : 0;
 
-                  // Determinar estado para el promedio (Nivel A: >= 90, Nivel B: >= 80, Nivel C: < 80)
                   const estadoPromedio = ifoDia >= 90 ? 'Nivel A' : ifoDia >= 80 ? 'Nivel B' : 'Nivel C';
                   const statusClassAlt = getStatusClass(estadoPromedio);
 
                   return (
                     <td key="ifo-dia">
                       <div className={`index-cell ${statusClassAlt} ifo-dia-cell`}>
-                        {ifoDia.toFixed(2)}%
+                        <div className="ifo-dia-main">
+                          {ifoDia.toFixed(2)}%
+                        </div>
+                        {(() => {
+                          // Aseguramos que los valores sean numéricos y filtramos nulos
+                          const totalHoras = eot.resultados_franjas.reduce((acc, r) => acc + (Number(r.cant_horas) || 0), 0);
+                          const sumHorasIfo = eot.resultados_franjas.reduce((acc, r) => acc + ((Number(r.ifo_franja_calculado) || 0) * (Number(r.cant_horas) || 0)), 0);
+                          const ifoHoraAvg = totalHoras > 0 ? sumHorasIfo / totalHoras : 0;
+
+                          const tooltipText = `IFO Real (Promedio ponderado por horas)\nTotal horas analizadas: ${totalHoras}\nIFO = (Sumatoria IFO_franja * Horas_franja) / Total_horas`;
+
+                          return (
+                            <div className="ifo-dia-sub" title={tooltipText}>
+                              H: {ifoHoraAvg.toFixed(2)}%
+                            </div>
+                          );
+                        })()}
                       </div>
                     </td>
                   );
