@@ -34,7 +34,7 @@ function App() {
   // Cargar EOTs al montar el componente
   useEffect(() => {
     fetchEots();
-    // Establecer fecha actual por defecto
+    // Fecha por defecto: yyyy-MM-DD para input date; para input month usamos slice(0,7) -> yyyy-MM
     const today = new Date().toISOString().split('T')[0];
     setFecha(today);
 

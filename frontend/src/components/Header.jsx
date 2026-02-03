@@ -140,9 +140,23 @@ const Header = ({
                 </label>
                 <input
                   id="fecha-input"
+                  key={viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'system-ifo' ? 'month' : 'date'}
                   type={viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'system-ifo' ? "month" : "date"}
-                  value={fecha}
-                  onChange={(e) => setFecha(e.target.value)}
+                  value={
+                    (viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'system-ifo')
+                      ? (fecha && String(fecha).length >= 7
+                          ? String(fecha).slice(0, 7)
+                          : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`)
+                      : fecha
+                  }
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'system-ifo') {
+                      setFecha(v.length === 7 ? v + '-01' : v);
+                    } else {
+                      setFecha(v);
+                    }
+                  }}
                   className="form-control"
                   required
                 />

@@ -1,0 +1,11 @@
+{
+  "short_name": "CBD Monitor",
+  "name": "Monitor de Indicadores de Desempeño (CBD/IFO)",
+  "description": "Monitor de Control de Buses Distintos para empresas operadoras de transporte",
+  "icons": [],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#ffffff",
+  "lang": "es"
+}

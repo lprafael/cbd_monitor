@@ -1,5 +1,5 @@
 # Dockerfile para el frontend de CBD Monitor
-FROM node:18-alpine as build
+FROM node:18-alpine AS build
 
 # Establecer directorio de trabajo
 WORKDIR /app
@@ -26,6 +26,8 @@ FROM nginx:alpine
 
 # Copiar los archivos compilados al directorio de nginx
 COPY --from=build /app/build /usr/share/nginx/html
+# Asegurar manifest.json (por si el build no lo incluye en la raíz)
+COPY --from=build /app/public/manifest.json /usr/share/nginx/html/manifest.json
 
 # Copiar configuración personalizada de nginx (opcional)
 # COPY nginx.conf /etc/nginx/conf.d/default.conf
