@@ -106,239 +106,79 @@ def get_tipo_dia_id(fecha_obj):
 
 
 def obtener_datos_mensuales_eot(id_eot_vmt_hex: str, fecha_referencia: date):
-    """
-    Obtiene los datos mensuales de IFO para un EOT desde el primer día del mes hasta la fecha de referencia.
-    Agrupa los datos por tipo de día (Laboral, Sábado, Domingo/Feriado).
-    También obtiene el índice CBD para cada franja desde la API.
-    
-    Returns:
-        dict: {
-            'tipos_dia': {
-                5: {  # LABORAL
-                    'nombre': 'Día Laboral',
-                    'franjas': {id_franja: nombre_franja},
-                    'dias': {fecha: {'franjas': {...}, 'ifo_diario': ...}}
-                },
-                6: {  # SABADO
-                    'nombre': 'Sábado',
-                    'franjas': {id_franja: nombre_franja},
-                    'dias': {fecha: {'franjas': {...}, 'ifo_diario': ...}}
-                },
-                7: {  # NO LABORAL
-                    'nombre': 'Domingo/Feriado',
-                    'franjas': {id_franja: nombre_franja},
-                    'dias': {fecha: {'franjas': {...}, 'ifo_diario': ...}}
-                }
-            },
-            'ifo_mes': promedio del IFO mensual
-        }
-    """
-    conn = get_db_connection()
-    if not conn:
-        print(f"⚠ No se pudo conectar a la BD para obtener datos mensuales del EOT {id_eot_vmt_hex}")
-        return None
+    """Obtiene los datos mensuales de IFO desde la API del backend."""
+    # Obtener API_URL desde el entorno
+    API_BASE_URL = os.getenv('CBD_API_URL', 'http://localhost:8000')
+    API_URL = f"{API_BASE_URL}/api"
     
     try:
-        import psycopg2.extras
-        from psycopg2.extras import RealDictCursor
-        import concurrent.futures
-        
-        # Primer día del mes
-        primer_dia_mes = fecha_referencia.replace(day=1)
-        
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        
-        # Obtener franjas por tipo de día
-        tipos_dia_info = {
-            5: {'nombre': 'Día Laboral', 'franjas': {}, 'dias': {}},
-            6: {'nombre': 'Sábado', 'franjas': {}, 'dias': {}},
-            7: {'nombre': 'Domingo/Feriado', 'franjas': {}, 'dias': {}}
+        payload = {
+            "id_eot_vmt_hex": id_eot_vmt_hex,
+            "fecha_referencia": fecha_referencia.strftime("%Y-%m-%d")
         }
+        response = requests.post(f"{API_URL}/reports/res120/monthly-summary", json=payload, timeout=30)
+        response.raise_for_status()
+        data = response.json()
         
-        # Obtener franjas para cada tipo de día con información completa
-        for id_tipo_dia in [5, 6, 7]:
-            cur.execute("""
-                SELECT DISTINCT f.id_franja, f.denominacion, f.hora_inicio, f.hora_fin
-                FROM control_metricas.franjas_operativas f
-                WHERE f.id_tipo_dia = %s
-                  AND (f.inicio_vigencia IS NULL OR f.inicio_vigencia <= %s)
-                  AND (f.fin_vigencia IS NULL OR f.fin_vigencia >= %s)
-                ORDER BY f.hora_inicio
-            """, (id_tipo_dia, fecha_referencia, primer_dia_mes))
-            franjas_tipo = cur.fetchall()
-            franjas_ordenadas = sorted(franjas_tipo, key=lambda x: x['hora_inicio'] if x['hora_inicio'] else '')
-            
-            # Crear diccionario con información completa de franjas
-            franjas_info = {}
-            for f in franjas_ordenadas:
-                id_franja = f['id_franja']
-                # Obtener cbd_minimo_franja desde cbd_parametros_minimos
-                cur.execute("""
-                    SELECT cbd_minimo_franja
-                    FROM control_metricas.cbd_parametros_minimos
-                    WHERE id_franja = %s
-                      AND id_tipo_dia = %s
-                      AND (vigencia_desde IS NULL OR vigencia_desde <= %s)
-                      AND (vigencia_hasta IS NULL OR vigencia_hasta >= %s)
-                    ORDER BY vigencia_desde DESC NULLS LAST
-                    LIMIT 1
-                """, (id_franja, id_tipo_dia, fecha_referencia, primer_dia_mes))
-                param_result = cur.fetchone()
-                cbd_minimo = param_result['cbd_minimo_franja'] if param_result else None
-                
-                franjas_info[id_franja] = {
-                    'denominacion': f['denominacion'],
-                    'hora_inicio': f['hora_inicio'],
-                    'hora_fin': f['hora_fin'],
-                    'cbd_minimo': cbd_minimo
-                }
-            
-            tipos_dia_info[id_tipo_dia]['franjas'] = franjas_info
-        
-        # Obtener datos de IFO del mes desde la BD
-        cur.execute("""
-            SELECT fecha, id_franja, ifo, cbd_indice, cbd_cantidad
-            FROM control_metricas.ifo_historico
-            WHERE id_eot_vmt_hex = %s 
-              AND fecha >= %s 
-              AND fecha <= %s
-            ORDER BY fecha, id_franja
-        """, (id_eot_vmt_hex, primer_dia_mes, fecha_referencia))
-        datos_ifo = cur.fetchall()
-        
-        # Inicializar todas las fechas del mes agrupadas por tipo de día
-        from datetime import date, timedelta
-        fecha_actual = primer_dia_mes
-        while fecha_actual <= fecha_referencia:
-            id_tipo_dia = get_tipo_dia_id(fecha_actual)
-            if id_tipo_dia in tipos_dia_info:
-                tipos_dia_info[id_tipo_dia]['dias'][fecha_actual] = {'franjas': {}, 'ifo_diario': None}
-            fecha_actual += timedelta(days=1)
-        
-        # Organizar datos de IFO por fecha y tipo de día
-        for row in datos_ifo:
-            fecha = row['fecha']
-            id_franja = row['id_franja']
-            ifo = row['ifo']
-            cbd_idx = row['cbd_indice']
-            cbd_cant = row['cbd_cantidad']
-            
-            id_tipo_dia = get_tipo_dia_id(fecha)
-            if id_tipo_dia in tipos_dia_info and fecha in tipos_dia_info[id_tipo_dia]['dias']:
-                tipos_dia_info[id_tipo_dia]['dias'][fecha]['franjas'][id_franja] = {
-                    'ifo': (float(ifo) * 100) if ifo is not None else 0, # Convertir a porcentaje para visualización 
-                    'cbd': float(cbd_idx) if cbd_idx is not None else 0,
-                    'cbd_cantidad': int(cbd_cant) if cbd_cant is not None else 0
-                }
-        
-        # Calcular IFO diario promedio usando solo los datos de BD
-        for tipo_data in tipos_dia_info.values():
-            for fecha, dia_data in tipo_data['dias'].items():
-                franjas_dia = dia_data['franjas']
-                ifos = [f['ifo'] for f in franjas_dia.values() if f.get('ifo') is not None]
-                if ifos:
-                    dia_data['ifo_diario'] = sum(ifos) / len(ifos)
-        
-        # YA NO SE NECESITA LLAMAR A LA API (Optimización completa)
-        # Los datos ya se cargaron desde la BD arriba
-        print(f"  ✓ Datos obtenidos directamente de BD (optimizado)")
-        
-        # Calcular IFO MES (promedio de IFO diario del mes, todos los tipos de día)
-        ifos_diarios = []
-        for tipo_data in tipos_dia_info.values():
-            for dia_data in tipo_data['dias'].values():
-                if dia_data.get('ifo_diario') is not None:
-                    ifos_diarios.append(dia_data['ifo_diario'])
-        
-        ifo_mes = sum(ifos_diarios) / len(ifos_diarios) if ifos_diarios else 0
-        
-        # Retornar datos agrupados por tipo de día
+        # Convertir llaves de tipo_dia (vienen como strings desde JSON) y fechas
         resultado = {
-            'tipos_dia': tipos_dia_info,
-            'ifo_mes': ifo_mes
+            'tipos_dia': {},
+            'ifo_mes': data['ifo_mes']
         }
         
-        total_franjas = sum(len(t['franjas']) for t in tipos_dia_info.values())
-        total_dias = sum(len(t['dias']) for t in tipos_dia_info.values())
-        print(f"  ✓ Datos mensuales obtenidos para EOT {id_eot_vmt_hex}: {total_franjas} franjas, {total_dias} días, IFO MES: {ifo_mes:.2f}%")
+        for tid_str, td_data in data['tipos_dia'].items():
+            tid = int(tid_str)
+            # Re-formatear fechas de d['dias'] a objetos date
+            dias_dict = {}
+            for fecha_str, dia_val in td_data['dias'].items():
+                f_obj = datetime.strptime(fecha_str, "%Y-%m-%d").date()
+                dias_dict[f_obj] = dia_val
+                
+            resultado['tipos_dia'][tid] = {
+                'nombre': td_data['nombre'],
+                'franjas': td_data['franjas'],
+                'dias': dias_dict
+            }
+        
+        print(f"  ✓ Datos mensuales obtenidos vía API para EOT {id_eot_vmt_hex}")
         return resultado
-    
     except Exception as e:
-        print(f"⚠ Error obteniendo datos mensuales para EOT {id_eot_vmt_hex}: {e}")
-        import traceback
-        traceback.print_exc()
+        print(f"⚠ Error obteniendo datos mensuales vía API para EOT {id_eot_vmt_hex}: {e}")
         return None
-    finally:
-        if 'conn' in locals() and conn:
-            try:
-                conn.close()
-            except:
-                pass
 
 
-def obtener_parametros_ifo_resumen(fecha_referencia):
-    """
-    Obtiene un resumen de los parámetros de IFO vigentes para la fecha de referencia.
-    
-    Args:
-        fecha_referencia (date): Fecha de referencia para obtener los parámetros
-    
-    Returns:
-        str: Texto descriptivo de los parámetros de cumplimiento
-    """
-    conn = get_db_connection()
-    if not conn:
-        return "Los incumplimientos para el IFO son sancionables según normativa vigente."
+def obtener_ifo_sistema_mes_anterior(fecha_referencia: date) -> float:
+    """Obtiene el IFO del sistema del mes anterior desde la API."""
+    # Obtener API_URL desde el entorno
+    API_BASE_URL = os.getenv('CBD_API_URL', 'http://localhost:8000')
+    API_URL = f"{API_BASE_URL}/api"
     
     try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT DISTINCT
-                    f.denominacion,
-                    p.porc_cumplimiento_minimo,
-                    p.normativa
-                FROM control_metricas.parametros_ifo p
-                JOIN control_metricas.franjas_operativas f ON p.id_franja_operativa = f.id_franja
-                WHERE p.inicio_vigencia <= %s 
-                    AND (p.fin_vigencia IS NULL OR p.fin_vigencia >= %s)
-                ORDER BY f.denominacion
-            """, (fecha_referencia, fecha_referencia))
-            
-            parametros = cur.fetchall()
-            
-            if not parametros:
-                return "Los incumplimientos para el IFO son sancionables según normativa vigente."
-            
-            # Agrupar por porcentaje de cumplimiento
-            franjas_por_porcentaje = {}
-            normativa = None
-            
-            for franja, porcentaje, norm in parametros:
-                if normativa is None:
-                    normativa = norm
-                if porcentaje not in franjas_por_porcentaje:
-                    franjas_por_porcentaje[porcentaje] = []
-                franjas_por_porcentaje[porcentaje].append(franja)
-            
-            # Construir el texto descriptivo
-            descripciones = []
-            for porcentaje, franjas in sorted(franjas_por_porcentaje.items()):
-                franjas_texto = ", ".join(franjas)
-                descripciones.append(f"{int(porcentaje)}% en franjas {franjas_texto}")
-            
-            texto_base = f"Los incumplimientos para el <strong>IFO</strong> son sancionables cuando están por debajo del {' y '.join(descripciones)}."
-            
-            if normativa:
-                texto_base += f" <strong>Base legal:</strong> {normativa}"
-            
-            return texto_base
-    
+        fecha_str = fecha_referencia.strftime("%Y-%m-%d")
+        response = requests.get(f"{API_URL}/reports/res120/system-ifo-baseline/{fecha_str}", timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        return float(data.get('ifo_sistema_mes_anterior', 0.0))
     except Exception as e:
-        print(f"⚠ Error al obtener parámetros IFO: {e}")
-        return "Los incumplimientos para el IFO son sancionables según normativa vigente."
+        print(f"⚠ Error obteniendo IFO sistema vía API: {e}")
+        return 0.0
+
+
+def obtener_parametros_ifo_resumen(fecha_referencia: date) -> str:
+    """Obtiene el resumen de parámetros de IFO desde la API."""
+    # Obtener API_URL desde el entorno
+    API_BASE_URL = os.getenv('CBD_API_URL', 'http://localhost:8000')
+    API_URL = f"{API_BASE_URL}/api"
     
-    finally:
-        conn.close()
+    try:
+        fecha_str = fecha_referencia.strftime("%Y-%m-%d")
+        response = requests.get(f"{API_URL}/reports/res120/parameters-summary/{fecha_str}", timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        return data.get('resumen', "Los incumplimientos para el IFO son sancionables según normativa vigente.")
+    except Exception as e:
+        print(f"⚠ Error obteniendo parámetros IFO vía API: {e}")
+        return "Los incumplimientos para el IFO son sancionables según normativa vigente."
 
 def obtener_clima(fecha: date) -> Optional[Dict[str, Any]]:
     """
@@ -408,7 +248,7 @@ def obtener_clima(fecha: date) -> Optional[Dict[str, Any]]:
         'comprobado': comprobado
     }
 
-def analizar_infracciones_res_120(eot_nombre, datos_mensuales, fecha_referencia):
+def analizar_infracciones_res_120(eot_nombre, datos_mensuales, fecha_referencia, ifo_objetivo=0.0):
     """
     Analiza las infracciones según los Artículos 15 y 16 de la Resolución 120/2025.
     Retorna una lista de todas las sanciones detectadas en el mes hasta la fecha_referencia.
@@ -534,6 +374,18 @@ def analizar_infracciones_res_120(eot_nombre, datos_mensuales, fecha_referencia)
                 historial_faltas.append({'fecha': fecha, 'base': 'Art. 16.4', 'desc': 'Reincidencia Nivel B Pos Pico (5 adicionales en 7 días)', 'jornales': 20})
                 trigger_16_4 = True
 
+    # 5. Art. 15.1 - IFO Mensual Objetivo (Umbral Mínimo Obligatorio)
+    # Solo se aplica si el IFO acumulado del mes es menor al IFO Objetivo
+    if ifo_objetivo > 0:
+        ifo_mes_acumulado = datos_mensuales.get('ifo_mes', 0)
+        if ifo_mes_acumulado < ifo_objetivo:
+            historial_faltas.append({
+                'fecha': fecha_referencia, 
+                'base': 'Art. 15.1', 
+                'desc': f'Incumplimiento IFO Mensual Objetivo ({ifo_mes_acumulado:.2f}% < {ifo_objetivo:.2f}%)', 
+                'jornales': 173
+            })
+
     # Transformar para el reporte
     sanciones = []
     for f in historial_faltas:
@@ -560,6 +412,10 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
     """
     fecha_formato = fecha_referencia.strftime("%Y-%m-%d")
     fecha_envio = datetime.now().strftime("%Y-%m-%d %I:%M %p")
+    
+    # Calcular IFO Objetivo (Sistema Mes Anterior - 5)
+    ifo_sistema_anterior = obtener_ifo_sistema_mes_anterior(fecha_referencia)
+    ifo_objetivo = round(ifo_sistema_anterior - 5.0, 2) if ifo_sistema_anterior > 0 else 0.0
     
     # Obtener descripción dinámica de parámetros
     nota_parametros = obtener_parametros_ifo_resumen(fecha_referencia)
@@ -701,7 +557,7 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
         
         # Analizar infracciones para el resumen (Art 15/16)
         if datos_mensuales:
-            inf_detectadas = analizar_infracciones_res_120(eot_nombre, datos_mensuales, fecha_referencia)
+            inf_detectadas = analizar_infracciones_res_120(eot_nombre, datos_mensuales, fecha_referencia, ifo_objetivo=ifo_objetivo)
             for inf in inf_detectadas:
                 resumen_infracciones_lista.append({
                     'empresa': eot_nombre,
@@ -730,7 +586,8 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
         secciones_eot_html += f"""
         <div style="margin-top: 30px; page-break-inside: avoid;">
             <h4 style="color: #004a99; margin-bottom: 10px;">{eot_nombre}</h4>
-            <p style="margin-bottom: 15px;"><strong>IFO MES(Acumulado):</strong> {ifo_mes:.2f}%</p>
+            <p style="margin-bottom: 5px;"><strong>IFO MES(Acumulado):</strong> {ifo_mes:.2f}%</p>
+            <p style="margin-bottom: 15px;"><strong>IFO MES(Objetivo):</strong> {ifo_objetivo:.2f}% {"<span style='color: #cc0000; font-weight: bold;'> (INCUMPLIMIENTO)</span>" if ifo_objetivo > 0 and ifo_mes < ifo_objetivo else ""}</p>
         """
         
         # Generar tabla para cada tipo de día (5=Laboral, 6=Sábado, 7=Domingo/Feriado)
@@ -752,8 +609,11 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
             for fid in franjas_ids:
                 franja_info = franjas[fid]
                 nombre = franja_info['denominacion']
-                hora_inicio = franja_info['hora_inicio'].strftime('%H:%M') if franja_info['hora_inicio'] else ''
-                hora_fin = franja_info['hora_fin'].strftime('%H:%M') if franja_info['hora_fin'] else ''
+                hora_inicio = franja_info['hora_inicio'] if franja_info['hora_inicio'] else ''
+                hora_fin = franja_info['hora_fin'] if franja_info['hora_fin'] else ''
+                # Si vienen con segundos (HH:MM:SS), recortar a HH:MM
+                if len(hora_inicio) > 5: hora_inicio = hora_inicio[:5]
+                if len(hora_fin) > 5: hora_fin = hora_fin[:5]
                 cbd_min = franja_info.get('cbd_minimo', '')
                 encabezado_franjas += f"""
                     <th style="border: 1px solid #ccc; padding: 8px; text-align: center; vertical-align: top;">
@@ -1030,15 +890,15 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
                             <div style="margin-top: 5px;">
                                 <div style="display: flex; gap: 10px; margin-bottom: 5px;">
                                     <span style="background-color: #e6ffe6; border: 1px solid #b7eb8f; padding: 2px 8px; border-radius: 3px; font-size: 10px;">Verde</span>
-                                    <span>Cumplimiento Óptimo (IFO &ge; 90% | ICCBDM &ge; 100%)</span>
+                                    <span>Cumplimiento Óptimo (IFO &ge; 90%(Nivel A) | ICCBDM &ge; 100%)</span>
                                 </div>
                                 <div style="display: flex; gap: 10px; margin-bottom: 5px;">
                                     <span style="background-color: #ffffe6; border: 1px solid #ffe58f; padding: 2px 8px; border-radius: 3px; font-size: 10px;">Amarillo</span>
-                                    <span>Cumplimiento Regular (IFO 80% - 89%)</span>
+                                    <span>Cumplimiento Regular (IFO 80% - 89%) - (Nivel B)</span>
                                 </div>
                                 <div style="display: flex; gap: 10px;">
                                     <span style="background-color: #ffe6e6; border: 1px solid #ffa39e; padding: 2px 8px; border-radius: 3px; font-size: 10px;">Rojo</span>
-                                    <span>Cumplimiento Crítico / Insuficiente (IFO < 80% | ICCBDM < 100%)</span>
+                                    <span>Cumplimiento Crítico / Insuficiente (IFO < 80%(Nivel C) | ICCBDM < 100%)</span>
                                 </div>
                             </div>
                         </div>
@@ -1193,8 +1053,8 @@ def enviar_informe_incumplimientos(datos_incumplimientos, fecha_referencia=None,
         
         # msg['Subject'] = f'[DMT] Reporte Diario - Métricas IFO/ICCBDM - {fecha_referencia.strftime("%Y-%m-%d")}'
         
-        # Ajustar asunto si es simulación
-        prefix = "[SIMULACIÓN EMPRESA]" if email_destino else "[BORRADOR]" 
+        # Ajustar asunto según si es simulación o informe oficial
+        prefix = "[SIMULACIÓN EMPRESA]" if email_destino else "[DMT] OFICIAL" 
         msg['Subject'] = f'{prefix} Reporte Diario - Métricas IFO/ICCBDM - {fecha_referencia.strftime("%Y-%m-%d")}'
         
         # Generar el contenido HTML del informe (incluyendo visualización de CC)

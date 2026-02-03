@@ -115,6 +115,10 @@ async def get_monthly_performance(
         ifo_diarios = [{'fecha': str(r['fecha']), 'ifo': float(r['daily_ifo'] * 100)} for r in daily_rows]
         
         # 3. Calculate IFO Sistema (Month n-1)
+        # IMPORTANTE: Excluir días atípicos según Resolución 120/2025
+        # El IFO Objetivo se calcula como: IFO Sistema (n-1) - 5 puntos porcentuales
+        # donde IFO Sistema (n-1) es el promedio de IFO Mensual de todas las EOTs
+        # excluyendo días atípicos para representar operación normal
         query_system_prev = """
             SELECT 
                 AVG(eot_monthly_ifo) as system_ifo,
@@ -140,6 +144,7 @@ async def get_monthly_performance(
                         WHERE h.fecha BETWEEN %s AND %s
                           AND extract(isodow from h.fecha) < 7
                           AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
+                          AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
                         GROUP BY id_eot_vmt_hex, fecha, h.id_franja
                     ) franja_level
                     GROUP BY id_eot_vmt_hex, fecha

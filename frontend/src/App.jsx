@@ -10,6 +10,7 @@ import PerformanceDashboard from './components/PerformanceDashboard';
 import IndicesDashboard from './components/IndicesDashboard';
 import MonthlyPerformanceDashboard from './components/MonthlyPerformanceDashboard';
 import Verify290Dashboard from './components/Verify290Dashboard';
+import SystemIFODashboard from './components/SystemIFODashboard';
 import './App.css';
 
 // URL base de la API - Cambiar según el entorno
@@ -72,6 +73,11 @@ function App() {
    * Obtener datos según el modo seleccionado
    */
   const handleConsulta = async () => {
+    // Si es modo system-ifo, no hacemos nada aquí, el dashboard se renderiza directamente
+    if (viewMode === 'system-ifo') {
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setCbdData(null);
@@ -197,6 +203,13 @@ function App() {
 
         {!loading && !error && viewMode === 'verify290' && (
           <Verify290Dashboard data={verify290Data} />
+        )}
+
+        {viewMode === 'system-ifo' && (
+          <SystemIFODashboard
+            year={fecha ? parseInt(fecha.split('-')[0]) : new Date().getFullYear()}
+            month={fecha ? parseInt(fecha.split('-')[1]) : new Date().getMonth() + 1}
+          />
         )}
       </main>
 

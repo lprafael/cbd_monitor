@@ -29,7 +29,12 @@ const Header = ({
     const options = e.target.options;
     const selected = [];
 
-    // Si estamos en modo mensual o verificar 290, solo permitimos una selección
+    // Si estamos en modo mensual, verificar 290 o system-ifo, solo permitimos una selección o ninguna
+    if (viewMode === 'system-ifo') {
+      // No se requiere selección de EOT para IFO Sistema
+      return;
+    }
+
     if (viewMode === 'monthly' || viewMode === 'verify290') {
       setSelectedEots([parseInt(e.target.value)]);
       return;
@@ -45,10 +50,13 @@ const Header = ({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (selectedEots.length === 0) {
+
+    // Para IFO Sistema no se requiere selección de EOT
+    if (viewMode !== 'system-ifo' && selectedEots.length === 0) {
       alert('Por favor seleccione al menos una EOT');
       return;
     }
+
     if (!fecha) {
       alert('Por favor seleccione una fecha');
       return;
@@ -102,11 +110,13 @@ const Header = ({
               </label>
               <select
                 id="eot-select"
-                multiple={viewMode !== 'monthly' && viewMode !== 'verify290'}
+                multiple={viewMode !== 'monthly' && viewMode !== 'verify290' && viewMode !== 'system-ifo'}
                 value={(viewMode === 'monthly' || viewMode === 'verify290') && selectedEots.length > 0 ? selectedEots[0] : selectedEots.map(String)}
                 onChange={handleEotChange}
                 className="form-control eot-select"
                 size="5"
+                disabled={viewMode === 'system-ifo'}
+                style={viewMode === 'system-ifo' ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
               >
                 {eots.map((eot) => (
                   <option key={eot.cod_catalogo} value={eot.cod_catalogo}>
@@ -115,20 +125,22 @@ const Header = ({
                 ))}
               </select>
               <small className="form-hint">
-                {(viewMode === 'monthly' || viewMode === 'verify290')
-                  ? 'Seleccione una sola empresa para el reporte'
-                  : 'Mantén presionado Ctrl (Windows) o Cmd (Mac) para seleccionar múltiples'}
+                {viewMode === 'system-ifo'
+                  ? 'No se requiere selección de EOT (incluye todas)'
+                  : (viewMode === 'monthly' || viewMode === 'verify290')
+                    ? 'Seleccione una sola empresa para el reporte'
+                    : 'Mantén presionado Ctrl (Windows) o Cmd (Mac) para seleccionar múltiples'}
               </small>
             </div>
 
             <div className="form-controls-column">
               <div className="form-group">
                 <label htmlFor="fecha-input">
-                  {viewMode === 'monthly' || viewMode === 'verify290' ? 'Mes y Año:' : 'Fecha:'}
+                  {viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'system-ifo' ? 'Mes y Año:' : 'Fecha:'}
                 </label>
                 <input
                   id="fecha-input"
-                  type={viewMode === 'monthly' || viewMode === 'verify290' ? "month" : "date"}
+                  type={viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'system-ifo' ? "month" : "date"}
                   value={fecha}
                   onChange={(e) => setFecha(e.target.value)}
                   className="form-control"
@@ -178,6 +190,16 @@ const Header = ({
                       onChange={(e) => setViewMode(e.target.value)}
                     />
                     <span>📅 Desempeño Mensual</span>
+                  </label>
+                  <label className="radio-label">
+                    <input
+                      type="radio"
+                      name="viewMode"
+                      value="system-ifo"
+                      checked={viewMode === 'system-ifo'}
+                      onChange={(e) => setViewMode(e.target.value)}
+                    />
+                    <span>📊 IFO Sistema</span>
                   </label>
                   {/* <label className="radio-label">
                     <input
