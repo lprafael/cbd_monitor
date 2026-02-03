@@ -143,11 +143,11 @@ const SystemIFODashboard = ({ year, month }) => {
             <div className="exclusions-section">
                 <div className="section-title-row">
                     <span className="icon">📅</span>
-                    <h3>Días Atípicos y Feriados del Período</h3>
+                    <h3>Días Atípicos y Feriados del Período(Incluidos)</h3>
                 </div>
                 <div className="exclusions-grid">
                     <div className="exclusion-item">
-                        <span className="exclusion-label">🚫 Domingos:</span>
+                        <span className="exclusion-label">🗓️ Domingos:</span>
                         <span className="exclusion-count">{data.dias_excluidos.domingos.length} días</span>
                     </div>
                     <div className="exclusion-item">
@@ -240,10 +240,10 @@ const SystemIFODashboard = ({ year, month }) => {
                                                                 </thead>
                                                                 <tbody>
                                                                     {expandedEots[eot.id_eot_vmt_hex].data.map(dia => (
-                                                                        <tr key={dia.fecha} className={dia.es_excluido ? 'excluded-day' : ''}>
+                                                                        <tr key={dia.fecha} className={dia.es_excluido ? 'special-day' : ''}>
                                                                             <td className="date-cell">
                                                                                 {dia.fecha}
-                                                                                {dia.es_excluido && <span className="exclusion-tag" title={dia.motivo_exclusion}>{dia.motivo_exclusion}</span>}
+                                                                                {dia.motivo_exclusion && <span className="exclusion-tag" title={dia.motivo_exclusion}>{dia.motivo_exclusion}</span>}
                                                                             </td>
                                                                             <td>{new Intl.DateTimeFormat('es-PY', { weekday: 'long' }).format(new Date(dia.fecha + 'T00:00:00'))}</td>
                                                                             <td className="ifo-day-val">{dia.ifo_dia.toFixed(2)}%</td>

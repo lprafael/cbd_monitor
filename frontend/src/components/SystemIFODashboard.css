@@ -492,17 +492,17 @@
     color: var(--text-secondary);
 }
 
-/* Resaltado de días excluidos en el desglose */
-.excluded-day {
-    background-color: #fef2f2 !important;
+/* Resaltado de días especiales en el desglose (ahora se incluyen) */
+.special-day {
+    background-color: #f0f7ff !important;
 }
 
-.excluded-day td,
-.excluded-day .date-cell,
-.excluded-day .ifo-day-val,
-.excluded-day .franja-val {
-    color: #dc2626 !important;
-    /* ROJO para días excluidos */
+.special-day td,
+.special-day .date-cell,
+.special-day .ifo-day-val,
+.special-day .franja-val {
+    color: #475569 !important;
+    /* Gris azulado para días especiales que sí cuentan */
 }
 
 .exclusion-tag {

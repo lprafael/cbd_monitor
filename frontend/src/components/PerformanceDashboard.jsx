@@ -126,7 +126,7 @@ const PerformanceDashboard = ({ performanceData }) => {
                           );
                         })()}
                       </td>
-                      <td className="metric-value">{row.ifo_franja_calculado.toFixed(1)}%</td>
+                      <td className="metric-value">{row.ifo_franja_calculado.toFixed(2)}%</td>
                       <td>
                         <span className={`badge ${getComplianceClass(row.ifo_estado_cumplimiento)}`}>
                           {row.ifo_estado_cumplimiento}
@@ -139,7 +139,7 @@ const PerformanceDashboard = ({ performanceData }) => {
                 <tfoot>
                   <tr className="summary-row">
                     <td colSpan="2" className="summary-label">IFO DIA (Promedio):</td>
-                    <td className="metric-value summary-value">{ifoPromedio.toFixed(1)}%</td>
+                    <td className="metric-value summary-value">{ifoPromedio.toFixed(2)}%</td>
                     <td colSpan="2"></td>
                   </tr>
                 </tfoot>

@@ -32,8 +32,8 @@ async def get_monthly_performance(
     
     Rules:
     1. IFO Mensual: Average of Daily IFOs (which are average of Franja IFOs).
-       - Excludes Sundays and Holidays.
-       - Excludes 'Madrugada' and 'Nocturna' franjas.
+       - Incluye todos los días (Laborales, Sábados, Domingos, Feriados y Atípicos).
+       - Excluye las franjas 'Madrugada' y 'Nocturna' (si aplica la query de franjas).
     2. Comparison: IFO Sistema (Month n-1).
        - Average of Monthly IFOs of all EOTs in previous month.
     3. Thresholds:
@@ -76,8 +76,7 @@ async def get_monthly_performance(
                     JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
                     WHERE h.id_eot_vmt_hex = %s
                       AND h.fecha BETWEEN %s AND %s
-                      AND extract(isodow from h.fecha) < 7 -- Exclude Sundays (7)
-                      AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
+                      -- Incluimos todos los días sin excepciones (Etapa 1: Adaptación)
                     GROUP BY fecha, h.id_franja
                 ) franja_level
                 GROUP BY fecha
@@ -103,8 +102,7 @@ async def get_monthly_performance(
                 JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
                 WHERE h.id_eot_vmt_hex = %s
                   AND h.fecha BETWEEN %s AND %s
-                  AND extract(isodow from h.fecha) < 7
-                  AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
+                  -- Incluimos todos los días sin excepciones
                 GROUP BY fecha, h.id_franja
             ) franja_level
             GROUP BY fecha
@@ -142,9 +140,7 @@ async def get_monthly_performance(
                         FROM control_metricas.ifo_historico h
                         JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
                         WHERE h.fecha BETWEEN %s AND %s
-                          AND extract(isodow from h.fecha) < 7
-                          AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
-                          AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
+                          -- Incluimos todos los días para tener el panorama completo del sistema
                         GROUP BY id_eot_vmt_hex, fecha, h.id_franja
                     ) franja_level
                     GROUP BY id_eot_vmt_hex, fecha

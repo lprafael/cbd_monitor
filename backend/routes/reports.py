@@ -419,7 +419,7 @@ async def get_eot_monthly_breakdown(
                 
                 breakdown[fecha_str] = {
                     "fecha": fecha_str,
-                    "es_excluido": es_domingo or es_feriado or es_atipico,
+                    "es_excluido": False, # Etapa 1: Todos los días se consideran para el promedio
                     "motivo_exclusion": "Domingo" if es_domingo else "Feriado" if es_feriado else "Atípico" if es_atipico else None,
                     "ifo_dia": 0,
                     "franjas": []

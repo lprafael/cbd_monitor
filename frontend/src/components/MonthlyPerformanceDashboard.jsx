@@ -89,6 +89,7 @@ const MonthlyPerformanceDashboard = ({ data }) => {
                             <thead>
                                 <tr>
                                     <th>Fecha</th>
+                                    <th>Día</th>
                                     <th>IFO Diario</th>
                                     <th>IFO Diario(Topeado)</th>
                                     <th>Estado</th>
@@ -98,6 +99,7 @@ const MonthlyPerformanceDashboard = ({ data }) => {
                                 {capped_ifo_diarios.map((d, idx) => (
                                     <tr key={idx}>
                                         <td>{d.fecha}</td>
+                                        <td>{new Intl.DateTimeFormat('es-PY', { weekday: 'long' }).format(new Date(d.fecha + 'T00:00:00'))}</td>
                                         <td>{d.ifo.toFixed(2)}%</td>
                                         <td>{d.ifo_topeado.toFixed(2)}%</td>
                                         <td>
