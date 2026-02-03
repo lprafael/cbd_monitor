@@ -2,7 +2,6 @@ import smtplib
 import requests
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from email.mime.image import MIMEImage
 from datetime import datetime, timedelta, date
 import os
 from dotenv import load_dotenv
@@ -586,8 +585,8 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
         secciones_eot_html += f"""
         <div style="margin-top: 30px; page-break-inside: avoid;">
             <h4 style="color: #004a99; margin-bottom: 10px;">{eot_nombre}</h4>
-            <p style="margin-bottom: 5px;"><strong>IFO MES(Acumulado):</strong> {ifo_mes:.2f}% {"<span style='color: #cc0000; font-weight: bold;'> (POR DEBAJO)</span>" if ifo_objetivo > 0 and ifo_mes < ifo_objetivo else ""}</p>
-            <p style="margin-bottom: 15px;"><strong>IFO MES(Objetivo):</strong> {ifo_objetivo:.2f}%</p>
+            <p style="margin-bottom: 5px;"><strong>IFO MES(Acumulado):</strong> {ifo_mes:.2f}%</p>
+            <p style="margin-bottom: 15px;"><strong>IFO MES(Objetivo):</strong> {ifo_objetivo:.2f}% {"<span style='color: #cc0000; font-weight: bold;'> (INCUMPLIMIENTO)</span>" if ifo_objetivo > 0 and ifo_mes < ifo_objetivo else ""}</p>
         """
         
         # Generar tabla para cada tipo de día (5=Laboral, 6=Sábado, 7=Domingo/Feriado)
@@ -791,8 +790,11 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
                 box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             }}
             .header {{
+                background-color: #004a99;
+                color: #fff;
+                padding: 15px;
                 text-align: center;
-                margin-bottom: 20px;
+                border-radius: 5px 5px 0 0;
             }}
             .section-title {{
                 color: #004a99;
@@ -840,38 +842,32 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
     <body>
         <div class="container">
             <div class="header">
-                <img src="cid:vmt_logo" alt="Logo MOPC VMT" style="width: 100%; max-width: 800px; height: auto; display: block; margin: 0 auto;">
+                <h2>VICEMINISTERIO DE TRANSPORTE - CENTRAL DE CONTROL Y MONITOREO (CID-DMT)</h2>
             </div>
 
-            <p style="text-align: right; font-size: 12px;"><strong>ASUNTO:</strong> Notificación Oficial de Desempeño Operativo – Inicio de la Etapa 1 (Adaptación)</p>
-            <p style="font-size: 12px;"><strong>FECHA DE OPERACIÓN:</strong> {fecha_formato}</p>
-            <p style="font-size: 12px;"><strong>FECHA DE EMISIÓN:</strong> {fecha_envio}</p>
+            <p style="text-align: right; font-size: 12px;"><strong>ASUNTO:</strong> <strong>REPORTE DIARIO D+1:</strong> Consolidado de las verificaciones (CBD/ICCBDM/IFO) - {fecha_formato}</p>
+            <p style="font-size: 12px;"><strong>DE:</strong> Coordinación de Innovación y Desarrollo (CID)</p>
+            <p style="font-size: 12px;"><strong>PARA:</strong> Ing. ROLANDO GONZÁLEZ, Director (Dirección Metropolitana de Transporte - DMT)</p>
+            <p style="font-size: 12px;"><strong>FECHA:</strong> {fecha_envio}</p>
+            {f'<p style="font-size: 12px;"><strong>CC:</strong> {email_cc}</p>' if email_cc else ''}
 
             <hr style="border-top: 1px solid #004a99;">
 
             <div class="cuerpo-texto">
-                <p>Estimados Permisionarios del Servicio de Transporte Público Metropolitano:</p>
+                <p>Estimado Ing. ROLANDO GONZÁLEZ, Director (Dirección Metropolitana de Transporte - DMT):</p>
+                <p>La <strong>Coordinación de Innovación y Desarrollo (CID),</strong> a través de la Central de Control y Monitoreo (CCM), eleva el presente <strong>Informe Diario de Control y Monitoreo</strong> correspondiente a la operación del día <strong>{fecha_formato}</strong>.</p>
                 
-                <p>La <strong>Dirección Metropolitana de Transporte (DMT),</strong> en cumplimiento de lo establecido en el <strong>Artículo 14 de la Resolución GVMT N° 120/2025</strong>, remite el presente reporte de desempeño acumulado del mes, hasta la operativa del día <strong>{fecha_formato}</strong>.</p>
+                <p>Se deja constancia de que este reporte se emite en el marco del periodo de socialización y capacitación establecido en el <strong>Artículo 22 de la Resolución GVMT N° 120/2025</strong>, el cual precede a la entrada en vigencia formal de la normativa el próximo 1 de febrero.</p>
                 
-                <p>Se deja constancia de que, con fecha <strong>1 de febrero de 2026</strong>, se ha dado inicio oficial a la <strong>Etapa 1: Adaptación Operativa</strong>, la cual tendrá una duración de dos meses. Esta fase es fundamental para la consolidación del Sistema Integral de Control y Monitoreo basado en los datos de GPS y Billetaje Electrónico.</p>
-
-                <div style="background-color: #f0f7ff; border-left: 5px solid #004a99; padding: 15px; margin: 20px 0;">
-                    <h4 style="margin-top: 0; color: #004a99;">Pautas de la Etapa Actual (Febrero - Marzo 2026):</h4>
-                    <ul style="margin: 10px 0; padding-left: 20px;">
-                        <li><strong>Sin Sanciones Pecuniarias:</strong> Durante estos dos meses, de acuerdo con el <strong>Artículo 21.1</strong>, los eventuales incumplimientos de los indicadores de desempeño (IFO y CBDmin) serán reportados a las empresas con fines informativos, pero <strong>no se aplicarán las sanciones pecuniarias</strong> previstas en el catálogo de infracciones.</li>
-                        <li><strong>Propósito de Adaptación:</strong> Esta comunicación tiene como objetivo principal que cada empresa pueda:
-                            <ol>
-                                <li>Ajustar su operación a los nuevos niveles de servicio (Niveles A, B y C) y parámetros de buses mínimos (CBDmin).</li>
-                                <li>Verificar la precisión de la transmisión de sus datos operativos (GPS) y validaciones de billetaje.</li>
-                                <li>Realizar correcciones técnicas antes del inicio de la Etapa 2 (Parcial), donde comenzarán a regir las multas en franjas pico y pospico.</li>
-                            </ol>
-                        </li>
-                        <li><strong>Tratamiento de Datos:</strong> Recordamos que el cálculo del Índice de Flota Operativa (IFO) y de Cantidad Mínima de Buses Diferentes (CBDmin) incluye inicialmente todos los días con datos válidos, aplicando los factores de ajuste correspondientes para días atípicos si los hubiere.</li>
-                    </ul>
-                </div>
-
-                <p>Este reporte diario constituye el canal oficial de comunicación para garantizar la transparencia y la robustez técnica del sistema antes de la plena vigencia del régimen sancionatorio.</p>
+                <p><strong>Propósito de esta fase previa:</strong> A diferencia de los reportes previstos en el Art. 14, esta comunicación diaria tiene un carácter estrictamente interno y técnico, orientado a:</p>
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                    <li><strong>Ajustes de Control y Monitoreo:</strong> Facilitar el ajuste de los sistemas de recolección y procesamiento de datos (GPS y Billetaje) antes del inicio de la Etapa 1.</li>
+                    <li><strong>Conocimiento de las Autoridades:</strong> Permitir que la Dirección analice el comportamiento real de la flota y los indicadores (IFO y CBD) en un entorno de prueba.</li>
+                    <li><strong>Validación y Feedback:</strong> Obtener observaciones y correcciones necesarias por parte de la autoridad superior sobre la visualización y precisión de los datos presentados.</li>
+                    <li><strong>Análisis de Comportamiento:</strong> Identificar de manera temprana variaciones significativas en la operatividad de las EOT que requieran atención técnica o normativa.</li>
+                </ul>
+                
+                <p>Este flujo de información diaria servirá para consolidar la herramienta de cálculo y garantizar que, al llegar a la Etapa de adaptación operativa el 1 de febrero, el sistema cuente con la robustez técnica necesaria para el reporte oficial a los permisionarios.</p>
 
                 {seccion_clima}
 
@@ -912,6 +908,20 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
 
                 {secciones_eot_html}
 
+                <div class="note">
+                    <p><strong>Nota: Niveles de Servicio y Régimen Sancionatorio del IFO</strong></p>
+                    <p>De acuerdo con la Resolución GVMT N° 120/2025, los niveles de rendimiento para el Índice de Flota Operativa (IFO) se categorizan y sancionan de la siguiente manera:</p>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li><strong>Nivel de Servicio B (Cumplimiento entre 80% y 89%):</strong> Clasificado como Infracción Leve. Genera una multa de 10 jornales al acumular cinco (5) franjas en este nivel dentro de un mes calendario.</li>
+                        <li><strong>Nivel de Servicio C (Cumplimiento inferior al 80%):</strong> Clasificado como Infracción Intermedia. Genera una multa de 20 jornales por cada día en que se registre al menos una franja en este nivel.</li>
+                    </ul>
+                    <p><strong>Ámbito de Aplicación por Franjas:</strong> Según lo establecido en los numerales 15.2 al 15.5 de la resolución, estas sanciones por IFO son aplicables exclusivamente a las franjas:</p>
+                    <ol style="margin: 10px 0; padding-left: 20px;">
+                        <li><strong>Pico:</strong> Mañana, Tarde y Sábado.</li>
+                        <li><strong>Pos Pico:</strong> Entre picos, Tarde, Sábado y Domingos/Feriados.</li>
+                    </ol>
+                    <p><strong>Importante:</strong> Las franjas Madrugada y Nocturna, si bien son monitoreadas para el cumplimiento de buses mínimos (CBD), no están contempladas taxativamente para las sanciones por niveles de rendimiento IFO (B o C) en el Artículo 15.</p>
+                </div>
 
                 <h3 class="section-title">PROCEDIMIENTO Y BASE LEGAL</h3>
                 <ul>
@@ -952,11 +962,9 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
             </div>
 
             <div class="signature">
-                <p>Para consultas técnicas sobre los valores obtenidos en este informe, pueden dirigirse a la Coordinación de Innovación y Desarrollo (CID) a través del correo oficial: <strong>billetajevmt@gmail.com</strong>.</p>
-                <br>
                 <p>Atentamente,</p>
-                <p><strong>Ing. ROLANDO GONZÁLEZ</strong><br>Director – Dirección Metropolitana de Transporte (DMT)<br>Viceministerio de Transporte (GVMT)</p>
-                <p style="color: #888; margin-top: 10px; font-size: 10px;">*Este es un mensaje generado automáticamente por el Sistema Integral de Control y Monitoreo (CID/DMT)*</p>
+                <p><strong>Coordinación de Innovación y Desarrollo (CID)</strong><br>Dirección Metropolitana de Transporte (DMT)<br>Viceministerio de Transporte (GVMT)<br>Ministerio de Obras Públicas y Comunicaciones</p>
+                <p style="color: #888; margin-top: 10px;">*Este es un mensaje generado automáticamente por el Sistema de Control y Monitoreo (CID/DMT)*</p>
             </div>
         </div>
     </body>
@@ -1042,32 +1050,15 @@ def enviar_informe_incumplimientos(datos_incumplimientos, fecha_referencia=None,
         if destinatarios_cc:
             msg['Cc'] = ", ".join(destinatarios_cc)
         
-        # Ajustar asunto según si es simulación o informe oficial
-        #prefix = "[SIMULACIÓN EMPRESA]" if email_destino else "[DMT] OFICIAL" 
-        #msg['Subject'] = f'{prefix} Reporte Diario - Métricas IFO/ICCBDM - {fecha_referencia.strftime("%Y-%m-%d")}'
+        # msg['Subject'] = f'[DMT] Reporte Diario - Métricas IFO/ICCBDM - {fecha_referencia.strftime("%Y-%m-%d")}'
         
-        # Nuevo Asunto Oficial Etapa 1
-        msg['Subject'] = f'Notificación Oficial de Desempeño Operativo – Inicio de la Etapa 1 (Adaptación) - Res. GVMT N° 120/2025 - {fecha_referencia.strftime("%Y-%m-%d")}'
+        # Ajustar asunto según si es simulación o informe oficial
+        prefix = "[SIMULACIÓN EMPRESA]" if email_destino else "[DMT] OFICIAL" 
+        msg['Subject'] = f'{prefix} Reporte Diario - Métricas IFO/ICCBDM - {fecha_referencia.strftime("%Y-%m-%d")}'
         
         # Generar el contenido HTML del informe (incluyendo visualización de CC)
         html_content = generar_html_informe(datos_incumplimientos, fecha_referencia, EMAIL_CC, incluir_resumen_infracciones=incluir_resumen_infracciones)
         msg.attach(MIMEText(html_content, 'html'))
-
-        # Adjuntar LOGO MOPC VMT (Si existe)
-        try:
-            current_dir = Path(__file__).parent.absolute()
-            logo_path = current_dir.parent / 'frontend' / 'public' / 'imagenes' / 'Logo MOPC VMT.png'
-            
-            if logo_path.exists():
-                with open(logo_path, 'rb') as f:
-                    logo_img = MIMEImage(f.read())
-                    logo_img.add_header('Content-ID', '<vmt_logo>')
-                    logo_img.add_header('Content-Disposition', 'inline', filename='logo.png')
-                    msg.attach(logo_img)
-            else:
-                print(f"⚠ Logo no encontrado en: {logo_path}")
-        except Exception as e:
-            print(f"⚠ Error adjuntando logo: {e}")
         
         # Configurar conexión SMTP
         server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=60)

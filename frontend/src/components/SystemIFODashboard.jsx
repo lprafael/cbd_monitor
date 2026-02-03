@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './SystemIFODashboard.css';
 import CalculationMethodologyModal from './CalculationMethodologyModal';
 
@@ -9,14 +9,7 @@ const SystemIFODashboard = ({ year, month }) => {
     const [isMethodologyModalOpen, setIsMethodologyModalOpen] = useState(false);
     const [expandedEots, setExpandedEots] = useState({}); // { eot_id: { loading, data, error } }
 
-    useEffect(() => {
-        if (year && month) {
-            fetchSystemIFO();
-            setExpandedEots({}); // Reset expanded states on month change
-        }
-    }, [year, month]);
-
-    const fetchSystemIFO = async () => {
+    const fetchSystemIFO = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
@@ -31,7 +24,14 @@ const SystemIFODashboard = ({ year, month }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [year, month]);
+
+    useEffect(() => {
+        if (year && month) {
+            fetchSystemIFO();
+            setExpandedEots({}); // Reset expanded states on month change
+        }
+    }, [year, month, fetchSystemIFO]);
 
     const toggleEotExpansion = async (eotId) => {
         if (expandedEots[eotId] && expandedEots[eotId].data) { // If already expanded and data loaded, just collapse
@@ -143,7 +143,7 @@ const SystemIFODashboard = ({ year, month }) => {
             <div className="exclusions-section">
                 <div className="section-title-row">
                     <span className="icon">📅</span>
-                    <h3>Días Excluidos del Cálculo</h3>
+                    <h3>Días Atípicos y Feriados del Período</h3>
                 </div>
                 <div className="exclusions-grid">
                     <div className="exclusion-item">
@@ -280,7 +280,7 @@ const SystemIFODashboard = ({ year, month }) => {
                 <ol>
                     <li><strong>IFO Franja:</strong> Valor base almacenado en la base de datos</li>
                     <li><strong>IFO Día:</strong> Promedio de IFO Franja por día</li>
-                    <li><strong>IFO Mensual EOT:</strong> Promedio de IFO Día (excluyendo domingos, feriados y días atípicos)</li>
+                    <li><strong>IFO Mensual EOT:</strong> Promedio de IFO Día (incluyendo todos los días del mes sin exclusión)</li>
                     <li><strong>IFO Sistema:</strong> Promedio de IFO Mensual de todas las EOTs</li>
                 </ol>
                 <p className="formula">

@@ -336,7 +336,8 @@
 }
 
 .eots-table thead {
-    background: var(--primary-color);
+    background: #004a99;
+    /* Azul oscuro para contraste */
     color: white;
 }
 
@@ -517,8 +518,9 @@
 }
 
 .total-row {
-    background-color: var(--hover-background) !important;
-    border-top: 2px solid var(--border-color);
+    background-color: #f8fafc !important;
+    /* Gris muy claro para distinguir totales */
+    border-top: 2px solid #e2e8f0;
 }
 
 .total-row td {

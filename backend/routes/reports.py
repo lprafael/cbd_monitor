@@ -167,9 +167,6 @@ async def get_system_ifo_baseline(fecha: date, db: DatabaseConnection = Depends(
                 AVG(h.ifo) as ifo_dia
             FROM control_metricas.ifo_historico h
             WHERE h.fecha >= %s AND h.fecha <= %s
-              AND extract(isodow from h.fecha) < 7
-              AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
-              AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
             GROUP BY h.id_eot_vmt_hex, h.fecha
         ),
         ifo_mensual_eot AS (
@@ -302,9 +299,6 @@ async def get_system_ifo_breakdown(
                 AVG(h.ifo) as ifo_dia
             FROM control_metricas.ifo_historico h
             WHERE h.fecha >= %s AND h.fecha <= %s
-              AND extract(isodow from h.fecha) < 7
-              AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
-              AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
             GROUP BY h.id_eot_vmt_hex, h.fecha
         ),
         ifo_mensual_eot AS (

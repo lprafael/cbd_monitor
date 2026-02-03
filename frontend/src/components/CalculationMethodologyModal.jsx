@@ -76,16 +76,15 @@ const CalculationMethodologyModal = ({ isOpen, onClose }) => {
                     </section>
 
                     <section className="methodology-section">
-                        <h3>🚫 Filtros y Exclusiones</h3>
+                        <h3>📌 Consideraciones del Período</h3>
                         <div className="exclusions-info">
-                            <div className="exclusion-card">
-                                <h4>Días Excluidos</h4>
+                            <div className="exclusion-card highlight">
+                                <h4>Días Atípicos y Feriados</h4>
+                                <p><strong>Nota importante:</strong> Según el requerimiento actual, estos días <strong>SI</strong> se consideran en el promedio mensual, aunque se mantienen identificados visualmente para auditoría:</p>
                                 <ul>
-                                    <li><strong>Domingos:</strong> <code>extract(isodow from fecha) = 7</code></li>
-                                    <li><strong>Feriados:</strong> Fechas en tabla <code>public.feriados</code></li>
-                                    <li><strong>Días Atípicos:</strong> Fechas en tabla <code>control_metricas.dias_atipicos</code>
-                                        <br /><small>(Eventos extraordinarios, manifestaciones, clima extremo, etc.)</small>
-                                    </li>
+                                    <li><strong>Domingos:</strong> Incluidos en el promedio</li>
+                                    <li><strong>Feriados:</strong> Incluidos en el promedio</li>
+                                    <li><strong>Días Atípicos:</strong> Incluidos en el promedio</li>
                                 </ul>
                             </div>
                             <div className="exclusion-card">
@@ -175,9 +174,7 @@ FROM (
             JOIN control_metricas.franjas_operativas f 
                 ON h.id_franja = f.id_franja
             WHERE h.fecha BETWEEN :inicio_mes AND :fin_mes
-              AND extract(isodow from h.fecha) < 7  -- Excluir domingos
-              AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
-              AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
+            -- Nota: Se incluyen domingos, feriados y atípicos en el cálculo
             GROUP BY id_eot_vmt_hex, fecha, h.id_franja
         ) franja_level
         GROUP BY id_eot_vmt_hex, fecha
