@@ -249,7 +249,7 @@ def obtener_clima(fecha: date) -> Optional[Dict[str, Any]]:
         'comprobado': comprobado
     }
 
-def analizar_infracciones_res_120(eot_nombre, datos_mensuales, fecha_referencia, ifo_objetivo=0.0):
+def analizar_infracciones_res_120(eot_nombre, datos_mensuales, fecha_referencia):
     """
     Analiza las infracciones según los Artículos 15 y 16 de la Resolución 120/2025.
     Retorna una lista de todas las sanciones detectadas en el mes hasta la fecha_referencia.
@@ -374,18 +374,6 @@ def analizar_infracciones_res_120(eot_nombre, datos_mensuales, fecha_referencia,
                 historial_faltas.append({'fecha': fecha, 'base': 'Art. 16.4', 'desc': 'Reincidencia Nivel B Pos Pico (5 adicionales en 7 días)', 'jornales': 20})
                 trigger_16_4 = True
 
-    # 5. Art. 15.1 - IFO Mensual Objetivo (Umbral Mínimo Obligatorio)
-    # Solo se aplica si el IFO acumulado del mes es menor al IFO Objetivo
-    if ifo_objetivo > 0:
-        ifo_mes_acumulado = datos_mensuales.get('ifo_mes', 0)
-        if ifo_mes_acumulado < ifo_objetivo:
-            historial_faltas.append({
-                'fecha': fecha_referencia, 
-                'base': 'Art. 15.1', 
-                'desc': f'Incumplimiento IFO Mensual Objetivo ({ifo_mes_acumulado:.2f}% < {ifo_objetivo:.2f}%)', 
-                'jornales': 173
-            })
-
     # Transformar para el reporte
     sanciones = []
     for f in historial_faltas:
@@ -414,8 +402,8 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
     fecha_envio = datetime.now().strftime("%Y-%m-%d %I:%M %p")
     
     # Calcular IFO Objetivo (Sistema Mes Anterior - 5)
-    ifo_sistema_anterior = obtener_ifo_sistema_mes_anterior(fecha_referencia)
-    ifo_objetivo = round(ifo_sistema_anterior - 5.0, 2) if ifo_sistema_anterior > 0 else 0.0
+    # ifo_sistema_anterior = obtener_ifo_sistema_mes_anterior(fecha_referencia)
+    # ifo_objetivo = round(ifo_sistema_anterior - 5.0, 2) if ifo_sistema_anterior > 0 else 0.0
     
     # Obtener descripción dinámica de parámetros
     nota_parametros = obtener_parametros_ifo_resumen(fecha_referencia)
@@ -557,7 +545,7 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
         
         # Analizar infracciones para el resumen (Art 15/16)
         if datos_mensuales:
-            inf_detectadas = analizar_infracciones_res_120(eot_nombre, datos_mensuales, fecha_referencia, ifo_objetivo=ifo_objetivo)
+            inf_detectadas = analizar_infracciones_res_120(eot_nombre, datos_mensuales, fecha_referencia)
             for inf in inf_detectadas:
                 resumen_infracciones_lista.append({
                     'empresa': eot_nombre,
@@ -586,8 +574,7 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
         secciones_eot_html += f"""
         <div style="margin-top: 30px; page-break-inside: avoid;">
             <h4 style="color: #004a99; margin-bottom: 10px;">{eot_nombre}</h4>
-            <p style="margin-bottom: 5px;"><strong>IFO MES(Acumulado):</strong> {ifo_mes:.2f}% {"<span style='color: #cc0000; font-weight: bold;'> (POR DEBAJO)</span>" if ifo_objetivo > 0 and ifo_mes < ifo_objetivo else ""}</p>
-            <p style="margin-bottom: 15px;"><strong>IFO MES(Objetivo):</strong> {ifo_objetivo:.2f}%</p>
+            <p style="margin-bottom: 15px;"><strong>IFO MES(Acumulado):</strong> {ifo_mes:.2f}%</p>
         """
         
         # Generar tabla para cada tipo de día (5=Laboral, 6=Sábado, 7=Domingo/Feriado)
@@ -704,7 +691,7 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
                             <th rowspan="2" style="border: 1px solid #ccc; padding: 8px; text-align: center;">Fecha</th>
                             <th rowspan="2" style="border: 1px solid #ccc; padding: 8px; text-align: center;">Métrica</th>
                             <th colspan="{len(franjas_ids)}" style="border: 1px solid #ccc; padding: 8px; text-align: center;">Franjas Operativas</th>
-                            <th rowspan="2" style="border: 1px solid #ccc; padding: 8px; text-align: center;">Promedio IFO Diario</th>
+                            <th rowspan="2" style="border: 1px solid #ccc; padding: 8px; text-align: center;">IFO Promedio Diario (%)</th>
                         </tr>
                         <tr style="background-color: #d9e3f1;">
                             {encabezado_franjas}
@@ -843,7 +830,7 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
                 <img src="cid:vmt_logo" alt="Logo MOPC VMT" style="width: 100%; max-width: 800px; height: auto; display: block; margin: 0 auto;">
             </div>
 
-            <p style="text-align: right; font-size: 12px;"><strong>ASUNTO:</strong> Notificación Oficial de Desempeño Operativo – Inicio de la Etapa 1 (Adaptación)</p>
+            <p style="text-align: left; font-size: 12px;"><strong>ASUNTO:</strong> Reporte Oficial de Desempeño Operativo – Etapa 1 (Adaptación)</p>
             <p style="font-size: 12px;"><strong>FECHA DE OPERACIÓN:</strong> {fecha_formato}</p>
             <p style="font-size: 12px;"><strong>FECHA DE EMISIÓN:</strong> {fecha_envio}</p>
 
@@ -867,7 +854,7 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
                                 <li>Realizar correcciones técnicas antes del inicio de la Etapa 2 (Parcial), donde comenzarán a regir las multas en franjas pico y pospico.</li>
                             </ol>
                         </li>
-                        <li><strong>Tratamiento de Datos:</strong> Recordamos que el cálculo del Índice de Flota Operativa (IFO) y de Cantidad Mínima de Buses Diferentes (CBDmin) incluye inicialmente todos los días con datos válidos, aplicando los factores de ajuste correspondientes para días atípicos si los hubiere.</li>
+                        <li><strong>Tratamiento de Datos:</strong> El cálculo del Índice de Flota Operativa (IFO) y de Cantidad Mínima de Buses Diferentes (CBDmin) aplica factores de ajustes correspondientes a días atípicos, cuyos cálculos podría arrojar valores superlativos, los cuales serán analizados durante esta Etapa 1 (Adaptación).</li>
                     </ul>
                 </div>
 
@@ -908,15 +895,14 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
                     </div>
                 </div>
 
-                <h3 class="section-title">CONSOLIDADO DE MONITOREOS DIARIOS (CBD/ICCBDM/IFO)</h3>
+                <h3 class="section-title">CONSOLIDADO DE MONITOREOS DIARIOS</h3>
 
                 {secciones_eot_html}
 
 
                 <h3 class="section-title">PROCEDIMIENTO Y BASE LEGAL</h3>
                 <ul>
-                    <li><strong>Alerta Automática:</strong> El sistema genera este informe de manera automatizada al detectar rendimientos en niveles B o C, conforme a la metodología de cálculo que incluye el redondeo al entero superior inmediato.</li>
-                    <li><strong>Generación de Acta:</strong> Tras la validación técnica de la Coordinación de Innovación y Desarrollo (CID), se emitirá el Acta de Comprobación con validez de infracción, según el Artículo 19.</li>
+                    <li><strong>Alerta Automática:</strong> El sistema genera este informe de manera automatizada.</li>
                     <li><strong>Vigencia Gradual:</strong> Conforme al Artículo 21, durante la Etapa 1 (febrero y marzo de 2026), los incumplimientos se reportarán únicamente a efectos informativos, sin aplicación de multas. Las sanciones efectivas iniciarán en la Etapa 2 (abril de 2026) solo para picos y pos picos de lunes a sábado.</li>
                     <li><strong>Marco Regulatorio:</strong> Todo el proceso se rige por el Capítulo IV de la Resolución GVMT N° 120/2025.</li>
                 </ul>
@@ -1011,7 +997,8 @@ def enviar_informe_incumplimientos(datos_incumplimientos, fecha_referencia=None,
         EMAIL_TO = os.getenv('EMAIL_TO', 'transporte.mopc@gmail.com')
 
     # Tomamos el CC del .env, si no hay nada usamos None
-    EMAIL_CC = os.getenv('EMAIL_CC')
+    # EMAIL_CC = os.getenv('EMAIL_CC')
+    EMAIL_CC = None
     
     USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() in ('true', '1', 't')
     
@@ -1030,9 +1017,10 @@ def enviar_informe_incumplimientos(datos_incumplimientos, fecha_referencia=None,
     
     # Configurar destinatarios (Soporta listas separadas por comas)
     destinatarios_to = [e.strip() for e in EMAIL_TO.split(',') if e.strip()]
-    destinatarios_cc = [e.strip() for e in EMAIL_CC.split(',') if e.strip()] if EMAIL_CC else []
+    # destinatarios_cc = [e.strip() for e in EMAIL_CC.split(',') if e.strip()] if EMAIL_CC else []
+    destinatarios_cc = []
     
-    all_recipients = destinatarios_to + destinatarios_cc
+    all_recipients = destinatarios_to # + destinatarios_cc
 
     try:
         # Crear el mensaje
@@ -1047,7 +1035,7 @@ def enviar_informe_incumplimientos(datos_incumplimientos, fecha_referencia=None,
         #msg['Subject'] = f'{prefix} Reporte Diario - Métricas IFO/ICCBDM - {fecha_referencia.strftime("%Y-%m-%d")}'
         
         # Nuevo Asunto Oficial Etapa 1
-        msg['Subject'] = f'Notificación Oficial de Desempeño Operativo – Inicio de la Etapa 1 (Adaptación) - Res. GVMT N° 120/2025 - {fecha_referencia.strftime("%Y-%m-%d")}'
+        msg['Subject'] = f'Reporte Oficial de Desempeño Operativo – Etapa 1 (Adaptación) - Res. GVMT N° 120/2025 - {fecha_referencia.strftime("%Y-%m-%d")}'
         
         # Generar el contenido HTML del informe (incluyendo visualización de CC)
         html_content = generar_html_informe(datos_incumplimientos, fecha_referencia, EMAIL_CC, incluir_resumen_infracciones=incluir_resumen_infracciones)

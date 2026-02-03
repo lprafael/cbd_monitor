@@ -313,9 +313,8 @@ def procesar_fecha(fecha: date, modo_notificacion: str = None):
                 })
                 
                 # Detectar incumplimientos para notificaciones
-                # Si es modo verificación (Director), incluimos todo. Si es notificación (Empresa), solo incumplimientos.
-                es_incumplimiento = ifo_val < ifo_min_pct
-                incluir_en_reporte = es_incumplimiento or (modo_notificacion == 'verificacion')
+                # Si es modo notificación o verificación, incluimos a todos (antes se filtraba solo incumplimientos)
+                incluir_en_reporte = (modo_notificacion is not None) or es_incumplimiento
 
                 if incluir_en_reporte:
                     datos_incumplimientos.append({
@@ -400,9 +399,9 @@ def enviar_notificaciones(datos_incumplimientos: list, fecha: date, modo: str):
                     email_eot = None
                     try:
                         cursor.execute("""
-                            SELECT email FROM public.eots 
-                            WHERE id_eot_vmt_hex = %s AND email IS NOT NULL
-                            AND e.cod_catalogo NOT IN (75)
+                            SELECT e_mail FROM public.eots 
+                            WHERE id_eot_vmt_hex = %s AND e_mail IS NOT NULL
+                            AND cod_catalogo NOT IN (75)
                         """, (eot_vmt_hex,))
                         result = cursor.fetchone()
                         email_eot = result[0] if result else None
@@ -425,7 +424,8 @@ def enviar_notificaciones(datos_incumplimientos: list, fecha: date, modo: str):
                 def procesar_envio(tarea):
                     try:
                         incumplimientos_eot = tarea['data']['incumplimientos']
-                        if enviar_informe_incumplimientos(incumplimientos_eot, fecha, incluir_resumen_infracciones=False):
+                        # CORRECCIÓN: Pasar el email_destino de la tarea
+                        if enviar_informe_incumplimientos(incumplimientos_eot, fecha, email_destino=tarea['email'], incluir_resumen_infracciones=False):
                             return f"    ✓ {tarea['data']['eot_nombre']}: {len(incumplimientos_eot)} incumplimientos - Enviado a {tarea['email']}"
                         else:
                             return f"    ✗ {tarea['data']['eot_nombre']}: Falló el envío a {tarea['email']}"
@@ -438,6 +438,10 @@ def enviar_notificaciones(datos_incumplimientos: list, fecha: date, modo: str):
                         futures = [executor.submit(procesar_envio, tarea) for tarea in tareas_envio]
                         for future in concurrent.futures.as_completed(futures):
                             print(future.result())
+                    
+                    # ADICIÓN: Enviar también el consolidado al Director para su seguimiento
+                    print(f"\n  Enviando copia del informe consolidado al Director...")
+                    enviar_informe_incumplimientos(datos_incumplimientos, fecha, incluir_resumen_infracciones=True)
                 else:
                     print("  No hay correos para enviar.")
 
