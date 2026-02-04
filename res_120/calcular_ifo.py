@@ -69,6 +69,33 @@ MAX_WORKERS = 3   # Menos workers para no saturar la BD, ya que cada batch es m�
 datos_incumplimientos = []
 
 
+ALERTA_GENERADA = False
+
+def registrar_ejecucion_correcta(id_script: int = 4):
+    """
+    Registra una ejecución correcta en la tabla alertas.registro_ejecuciones.
+    """
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return
+
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO alertas.registro_ejecuciones 
+            (id_script, fecha_ejecucion, estado, detalles)
+            VALUES (%s, NOW(), %s, %s)
+        """, (id_script, 'OK', 'Ejecución completada correctamente'))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        print("  ℹ Ejecución registrada en alertas.registro_ejecuciones")
+
+    except Exception as e:
+        print(f"  ⚠ Error al registrar ejecución en BD: {e}")
+
+
 def registrar_alerta(descripcion: str, id_tipo_alerta: int = 1):
     """
     Registra una alerta en la tabla alertas.control_alertas cuando ocurre un error.
@@ -77,6 +104,8 @@ def registrar_alerta(descripcion: str, id_tipo_alerta: int = 1):
         descripcion: Descripción del error/incidente
         id_tipo_alerta: ID del tipo de alerta (por defecto 1)
     """
+    global ALERTA_GENERADA
+    ALERTA_GENERADA = True
     try:
         conn = get_db_connection()
         if not conn:
@@ -97,6 +126,46 @@ def registrar_alerta(descripcion: str, id_tipo_alerta: int = 1):
         return True
     except Exception as e:
         print(f"  ⚠ Error al registrar alerta en BD: {e}")
+        return False
+
+
+def verificar_dependencias():
+    """
+    Verifica si los scripts 1, 2 y 3 se ejecutaron correctamente hoy.
+    """
+    try:
+        conn = get_db_connection()
+        if not conn:
+            print("  ⚠ No se pudo conectar a BD para verificar dependencias (scripts 1, 2, 3)")
+            # Si no hay conexión, asumimos que no se puede verificar y por seguridad retornamos False
+            # según el requerimiento estricto del usuario.
+            return False
+        
+        cursor = conn.cursor()
+        # Verificar scripts 1, 2 y 3
+        cursor.execute("""
+            SELECT COUNT(DISTINCT id_script)
+            FROM alertas.registro_ejecuciones
+            WHERE id_script IN (1, 2, 3)
+            AND fecha_ejecucion::date = CURRENT_DATE
+            AND estado = 'OK'
+        """)
+        resultado = cursor.fetchone()
+        cantidad = resultado[0] if resultado else 0
+        
+        cursor.close()
+        conn.close()
+        
+        if cantidad >= 3:
+            print("  ✓ Dependencias verificadas: Scripts 1, 2 y 3 ejecutados hoy.")
+            return True
+        else:
+            print(f"  ⚠ Dependencias NO cumplidas: Solo {cantidad}/3 scripts (1,2,3) ejecutados hoy.")
+            print("      El script no se ejecutará hasta que se completen las dependencias.")
+            return False
+            
+    except Exception as e:
+        print(f"  ⚠ Error verificando dependencias: {e}")
         return False
 
 
@@ -533,6 +602,17 @@ def main():
         print(f"  Asegúrese de que el backend esté ejecutándose")
         sys.exit(1)
     
+    
+    # Verificar dependencias antes de procesar
+    if not verificar_dependencias():
+        msg = "El script no se ejecutó debido a que los scripts necesarios no se ejecutaron previamente el día de hoy"
+        # Usamos id_tipo_alerta=2 para advertencias de flujo/dependencias si se desea distinguir, 
+        # pero por defecto se usa 1 (Error). El usuario no especificó ID, usaremos el default o uno genérico.
+        # Usaré el default (1) ya que interrumpe el proceso esperado.
+        registrar_alerta(msg)
+        print(f"  ⚠ Alerta generada: {msg}")
+        sys.exit(0)
+    
     try:
         inicio_total = time.time()
         # Procesar cada fecha
@@ -550,6 +630,10 @@ def main():
         
         fin_total = time.time()
         print(f"\n=== Proceso completado en {fin_total - inicio_total:.2f} segundos ===")
+        
+        # Si no hubo alertas, registrar ejecución correcta (ID script 4)
+        if not ALERTA_GENERADA:
+            registrar_ejecucion_correcta(id_script=4)
         
     except Exception as e:
         error_msg = f"Error crítico en el proceso de cálculo IFO: {e}"

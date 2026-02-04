@@ -951,6 +951,32 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
     
     return html
 
+def registrar_alerta(descripcion: str, id_tipo_alerta: int = 5):
+    """
+    Registra una alerta en la tabla alertas.control_alertas cuando ocurre un error de envío de correo.
+    """
+    try:
+        conn = get_db_connection()
+        if not conn:
+            print(f"  ⚠ No se pudo conectar a BD para registrar alerta: {descripcion[:50]}...")
+            return False
+        
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO alertas.control_alertas 
+            (fuente, fechahora_alerta, id_tipo_alerta, verificado, corregido, descripcion_incidente)
+            VALUES (%s, NOW(), %s, false, false, %s)
+        """, ('enviar_informe.py', id_tipo_alerta, descripcion))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        print(f"  ℹ Alerta registrada en control_alertas (Tipo {id_tipo_alerta})")
+        return True
+    except Exception as e:
+        print(f"  ⚠ Error al registrar alerta en BD: {e}")
+        return False
+
 def enviar_informe_incumplimientos(datos_incumplimientos, fecha_referencia=None, email_destino=None, incluir_resumen_infracciones=True):
     """
     Envía por correo electrónico el informe de incumplimientos.
@@ -1008,7 +1034,10 @@ def enviar_informe_incumplimientos(datos_incumplimientos, fecha_referencia=None,
     print(f"    - CC: {EMAIL_CC if EMAIL_CC else '(No configurado o deshabilitado por override)'}")
 
     if not all([SMTP_SERVER, SMTP_USER, SMTP_PASSWORD, EMAIL_FROM, EMAIL_TO]):
-        print("✗ Error: Faltan configuraciones de correo electrónico críticas")
+        msg = "Faltan configuraciones de correo electrónico críticas (.env)"
+        print(f"✗ Error: {msg}")
+        registrar_alerta(msg)
+        print(f"  ⚠ Alerta generada: {msg}")
         return False
     
     # Establecer fecha de referencia (por defecto, el día anterior)
@@ -1077,9 +1106,12 @@ def enviar_informe_incumplimientos(datos_incumplimientos, fecha_referencia=None,
         return True
     
     except Exception as e:
-        print(f"✗ Error al enviar el correo: {str(e)}")
+        msg = f"Error al enviar el correo a {EMAIL_TO}: {str(e)}"
+        print(f"✗ {msg}")
         import traceback
         traceback.print_exc()
+        registrar_alerta(msg)
+        print(f"  ⚠ Alerta generada: {msg}")
         return False
 
 if __name__ == "__main__":
