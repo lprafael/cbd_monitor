@@ -13,7 +13,7 @@ const SystemIFODashboard = ({ year, month }) => {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch(`http://localhost:8000/api/reports/res120/system-ifo-breakdown/${year}/${month}`);
+            const response = await fetch(`http://172.16.222.222:8000/api/reports/res120/system-ifo-breakdown/${year}/${month}`);
             if (!response.ok) {
                 throw new Error('Error al obtener datos del IFO Sistema');
             }
