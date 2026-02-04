@@ -60,5 +60,8 @@ logs/
 *.png
 *.pdf
 
+# Exceptuar carpeta de imágenes del frontend
+!frontend/public/imagenes/*
+
 # Archivos de configuración local
 docker-compose.override.yml
