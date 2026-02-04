@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './SystemIFODashboard.css';
 import CalculationMethodologyModal from './CalculationMethodologyModal';
+import { API_BASE_URL } from '../config';
 
 const SystemIFODashboard = ({ year, month }) => {
     const [data, setData] = useState(null);
@@ -13,7 +14,7 @@ const SystemIFODashboard = ({ year, month }) => {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch(`http://172.16.222.222:8000/api/reports/res120/system-ifo-breakdown/${year}/${month}`);
+            const response = await fetch(`${API_BASE_URL}/api/reports/res120/system-ifo-breakdown/${year}/${month}`);
             if (!response.ok) {
                 throw new Error('Error al obtener datos del IFO Sistema');
             }
@@ -47,7 +48,7 @@ const SystemIFODashboard = ({ year, month }) => {
         }));
 
         try {
-            const response = await fetch(`http://localhost:8000/api/reports/res120/eot-monthly-breakdown/${eotId}/${year}/${month}`);
+            const response = await fetch(`${API_BASE_URL}/api/reports/res120/eot-monthly-breakdown/${eotId}/${year}/${month}`);
             if (!response.ok) throw new Error('Error al cargar desglose');
             const breakdownData = await response.json();
 

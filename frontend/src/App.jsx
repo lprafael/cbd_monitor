@@ -12,9 +12,7 @@ import MonthlyPerformanceDashboard from './components/MonthlyPerformanceDashboar
 import Verify290Dashboard from './components/Verify290Dashboard';
 import SystemIFODashboard from './components/SystemIFODashboard';
 import './App.css';
-
-// URL base de la API - Cambiar según el entorno
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+import { API_BASE_URL } from './config';
 
 function App() {
   // Estados
