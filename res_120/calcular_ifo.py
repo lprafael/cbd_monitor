@@ -493,8 +493,8 @@ def enviar_notificaciones(datos_incumplimientos: list, fecha: date, modo: str):
                 def procesar_envio(tarea):
                     try:
                         incumplimientos_eot = tarea['data']['incumplimientos']
-                        # CORRECCIÓN: Pasar el email_destino de la tarea
-                        if enviar_informe_incumplimientos(incumplimientos_eot, fecha, email_destino=tarea['email'], incluir_resumen_infracciones=False):
+                        # CORRECCIÓN: Pasar el email_destino de la tarea y enviar_cc=False (particular)
+                        if enviar_informe_incumplimientos(incumplimientos_eot, fecha, email_destino=tarea['email'], incluir_resumen_infracciones=False, enviar_cc=False):
                             return f"    ✓ {tarea['data']['eot_nombre']}: {len(incumplimientos_eot)} incumplimientos - Enviado a {tarea['email']}"
                         else:
                             return f"    ✗ {tarea['data']['eot_nombre']}: Falló el envío a {tarea['email']}"
@@ -508,9 +508,9 @@ def enviar_notificaciones(datos_incumplimientos: list, fecha: date, modo: str):
                         for future in concurrent.futures.as_completed(futures):
                             print(future.result())
                     
-                    # ADICIÓN: Enviar también el consolidado al Director para su seguimiento
-                    print(f"\n  Enviando copia del informe consolidado al Director...")
-                    enviar_informe_incumplimientos(datos_incumplimientos, fecha, incluir_resumen_infracciones=True)
+                    # ADICIÓN: Enviar también el consolidado al Director con CC
+                    print(f"\n  Enviando copia del informe consolidado al Director (con CC)...")
+                    enviar_informe_incumplimientos(datos_incumplimientos, fecha, incluir_resumen_infracciones=True, enviar_cc=True)
                 else:
                     print("  No hay correos para enviar.")
 
@@ -535,7 +535,7 @@ def enviar_notificaciones(datos_incumplimientos: list, fecha: date, modo: str):
                 # If not, this line might cause a NameError.
                 # For this file, we'll assume they are accessible, as per the instruction.
                 print(f"    - Servidor SMTP: {os.getenv('SMTP_SERVER')}:{os.getenv('SMTP_PORT')}") # Assuming these are env vars
-                if enviar_informe_incumplimientos(datos_incumplimientos, fecha):
+                if enviar_informe_incumplimientos(datos_incumplimientos, fecha, enviar_cc=True):
                     print(f"  ✓ Informe consolidado enviado correctamente")
                 else:
                     print(f"  ✗ Falló el envío del informe consolidado")
@@ -550,7 +550,7 @@ def enviar_notificaciones(datos_incumplimientos: list, fecha: date, modo: str):
                     nombre_empresa = incumplimientos_random[0]['eot_nombre']
                     
                     print(f"  Enviando simulación de empresa ({nombre_empresa}) al Director ({director_email})...")
-                    if enviar_informe_incumplimientos(incumplimientos_random, fecha, email_destino=director_email, incluir_resumen_infracciones=False):
+                    if enviar_informe_incumplimientos(incumplimientos_random, fecha, email_destino=director_email, incluir_resumen_infracciones=False, enviar_cc=True):
                         print(f"  ✓ Simulación enviada correctamente")
                     else:
                         print(f"  ✗ Falló el envío de la simulación")

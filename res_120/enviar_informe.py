@@ -977,7 +977,7 @@ def registrar_alerta(descripcion: str, id_tipo_alerta: int = 5):
         print(f"  ⚠ Error al registrar alerta en BD: {e}")
         return False
 
-def enviar_informe_incumplimientos(datos_incumplimientos, fecha_referencia=None, email_destino=None, incluir_resumen_infracciones=True):
+def enviar_informe_incumplimientos(datos_incumplimientos, fecha_referencia=None, email_destino=None, incluir_resumen_infracciones=True, enviar_cc=False):
     """
     Envía por correo electrónico el informe de incumplimientos.
     
@@ -1022,9 +1022,8 @@ def enviar_informe_incumplimientos(datos_incumplimientos, fecha_referencia=None,
     else:
         EMAIL_TO = os.getenv('EMAIL_TO', 'transporte.mopc@gmail.com')
 
-    # Tomamos el CC del .env, si no hay nada usamos None
-    # EMAIL_CC = os.getenv('EMAIL_CC')
-    EMAIL_CC = None
+    # Tomamos el CC del .env si enviar_cc es True
+    EMAIL_CC = os.getenv('EMAIL_CC') if enviar_cc else None
     
     USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() in ('true', '1', 't')
     
@@ -1046,10 +1045,9 @@ def enviar_informe_incumplimientos(datos_incumplimientos, fecha_referencia=None,
     
     # Configurar destinatarios (Soporta listas separadas por comas)
     destinatarios_to = [e.strip() for e in EMAIL_TO.split(',') if e.strip()]
-    # destinatarios_cc = [e.strip() for e in EMAIL_CC.split(',') if e.strip()] if EMAIL_CC else []
-    destinatarios_cc = []
+    destinatarios_cc = [e.strip() for e in EMAIL_CC.split(',') if e.strip()] if EMAIL_CC else []
     
-    all_recipients = destinatarios_to # + destinatarios_cc
+    all_recipients = destinatarios_to + destinatarios_cc
 
     try:
         # Crear el mensaje

@@ -104,14 +104,14 @@ const SystemIFODashboard = ({ year, month }) => {
                     <div className="header-text-row">
                         <span className="main-title">📊 Desglose del IFO Sistema</span>
                         <span className="period-badge">{getMonthName(data.month)} {data.year}</span>
+                        <button
+                            className="methodology-button"
+                            onClick={() => setIsMethodologyModalOpen(true)}
+                            title="Ver metodología de cálculo detallada"
+                        >
+                            📖 Ver Metodología
+                        </button>
                     </div>
-                    <button
-                        className="methodology-button"
-                        onClick={() => setIsMethodologyModalOpen(true)}
-                        title="Ver metodología de cálculo detallada"
-                    >
-                        📖 Ver Metodología
-                    </button>
                 </div>
             </div>
 
@@ -148,15 +148,15 @@ const SystemIFODashboard = ({ year, month }) => {
                 <div className="exclusions-grid">
                     <div className="exclusion-item">
                         <span className="exclusion-label">🗓️ Domingos:</span>
-                        <span className="exclusion-count">{data.dias_excluidos.domingos.length} días</span>
+                        <span className="exclusion-count">{new Set(data.dias_excluidos.domingos).size} días</span>
                     </div>
                     <div className="exclusion-item">
                         <span className="exclusion-label">🎉 Feriados:</span>
-                        <span className="exclusion-count">{data.dias_excluidos.feriados.length} días</span>
+                        <span className="exclusion-count">{new Set(data.dias_excluidos.feriados).size} días</span>
                     </div>
                     <div className="exclusion-item">
                         <span className="exclusion-label">⚠️ Días Atípicos:</span>
-                        <span className="exclusion-count">{data.dias_excluidos.atipicos.length} días</span>
+                        <span className="exclusion-count">{new Set(data.dias_excluidos.atipicos).size} días</span>
                     </div>
                 </div>
 
@@ -165,7 +165,7 @@ const SystemIFODashboard = ({ year, month }) => {
                         <div className="exclusion-list-group">
                             <span className="list-label">Feriados:</span>
                             <div className="date-tags">
-                                {data.dias_excluidos.feriados.map(d => <span key={d} className="date-tag holiday">{d}</span>)}
+                                {[...new Set(data.dias_excluidos.feriados)].map(d => <span key={d} className="date-tag holiday">{d}</span>)}
                             </div>
                         </div>
                     )}
@@ -173,7 +173,7 @@ const SystemIFODashboard = ({ year, month }) => {
                         <div className="exclusion-list-group">
                             <span className="list-label">Días Atípicos:</span>
                             <div className="date-tags">
-                                {data.dias_excluidos.atipicos.map(d => <span key={d} className="date-tag atypical">{d}</span>)}
+                                {[...new Set(data.dias_excluidos.atipicos)].map(d => <span key={d} className="date-tag atypical">{d}</span>)}
                             </div>
                         </div>
                     )}

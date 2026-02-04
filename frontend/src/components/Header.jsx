@@ -145,8 +145,8 @@ const Header = ({
                   value={
                     (viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'system-ifo')
                       ? (fecha && String(fecha).length >= 7
-                          ? String(fecha).slice(0, 7)
-                          : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`)
+                        ? String(fecha).slice(0, 7)
+                        : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`)
                       : fecha
                   }
                   onChange={(e) => {
@@ -215,8 +215,8 @@ const Header = ({
                     />
                     <span>📊 IFO Sistema</span>
                   </label>
-                  {/* <label className="radio-label">
-                    <input
+                   {/* <label className="radio-label">
+                   <input
                       type="radio"
                       name="viewMode"
                       value="verify290"
