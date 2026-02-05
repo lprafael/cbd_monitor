@@ -281,7 +281,7 @@ async def get_cbd_detail(
             
             # 2. Solo si no cumple con el mínimo, consultar GPS
             cbd_observado = cbd_val
-            if cbd_val < cbd_min_hora:
+            if cbd_val < cbd_min_hora and eot_info['id_eot_vmt_hex']:
                 cursor.execute("""
                     SELECT COUNT(DISTINCT mean_id) as cbd
                     FROM control_metricas.cbd_detalle_buses
@@ -289,8 +289,10 @@ async def get_cbd_detail(
                 """, (eot_info['id_eot_vmt_hex'], request.fecha, hora))
                 cbd_gps = cursor.fetchone()['cbd'] or 0
                 
-                # Tomar el MAX entre validaciones y GPS
-                cbd_observado = max(cbd_val, cbd_gps)
+                # Solo usar GPS si tiene MÁS datos que billetaje
+                if cbd_gps > cbd_val:
+                    cbd_observado = cbd_gps
+                # Si GPS tiene menos o igual, usar billetaje (aunque no cumpla mínimo)
             
             # Calcular ratio (capped at 1)
             ratio = min(cbd_observado / cbd_min_hora, 1.0) if cbd_min_hora > 0 else 0
@@ -323,7 +325,7 @@ async def get_cbd_detail(
         
         # Si no cumple el mínimo, consultar GPS
         cbd_franja_observado = cbd_franja_val
-        if cbd_franja_val < cbd_min_franja:
+        if cbd_franja_val < cbd_min_franja and eot_info['id_eot_vmt_hex']:
             cursor.execute("""
                 SELECT COUNT(DISTINCT mean_id) as cbd
                 FROM control_metricas.cbd_detalle_buses
@@ -332,7 +334,10 @@ async def get_cbd_detail(
                   AND hora >= %s AND hora <= %s
             """, (eot_info['id_eot_vmt_hex'], request.fecha, hora_inicio, hora_fin))
             cbd_franja_gps = cursor.fetchone()['cbd'] or 0
-            cbd_franja_observado = max(cbd_franja_val, cbd_franja_gps)
+            # Solo usar GPS si tiene MÁS datos que billetaje
+            if cbd_franja_gps > cbd_franja_val:
+                cbd_franja_observado = cbd_franja_gps
+            # Si GPS tiene menos o igual, usar billetaje (aunque no cumpla mínimo)
         
         ratio_franja = min(cbd_franja_observado / cbd_min_franja, 1.0) if cbd_min_franja > 0 else 0
         I_F = ratio_franja
@@ -445,7 +450,7 @@ async def get_ifo_detail(
             
             # 2. Solo si no cumple con el mínimo, consultar GPS
             cbd_dia = cbd_val
-            if cbd_val < cbd_min_hora:
+            if cbd_val < cbd_min_hora and eot_info['id_eot_vmt_hex']:
                 cursor.execute("""
                     SELECT COUNT(DISTINCT mean_id) as cbd
                     FROM control_metricas.cbd_detalle_buses
@@ -453,8 +458,10 @@ async def get_ifo_detail(
                 """, (eot_info['id_eot_vmt_hex'], request.fecha, hora))
                 cbd_gps = cursor.fetchone()['cbd'] or 0
                 
-                # Tomar el MAX entre validaciones y GPS
-                cbd_dia = max(cbd_val, cbd_gps)
+                # Solo usar GPS si tiene MÁS datos que billetaje
+                if cbd_gps > cbd_val:
+                    cbd_dia = cbd_gps
+                # Si GPS tiene menos o igual, usar billetaje (aunque no cumpla mínimo)
             
             # Histórico: CBD de las 4 semanas anteriores (usando misma lógica)
             historico_detalle = []
@@ -472,14 +479,17 @@ async def get_ifo_detail(
                 
                 # Solo si no cumple, consultar GPS
                 cbd_hist = cbd_hist_val
-                if cbd_hist_val < cbd_min_hora:
+                if cbd_hist_val < cbd_min_hora and eot_info['id_eot_vmt_hex']:
                     cursor.execute("""
                         SELECT COUNT(DISTINCT mean_id) as cbd
                         FROM control_metricas.cbd_detalle_buses
                         WHERE id_eot_vmt_hex = %s AND fecha = %s AND hora = %s
                     """, (eot_info['id_eot_vmt_hex'], fecha_hist, hora))
                     cbd_hist_gps = cursor.fetchone()['cbd'] or 0
-                    cbd_hist = max(cbd_hist_val, cbd_hist_gps)
+                    # Solo usar GPS si tiene MÁS datos que billetaje
+                    if cbd_hist_gps > cbd_hist_val:
+                        cbd_hist = cbd_hist_gps
+                    # Si GPS tiene menos o igual, usar billetaje (aunque no cumpla mínimo)
                 
                 historico_detalle.append(IFOHoraHistorico(
                     fecha=fecha_hist,

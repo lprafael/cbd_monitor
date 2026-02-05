@@ -47,7 +47,12 @@ def get_cbd_for_hour(cursor, eot_id: int, eot_vmt_hex: str, fecha, hora: int, cb
             """, (eot_vmt_hex, fecha, hora))
             res = cursor.fetchone()
             cbd_gps = res['cbd'] if res else 0
-        return max(cbd_val, cbd_gps)
+        
+        # Solo usar GPS si tiene MÁS datos que billetaje
+        if cbd_gps > cbd_val:
+            return cbd_gps
+        # Si GPS tiene menos o igual, usar billetaje (aunque no cumpla mínimo)
+        return cbd_val
     
     return cbd_val
 
@@ -98,7 +103,11 @@ def calculate_cbd_index(cursor, eot_id: int, eot_vmt_hex: str, fecha, franja_inf
             """, (eot_vmt_hex, fecha, hora_inicio, hora_fin))
             res = cursor.fetchone()
             cbd_franja_gps = res['cbd'] if res else 0
-        cbd_franja_observado = max(cbd_franja_val, cbd_franja_gps)
+        
+        # Solo usar GPS si tiene MÁS datos que billetaje
+        if cbd_franja_gps > cbd_franja_val:
+            cbd_franja_observado = cbd_franja_gps
+        # Si GPS tiene menos o igual, usar billetaje (aunque no cumpla mínimo)
     
     ratio_franja = min(cbd_franja_observado / cbd_min_franja, 1.0) if cbd_min_franja > 0 else 0
     indice_cbd = (promedio_ratio_hora * 0.7) + (ratio_franja * 0.3)
