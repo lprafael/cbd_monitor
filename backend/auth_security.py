@@ -2,6 +2,7 @@
 # Configuración de seguridad para autenticación y autorización
 
 import os
+import bcrypt
 from jose import jwt, JWTError
 from datetime import datetime, timedelta
 from typing import Optional
@@ -26,19 +27,40 @@ EMAIL_USERNAME = os.getenv("EMAIL_USERNAME", "")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD", "")
 EMAIL_FROM = os.getenv("EMAIL_FROM", "")
 
-# Contexto para hash de contraseñas
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Contexto para hash de contraseñas (fallback a bcrypt directo si hay problemas)
+try:
+    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    USE_PASSLIB = True
+except Exception:
+    USE_PASSLIB = False
 
 # Bearer token para autenticación
 security = HTTPBearer()
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verifica si la contraseña coincide con el hash"""
-    return pwd_context.verify(plain_password, hashed_password)
+    if USE_PASSLIB:
+        try:
+            return pwd_context.verify(plain_password, hashed_password)
+        except Exception:
+            pass
+    # Fallback a bcrypt directo
+    password_bytes = plain_password.encode('utf-8')
+    hashed_bytes = hashed_password.encode('utf-8')
+    return bcrypt.checkpw(password_bytes, hashed_bytes)
 
 def get_password_hash(password: str) -> str:
     """Genera el hash de una contraseña"""
-    return pwd_context.hash(password)
+    if USE_PASSLIB:
+        try:
+            return pwd_context.hash(password)
+        except Exception:
+            pass
+    # Fallback a bcrypt directo
+    password_bytes = password.encode('utf-8')
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password_bytes, salt)
+    return hashed.decode('utf-8')
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     """Crea un token JWT de acceso"""

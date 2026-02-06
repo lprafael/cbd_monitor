@@ -7,11 +7,22 @@ from config.settings import settings
 
 load_dotenv()
 
-# Configuración de las bases de datos
-# Usar la misma configuración que el resto del sistema CBD
-DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-    # Si no hay DATABASE_URL, construir desde settings
+# Configuración de la base de datos de autenticación
+# Usar AUTH_DB_* para la base de datos de autenticación (líneas 17-21 del .env)
+AUTH_DB_HOST = os.getenv("AUTH_DB_HOST", "localhost")
+AUTH_DB_PORT = os.getenv("AUTH_DB_PORT", "5432")
+AUTH_DB_NAME = os.getenv("AUTH_DB_NAME", "")
+AUTH_DB_USER = os.getenv("AUTH_DB_USER", "")
+AUTH_DB_PASSWORD = os.getenv("AUTH_DB_PASSWORD", "")
+
+# Construir DATABASE_URL desde las variables AUTH_DB_*
+if AUTH_DB_NAME and AUTH_DB_USER and AUTH_DB_PASSWORD:
+    DATABASE_URL = f"postgresql+asyncpg://{AUTH_DB_USER}:{AUTH_DB_PASSWORD}@{AUTH_DB_HOST}:{AUTH_DB_PORT}/{AUTH_DB_NAME}"
+elif os.getenv("DATABASE_URL"):
+    # Fallback a DATABASE_URL si está definida
+    DATABASE_URL = os.getenv("DATABASE_URL").replace("postgresql://", "postgresql+asyncpg://")
+else:
+    # Último fallback: usar settings (que usa DB_*)
     DATABASE_URL = settings.database_url.replace("postgresql://", "postgresql+asyncpg://")
 
 # Motores asíncronos

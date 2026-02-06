@@ -18,10 +18,21 @@ from config.settings import settings
 # Cargar variables de entorno desde .env
 load_dotenv()
 
-# Configuración de la base de datos
-DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-    # Si no hay DATABASE_URL, construir desde settings
+# Configuración de la base de datos - Usar AUTH_DB_* para la base de datos de autenticación
+AUTH_DB_HOST = os.getenv("AUTH_DB_HOST", "localhost")
+AUTH_DB_PORT = os.getenv("AUTH_DB_PORT", "5432")
+AUTH_DB_NAME = os.getenv("AUTH_DB_NAME", "")
+AUTH_DB_USER = os.getenv("AUTH_DB_USER", "")
+AUTH_DB_PASSWORD = os.getenv("AUTH_DB_PASSWORD", "")
+
+# Construir DATABASE_URL desde las variables AUTH_DB_*
+if AUTH_DB_NAME and AUTH_DB_USER and AUTH_DB_PASSWORD:
+    DATABASE_URL = f"postgresql+asyncpg://{AUTH_DB_USER}:{AUTH_DB_PASSWORD}@{AUTH_DB_HOST}:{AUTH_DB_PORT}/{AUTH_DB_NAME}"
+elif os.getenv("DATABASE_URL"):
+    # Fallback a DATABASE_URL si está definida
+    DATABASE_URL = os.getenv("DATABASE_URL").replace("postgresql://", "postgresql+asyncpg://")
+else:
+    # Último fallback: usar settings (que usa DB_*)
     DATABASE_URL = settings.database_url.replace("postgresql://", "postgresql+asyncpg://")
 
 async def init_database():
@@ -45,12 +56,18 @@ async def init_database():
             existing_admin = result.scalar_one_or_none()
             if existing_admin:
                 print("La base de datos ya está inicializada.")
+                print(f"Usuario administrador existente: {existing_admin.username}")
                 return
             
             print("Inicializando base de datos...")
             
             # ===== CREAR PERMISOS POR DEFECTO =====
             print("Creando permisos...")
+            
+            # Verificar permisos existentes
+            result_permisos = await session.execute(select(Permiso))
+            permisos_existentes = {p.nombre for p in result_permisos.scalars().all()}
+            
             permisos = [
                 # Permisos para Usuarios
                 Permiso(nombre="usuarios_read", descripcion="Leer usuarios", modulo="usuarios", accion="read"),
@@ -74,9 +91,15 @@ async def init_database():
                 Permiso(nombre="sistema_reportes", descripcion="Generar reportes", modulo="sistema", accion="reportes"),
             ]
             
-            for permiso in permisos:
-                session.add(permiso)
-            await session.commit()
+            # Solo agregar permisos que no existen
+            permisos_a_crear = [p for p in permisos if p.nombre not in permisos_existentes]
+            if permisos_a_crear:
+                for permiso in permisos_a_crear:
+                    session.add(permiso)
+                await session.commit()
+                print(f"  [OK] Creados {len(permisos_a_crear)} permisos nuevos")
+            else:
+                print("  [OK] Todos los permisos ya existen")
             
             # Obtener los permisos creados
             permisos_creados = await session.execute(
@@ -87,13 +110,22 @@ async def init_database():
             # ===== CREAR ROLES POR DEFECTO =====
             print("Creando roles...")
             
+            # Verificar roles existentes
+            result_roles = await session.execute(select(Rol))
+            roles_existentes = {r.nombre: r for r in result_roles.scalars().all()}
+            
             # Rol Admin - Todos los permisos
-            rol_admin = Rol(
-                nombre="admin",
-                descripcion="Administrador del sistema con acceso completo"
-            )
-            session.add(rol_admin)
-            await session.commit()
+            if "admin" not in roles_existentes:
+                rol_admin = Rol(
+                    nombre="admin",
+                    descripcion="Administrador del sistema con acceso completo"
+                )
+                session.add(rol_admin)
+                await session.commit()
+                print("  [OK] Rol 'admin' creado")
+            else:
+                rol_admin = roles_existentes["admin"]
+                print("  [OK] Rol 'admin' ya existe")
             
             # Asignar todos los permisos al admin
             for permiso_id in permisos_dict.values():
@@ -103,12 +135,17 @@ async def init_database():
                 )
             
             # Rol Manager - Permisos de gestión
-            rol_manager = Rol(
-                nombre="manager",
-                descripcion="Gerente con permisos de gestión y lectura"
-            )
-            session.add(rol_manager)
-            await session.commit()
+            if "manager" not in roles_existentes:
+                rol_manager = Rol(
+                    nombre="manager",
+                    descripcion="Gerente con permisos de gestión y lectura"
+                )
+                session.add(rol_manager)
+                await session.commit()
+                print("  [OK] Rol 'manager' creado")
+            else:
+                rol_manager = roles_existentes["manager"]
+                print("  [OK] Rol 'manager' ya existe")
             
             # Permisos para manager
             permisos_manager = [
@@ -123,12 +160,17 @@ async def init_database():
                     )
             
             # Rol User - Permisos básicos
-            rol_user = Rol(
-                nombre="user",
-                descripcion="Usuario con permisos básicos de lectura y escritura"
-            )
-            session.add(rol_user)
-            await session.commit()
+            if "user" not in roles_existentes:
+                rol_user = Rol(
+                    nombre="user",
+                    descripcion="Usuario con permisos básicos de lectura y escritura"
+                )
+                session.add(rol_user)
+                await session.commit()
+                print("  [OK] Rol 'user' creado")
+            else:
+                rol_user = roles_existentes.get("user")
+                print("  [OK] Rol 'user' ya existe")
             
             # Permisos para user (actualmente sin permisos específicos en base limpia)
             permisos_user = [
@@ -142,12 +184,17 @@ async def init_database():
                     )
             
             # Rol Viewer - Solo lectura
-            rol_viewer = Rol(
-                nombre="viewer",
-                descripcion="Visualizador con permisos de solo lectura"
-            )
-            session.add(rol_viewer)
-            await session.commit()
+            if "viewer" not in roles_existentes:
+                rol_viewer = Rol(
+                    nombre="viewer",
+                    descripcion="Visualizador con permisos de solo lectura"
+                )
+                session.add(rol_viewer)
+                await session.commit()
+                print("  [OK] Rol 'viewer' creado")
+            else:
+                rol_viewer = roles_existentes.get("viewer")
+                print("  [OK] Rol 'viewer' ya existe")
             
             # Permisos para viewer
             permisos_viewer = [
