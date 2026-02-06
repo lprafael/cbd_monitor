@@ -196,22 +196,25 @@ const Login = ({ onLogin, googleClientId }) => {
             {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
           </button>
 
-          <div className="google-login-separator">
-            <span>O</span>
-          </div>
-
-          <div className="google-login-container">
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={() => setError('Error al iniciar sesión con Google')}
-              useOneTap
-              theme="outline"
-              size="large"
-              width="100%"
-              text="signin_with"
-              locale="es"
-            />
-          </div>
+          {googleClientId && (
+            <>
+              <div className="google-login-separator">
+                <span>O</span>
+              </div>
+              <div className="google-login-container">
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={() => setError('Error al iniciar sesión con Google')}
+                  useOneTap
+                  theme="outline"
+                  size="large"
+                  width={320}
+                  text="signin_with"
+                  locale="es"
+                />
+              </div>
+            </>
+          )}
         </form>
 
         <div className="login-footer">

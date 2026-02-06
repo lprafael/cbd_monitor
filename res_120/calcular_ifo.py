@@ -74,10 +74,12 @@ ALERTA_GENERADA = False
 def registrar_ejecucion_correcta(id_script: int = 4):
     """
     Registra una ejecución correcta en la tabla alertas.registro_ejecuciones.
+    Requiere conexión a BD (get_db_connection); si no hay .env/DB_* no se guarda.
     """
     try:
         conn = get_db_connection()
         if not conn:
+            print("  ⚠ No se pudo conectar a la BD para registrar en alertas.registro_ejecuciones (verifique DB_HOST, DB_NAME, etc. en backend/.env o res_120/.env)")
             return
 
         cursor = conn.cursor()

@@ -1,5 +1,6 @@
 """Aplicación principal de FastAPI para el monitoreo de CBD."""
 
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routes import eots, tipo_dia, franjas, cbd_data, performance, performance_detail, monthly_performance, verify_290, reports, auth, notify
@@ -12,10 +13,20 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Configurar CORS para permitir peticiones desde el frontend
+# CORS: con allow_credentials=True no se puede usar "*"; hay que listar orígenes
+_cors_origins = [
+    "http://172.16.222.222:8080",
+    "http://172.16.222.222:5001",
+    "http://localhost:3000",
+    "http://localhost:8080",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:8080",
+]
+if os.getenv("CORS_ORIGINS"):
+    _cors_origins.extend(o.strip() for o in os.getenv("CORS_ORIGINS").split(",") if o.strip())
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # En producción, especificar dominios permitidos
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

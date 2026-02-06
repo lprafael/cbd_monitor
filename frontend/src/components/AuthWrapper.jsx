@@ -83,6 +83,15 @@ const AuthWrapper = () => {
   // Usar Google Client ID del backend o del .env del frontend como fallback
   const GOOGLE_CLIENT_ID = googleClientId || process.env.REACT_APP_GOOGLE_CLIENT_ID || '';
 
+  // Solo usar GoogleOAuthProvider si hay un Client ID real (evita errores 403 y "client ID not found")
+  const LoginComponent = GOOGLE_CLIENT_ID ? (
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <Login onLogin={handleLogin} googleClientId={GOOGLE_CLIENT_ID} />
+    </GoogleOAuthProvider>
+  ) : (
+    <Login onLogin={handleLogin} googleClientId="" />
+  );
+
   if (loading) {
     return (
       <div style={{
@@ -96,14 +105,6 @@ const AuthWrapper = () => {
       </div>
     );
   }
-
-  // Siempre envolver Login con GoogleOAuthProvider (incluso sin Client ID para evitar errores)
-  // Si no hay Client ID, usar un valor dummy que no causará errores
-  const LoginComponent = (
-    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID || 'dummy-client-id'}>
-      <Login onLogin={handleLogin} googleClientId={GOOGLE_CLIENT_ID} />
-    </GoogleOAuthProvider>
-  );
 
   return (
     <>

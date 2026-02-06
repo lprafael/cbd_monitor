@@ -1050,8 +1050,8 @@ def enviar_informe_incumplimientos(datos_incumplimientos, fecha_referencia=None,
     all_recipients = destinatarios_to + destinatarios_cc
 
     try:
-        # Crear el mensaje
-        msg = MIMEMultipart()
+        # Crear el mensaje (related = permite cid: para imágenes inline)
+        msg = MIMEMultipart('related')
         msg['From'] = EMAIL_FROM
         msg['To'] = ", ".join(destinatarios_to)
         if destinatarios_cc:
@@ -1068,19 +1068,29 @@ def enviar_informe_incumplimientos(datos_incumplimientos, fecha_referencia=None,
         html_content = generar_html_informe(datos_incumplimientos, fecha_referencia, EMAIL_CC, incluir_resumen_infracciones=incluir_resumen_infracciones)
         msg.attach(MIMEText(html_content, 'html'))
 
-        # Adjuntar LOGO MOPC VMT (Si existe)
+        # Adjuntar LOGO MOPC VMT (Si existe). Varias rutas por si se ejecuta desde servidor/Prefect.
         try:
-            current_dir = Path(__file__).parent.absolute()
-            logo_path = current_dir.parent / 'frontend' / 'public' / 'imagenes' / 'Logo MOPC VMT.png'
-            
-            if logo_path.exists():
+            from pathlib import Path
+            current_dir = Path(__file__).resolve().parent
+            logo_name = 'Logo MOPC VMT.png'
+            candidatos = [
+                current_dir.parent / 'frontend' / 'public' / 'imagenes' / logo_name,
+                current_dir / 'imagenes' / logo_name,
+                current_dir / logo_name,
+            ]
+            logo_path = None
+            for p in candidatos:
+                if p.exists():
+                    logo_path = p
+                    break
+            if logo_path:
                 with open(logo_path, 'rb') as f:
-                    logo_img = MIMEImage(f.read())
+                    logo_img = MIMEImage(f.read(), _subtype='png')
                     logo_img.add_header('Content-ID', '<vmt_logo>')
                     logo_img.add_header('Content-Disposition', 'inline', filename='logo.png')
                     msg.attach(logo_img)
             else:
-                print(f"⚠ Logo no encontrado en: {logo_path}")
+                print(f"⚠ Logo no encontrado. Buscado en: {candidatos}")
         except Exception as e:
             print(f"⚠ Error adjuntando logo: {e}")
         

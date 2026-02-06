@@ -1,0 +1,5 @@
+# Dependencias para ejecutar el flow de Prefect (calcular_ifo diario)
+# Instalar en el servidor: pip install -r requirements-prefect.txt
+prefect>=2.14.0
+# El script calcular_ifo.py ya usa requests, python-dotenv; instalar si no están:
+# requests python-dotenv
