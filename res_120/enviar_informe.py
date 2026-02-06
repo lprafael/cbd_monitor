@@ -1009,18 +1009,18 @@ def enviar_informe_incumplimientos(datos_incumplimientos, fecha_referencia=None,
     else:
         load_dotenv(override=True)
     
-    # Configuración del correo
+    # Configuración del correo (mismo .env que backend: backend/.env)
     SMTP_SERVER = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
     SMTP_PORT = int(os.getenv('EMAIL_PORT', 587))
-    SMTP_USER = os.getenv('EMAIL_HOST_USER', 'billetajevmt@gmail.com')
-    SMTP_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', 'qlju dhxo jbon exlg')
-    EMAIL_FROM = os.getenv('EMAIL_FROM', 'billetajevmt@gmail.com')
-    
+    SMTP_USER = os.getenv('EMAIL_USERNAME', '')
+    SMTP_PASSWORD = os.getenv('EMAIL_PASSWORD', '')
+    EMAIL_FROM = os.getenv('EMAIL_FROM', '')
+
     # Determinar destinatario
     if email_destino:
         EMAIL_TO = email_destino
     else:
-        EMAIL_TO = os.getenv('EMAIL_TO', 'transporte.mopc@gmail.com')
+        EMAIL_TO = os.getenv('EMAIL_TO', '')
 
     # Tomamos el CC del .env si enviar_cc es True
     EMAIL_CC = os.getenv('EMAIL_CC') if enviar_cc else None

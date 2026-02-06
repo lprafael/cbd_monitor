@@ -12,5 +12,6 @@ requests==2.31.0
 openpyxl>=3.1.0
 python-jose[cryptography]
 passlib[bcrypt]
+bcrypt==4.0.1
 email-validator
 google-auth
