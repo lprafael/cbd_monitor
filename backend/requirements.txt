@@ -2,9 +2,15 @@ fastapi
 uvicorn[standard]
 psycopg2-binary
 SQLAlchemy
+sqlalchemy[asyncio]
+asyncpg
 pydantic
 pydantic-settings
 python-dotenv
 python-multipart
 requests==2.31.0
 openpyxl>=3.1.0
+python-jose[cryptography]
+passlib[bcrypt]
+email-validator
+google-auth

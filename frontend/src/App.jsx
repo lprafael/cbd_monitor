@@ -11,10 +11,12 @@ import IndicesDashboard from './components/IndicesDashboard';
 import MonthlyPerformanceDashboard from './components/MonthlyPerformanceDashboard';
 import Verify290Dashboard from './components/Verify290Dashboard';
 import SystemIFODashboard from './components/SystemIFODashboard';
+import UserManagement from './components/UserManagement';
+import AuditSystem from './components/AuditSystem';
 import './App.css';
 import { API_BASE_URL } from './config';
 
-function App() {
+function App({ onLogout, user }) {
   // Estados
   const [eots, setEots] = useState([]);
   const [selectedEots, setSelectedEots] = useState([]);
@@ -28,19 +30,47 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [theme, setTheme] = useState('ejecutivo'); // 'mopc' | 'institucional' | 'ejecutivo' | 'claro' | 'nocturno'
+  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' | 'users' | 'audit'
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [adminTab, setAdminTab] = useState('users'); // 'users' | 'audit'
+
+  // Detectar cambio de hash para navegación
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash === '/users' || hash === '/admin/users') {
+        setCurrentView('users');
+        setAdminTab('users');
+      } else if (hash === '/audit' || hash === '/admin/audit') {
+        setCurrentView('audit');
+        setAdminTab('audit');
+      } else {
+        setCurrentView('dashboard');
+      }
+    };
+
+    handleHashChange(); // Verificar hash inicial
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  // Verificar si el usuario es admin
+  const isAdmin = user && user.rol === 'admin';
 
   // Cargar EOTs al montar el componente
   useEffect(() => {
-    fetchEots();
-    // Fecha por defecto: yyyy-MM-DD para input date; para input month usamos slice(0,7) -> yyyy-MM
-    const today = new Date().toISOString().split('T')[0];
-    setFecha(today);
+    if (currentView === 'dashboard') {
+      fetchEots();
+      // Fecha por defecto: yyyy-MM-DD para input date; para input month usamos slice(0,7) -> yyyy-MM
+      const today = new Date().toISOString().split('T')[0];
+      setFecha(today);
+    }
 
     // Cargar tema guardado
     const savedTheme = localStorage.getItem('cbd-theme') || 'ejecutivo';
     setTheme(savedTheme);
     document.documentElement.setAttribute('data-theme', savedTheme);
-  }, []);
+  }, [currentView]);
 
   // Guardar tema cuando cambia
   useEffect(() => {
@@ -150,6 +180,93 @@ function App() {
     }
   };
 
+  // Si estamos en la vista de administración (usuarios o auditoría)
+  if (currentView === 'users' || currentView === 'audit') {
+    return (
+      <div className="app">
+        <Header
+          eots={eots}
+          selectedEots={selectedEots}
+          setSelectedEots={setSelectedEots}
+          fecha={fecha}
+          setFecha={setFecha}
+          modoVisualizacion={modoVisualizacion}
+          setModoVisualizacion={setModoVisualizacion}
+          viewMode={viewMode}
+          setViewMode={setViewMode}
+          onObtenerCBD={handleConsulta}
+          loading={loading}
+          theme={theme}
+          setTheme={setTheme}
+          onLogout={onLogout}
+          user={user}
+        />
+        <div className="content-wrapper">
+          {isAdmin && (
+            <aside className={`admin-sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
+              <div className="sidebar-header">
+                {!sidebarCollapsed && <h2>Administración</h2>}
+                <button
+                  className="sidebar-toggle"
+                  onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                  title={sidebarCollapsed ? "Mostrar menú" : "Ocultar menú"}
+                >
+                  {sidebarCollapsed ? "➡️" : "⬅️"}
+                </button>
+              </div>
+              <nav className="sidebar-nav">
+                <button
+                  className={`sidebar-item ${adminTab === 'users' ? 'active' : ''}`}
+                  onClick={() => {
+                    setAdminTab('users');
+                    setCurrentView('users');
+                    window.location.hash = '#/admin/users';
+                  }}
+                  title={sidebarCollapsed ? "Gestión de Usuarios" : ""}
+                >
+                  <span className="icon">👤</span>
+                  {!sidebarCollapsed && <span>Gestión de Usuarios</span>}
+                </button>
+                <button
+                  className={`sidebar-item ${adminTab === 'audit' ? 'active' : ''}`}
+                  onClick={() => {
+                    setAdminTab('audit');
+                    setCurrentView('audit');
+                    window.location.hash = '#/admin/audit';
+                  }}
+                  title={sidebarCollapsed ? "Auditoría" : ""}
+                >
+                  <span className="icon">📊</span>
+                  {!sidebarCollapsed && <span>Auditoría</span>}
+                </button>
+                <button
+                  className="sidebar-item"
+                  onClick={() => {
+                    setCurrentView('dashboard');
+                    window.location.hash = '#';
+                  }}
+                  title={sidebarCollapsed ? "Volver al Dashboard" : ""}
+                >
+                  <span className="icon">🏠</span>
+                  {!sidebarCollapsed && <span>Volver al Dashboard</span>}
+                </button>
+              </nav>
+            </aside>
+          )}
+          <main className="main-content">
+            {currentView === 'users' && <UserManagement />}
+            {currentView === 'audit' && <AuditSystem />}
+          </main>
+        </div>
+        <footer className="app-footer">
+          <p>
+            Monitoreo de Indicadores de Desempeño (CBD/IFO) | Resolución GVMT Nº 120/2025 | CID - VMT
+          </p>
+        </footer>
+      </div>
+    );
+  }
+
   return (
     <div className="app">
       <Header
@@ -166,6 +283,8 @@ function App() {
         loading={loading}
         theme={theme}
         setTheme={setTheme}
+        onLogout={onLogout}
+        user={user}
       />
 
       <main className="main-content">

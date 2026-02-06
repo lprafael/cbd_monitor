@@ -23,7 +23,9 @@ const Header = ({
   onObtenerCBD,
   loading,
   theme,
-  setTheme
+  setTheme,
+  onLogout,
+  user
 }) => {
   const handleEotChange = (e) => {
     const options = e.target.options;
@@ -82,23 +84,53 @@ const Header = ({
             🚌 Monitor de Indicadores de Desempeño (CBD/IFO) 📊
           </h1>
 
-          {/* Selector de tema */}
-          <div className="theme-selector">
-            <label htmlFor="theme-select" className="theme-label">
-              🎨 Tema:
-            </label>
-            <select
-              id="theme-select"
-              value={theme}
-              onChange={(e) => setTheme(e.target.value)}
-              className="theme-select"
-            >
-              {themes.map(t => (
-                <option key={t.value} value={t.value}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
+          <div className="header-top-right">
+            {/* Selector de tema */}
+            <div className="theme-selector">
+              <label htmlFor="theme-select" className="theme-label">
+                🎨 Tema:
+              </label>
+              <select
+                id="theme-select"
+                value={theme}
+                onChange={(e) => setTheme(e.target.value)}
+                className="theme-select"
+              >
+                {themes.map(t => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Información del usuario y botones */}
+            {user && (
+              <div className="user-info">
+                <span className="user-name">{user.nombre_completo || user.username}</span>
+                {user.rol === 'admin' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.location.hash = '#/admin/users';
+                      window.location.reload();
+                    }}
+                    className="admin-button"
+                    title="Administración"
+                  >
+                    ⚙️ Administración
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  className="logout-button"
+                  title="Cerrar sesión"
+                >
+                  🚪 Salir
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

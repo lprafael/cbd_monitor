@@ -2,7 +2,7 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routes import eots, tipo_dia, franjas, cbd_data, performance, performance_detail, monthly_performance, verify_290, reports
+from routes import eots, tipo_dia, franjas, cbd_data, performance, performance_detail, monthly_performance, verify_290, reports, auth, notify
 from config.settings import settings
 
 # Crear instancia de FastAPI
@@ -22,6 +22,8 @@ app.add_middleware(
 )
 
 # Incluir routers de cada módulo
+app.include_router(auth.router)
+app.include_router(notify.router)
 app.include_router(eots.router)
 app.include_router(tipo_dia.router)
 app.include_router(franjas.router)
