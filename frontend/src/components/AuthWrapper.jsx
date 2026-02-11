@@ -68,6 +68,9 @@ const AuthWrapper = () => {
   };
 
   const handleLogin = (data) => {
+    const loginTime = Date.now();
+    localStorage.setItem('login_time', loginTime.toString());
+    localStorage.setItem('last_activity', loginTime.toString());
     setUser(data.user);
     setIsAuthenticated(true);
   };
@@ -76,9 +79,55 @@ const AuthWrapper = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
+    localStorage.removeItem('login_time');
+    localStorage.removeItem('last_activity');
     setUser(null);
     setIsAuthenticated(false);
   };
+
+  // Lógica de Autocierre de Sesión (Inactividad y Tiempo Total)
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const INACTIVITY_LIMIT = 10 * 60 * 1000; // 10 minutos
+    const ABSOLUTE_LIMIT = 60 * 60 * 1000;   // 60 minutos
+
+    const checkTimeout = () => {
+      const now = Date.now();
+      const loginTime = parseInt(localStorage.getItem('login_time') || '0');
+      const lastActivity = parseInt(localStorage.getItem('last_activity') || now.toString());
+
+      // 1. Verificar límite absoluto (60 min desde login)
+      if (now - loginTime > ABSOLUTE_LIMIT) {
+        console.log('Sesión expirada (Límite absoluto 60 min)');
+        handleLogout();
+        return;
+      }
+
+      // 2. Verificar inactividad (10 min)
+      if (now - lastActivity > INACTIVITY_LIMIT) {
+        console.log('Sesión cerrada por inactividad (10 min)');
+        handleLogout();
+        return;
+      }
+    };
+
+    const updateActivity = () => {
+      localStorage.setItem('last_activity', Date.now().toString());
+    };
+
+    // Eventos para detectar actividad
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+    events.forEach(event => window.addEventListener(event, updateActivity));
+
+    // Verificar cada minuto
+    const interval = setInterval(checkTimeout, 30000); // Verificar cada 30 segundos para mayor precisión
+
+    return () => {
+      events.forEach(event => window.removeEventListener(event, updateActivity));
+      clearInterval(interval);
+    };
+  }, [isAuthenticated]);
 
   // Usar Google Client ID del backend o del .env del frontend como fallback
   const GOOGLE_CLIENT_ID = googleClientId || process.env.REACT_APP_GOOGLE_CLIENT_ID || '';
