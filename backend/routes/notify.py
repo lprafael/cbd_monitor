@@ -1,3 +1,5 @@
+import secrets
+import string
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -6,8 +8,6 @@ from auth_database import get_session
 from auth_email_service import email_service
 from auth_security import get_password_hash
 from pydantic import BaseModel
-import secrets
-import string
 
 router = APIRouter(prefix="/notify", tags=["Notificaciones"])
 
@@ -42,7 +42,7 @@ async def resend_user_password(
     data: ResendPasswordRequest,
     session: AsyncSession = Depends(get_session)
 ):
-    """Genera una nueva contraseña temporal y la envía al usuario por email"""
+    """Genera una nueva contraseña temporal y la envía al usuario por email."""
     username = data.username
     result = await session.execute(select(Usuario).where(Usuario.username == username))
     user = result.scalar_one_or_none()
@@ -51,7 +51,7 @@ async def resend_user_password(
     
     # Generar contraseña temporal
     alphabet = string.ascii_letters + string.digits
-    temp_password = ''.join(secrets.choice(alphabet) for _ in range(10))
+    temp_password = "".join(secrets.choice(alphabet) for _ in range(10))
     user.hashed_password = get_password_hash(temp_password)
     await session.commit()
     

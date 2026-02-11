@@ -54,6 +54,12 @@ Ese comando:
 
 **Dejar este proceso corriendo** (o configurarlo como servicio systemd para que arranque al inicio). No hace falta correr `prefect worker start` por separado: `python flow_calcular_ifo.py` ya hace de servidor del flow.
 
+### Por qué sale "Not Ready" y "Late"
+
+- **"Not Ready"** en el dashboard = no hay ningún proceso ejecutando este flow (el `python flow_calcular_ifo.py` no está corriendo o se cerró).
+- El **horario 8:00 sigue programado**, pero si no hay proceso escuchando, a las 8:00 Prefect crea el run y nadie lo ejecuta → aparece **"Late"** y el script no corre.
+- **Solución:** asegurarse de que `python flow_calcular_ifo.py` esté siempre activo en el servidor (p. ej. con systemd, ver abajo). Cuando el proceso está en marcha, el deployment pasa a **Ready** y los runs se ejecutan a la hora.
+
 Para cambiar la zona horaria, edita `flow_calcular_ifo.py` (busca `America/Asuncion`) y usa por ejemplo `America/Argentina/Buenos_Aires` o `UTC`.
 
 ---
@@ -84,6 +90,43 @@ python flow_calcular_ifo.py
 ```
 
 Dejar ese proceso en ejecución (o configurarlo como servicio). El schedule 8:00 AM ya está definido en el flow; no hace falta usar `prefect deployment build` ni `prefect worker start` por separado.
+
+---
+
+## Servicio systemd (recomendado)
+
+Para que el flow esté siempre **Ready** y no vuelva a salir "Late", conviene ejecutarlo como servicio (arranque al boot y reinicio si se cae).
+
+Ejemplo de unidad (ajusta `User`, `WorkingDirectory` y rutas):
+
+```ini
+# /etc/systemd/system/prefect-flow-calcular-ifo.service
+[Unit]
+Description=Prefect flow Calcular IFO (8:00)
+After=network.target
+
+[Service]
+Type=simple
+User=tu_usuario
+WorkingDirectory=/home/user/cbd_monitor/res_120
+Environment=PREFECT_API_URL=http://172.16.222.222:4201/api
+Environment=CBD_API_URL=http://172.16.222.222:5001
+ExecStart=/usr/bin/python3 flow_calcular_ifo.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Activar y arrancar:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable prefect-flow-calcular-ifo
+sudo systemctl start prefect-flow-calcular-ifo
+sudo systemctl status prefect-flow-calcular-ifo
+```
 
 ---
 
