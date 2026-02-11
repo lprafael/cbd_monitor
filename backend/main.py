@@ -19,6 +19,8 @@ _cors_origins = [
     "http://sistemas.mopc.gov.py",
     "https://sistemas.mopc.gov.py/cbd_monitor",
     "http://sistemas.mopc.gov.py/cbd_monitor",
+    "https://sistemas.mopc.gov.py/cbd_monitor/",
+    "http://sistemas.mopc.gov.py/cbd_monitor/",
     "http://cbd-monitor-frontend:80",
     "http://cbd-monitor-frontend:8080",
     "http://172.16.222.222:8080",
