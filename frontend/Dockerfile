@@ -22,18 +22,17 @@ ENV REACT_APP_API_URL=$REACT_APP_API_URL
 RUN npm run build
 
 # Etapa de producción con nginx
+# ... (etapa de producción)
 FROM nginx:alpine
 
-# Copiar los archivos compilados al directorio de nginx
-COPY --from=build /app/build /usr/share/nginx/html
-# Asegurar manifest.json (por si el build no lo incluye en la raíz)
-COPY --from=build /app/public/manifest.json /usr/share/nginx/html/manifest.json
+# 1. Copiamos el build a una carpeta con el nombre del sistema
+COPY --from=build /app/build /usr/share/nginx/html/cbd_monitor
 
-# Copiar configuración personalizada de nginx
+# 2. También copiamos el index a la raíz para que la IP funcione
+RUN cp /usr/share/nginx/html/cbd_monitor/index.html /usr/share/nginx/html/index.html
+
+# 3. Copiamos la configuración de Nginx
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Exponer el puerto 80
 EXPOSE 80
-
-# Comando para iniciar nginx
 CMD ["nginx", "-g", "daemon off;"]
