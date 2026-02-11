@@ -34,25 +34,32 @@ function App({ onLogout, user }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [adminTab, setAdminTab] = useState('users'); // 'users' | 'audit'
 
-  // Detectar cambio de hash para navegación
+  // Detectar cambio de hash para navegación (Protegido por rol)
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.replace('#', '');
-      if (hash === '/users' || hash === '/admin/users') {
+
+      // Solo permitimos estas rutas si es admin
+      if (isAdmin && (hash === '/users' || hash === '/admin/users')) {
         setCurrentView('users');
         setAdminTab('users');
-      } else if (hash === '/audit' || hash === '/admin/audit') {
+      } else if (isAdmin && (hash === '/audit' || hash === '/admin/audit')) {
         setCurrentView('audit');
         setAdminTab('audit');
       } else {
+        // Si no es admin o es cualquier otra ruta, al dashboard
         setCurrentView('dashboard');
+        // Si intentó entrar a admin sin serlo, limpiamos el hash
+        if (hash.includes('admin') || hash === '/users') {
+          window.location.hash = '#';
+        }
       }
     };
 
     handleHashChange(); // Verificar hash inicial
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
+  }, [isAdmin]); // Dependencia importante: isAdmin
 
   // Verificar si el usuario es admin
   const isAdmin = user && user.rol === 'admin';
@@ -288,6 +295,23 @@ function App({ onLogout, user }) {
       />
 
       <main className="main-content">
+        {/* Estado inicial para usuarios no administradores */}
+        {!isAdmin && currentView === 'dashboard' && !loading && !error && !cbdData && !performanceData && !monthlyData && !verify290Data && viewMode === 'live' && (
+          <div className="welcome-container" style={{
+            textAlign: 'center',
+            marginTop: '80px',
+            color: 'var(--text-secondary)',
+            padding: '2rem'
+          }}>
+            <h2 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--primary-color)' }}>
+              Bienvenido al Monitor CBD/IFO
+            </h2>
+            <p style={{ fontSize: '1.1rem', maxWidth: '600px', margin: '0 auto' }}>
+              Por favor, utilice los controles del panel superior para seleccionar los parámetros y consultar la información de desempeño.
+            </p>
+          </div>
+        )}
+
         {error && (
           <div className="error-message">
             <h3>⚠️ Error</h3>
@@ -302,23 +326,23 @@ function App({ onLogout, user }) {
           </div>
         )}
 
-        {!loading && !error && viewMode === 'live' && (
+        {!loading && !error && viewMode === 'live' && cbdData && (
           <CBDTable cbdData={cbdData} />
         )}
 
-        {!loading && !error && viewMode === 'performance' && (
+        {!loading && !error && viewMode === 'performance' && performanceData && (
           <PerformanceDashboard performanceData={performanceData} />
         )}
 
-        {!loading && !error && viewMode === 'indices' && (
+        {!loading && !error && viewMode === 'indices' && performanceData && (
           <IndicesDashboard performanceData={performanceData} fecha={fecha} />
         )}
 
-        {!loading && !error && viewMode === 'monthly' && (
+        {!loading && !error && viewMode === 'monthly' && monthlyData && (
           <MonthlyPerformanceDashboard data={monthlyData} />
         )}
 
-        {!loading && !error && viewMode === 'verify290' && (
+        {!loading && !error && viewMode === 'verify290' && verify290Data && (
           <Verify290Dashboard data={verify290Data} />
         )}
 
