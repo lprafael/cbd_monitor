@@ -21,4 +21,6 @@ function getApiBaseUrl() {
 }
 
 // export const API_BASE_URL = getApiBaseUrl();
-export const API_BASE_URL = window.location.origin + '/api';
+// Detectar si estamos en la subcarpeta /cbd_monitor (dominio MOPC) o en la raíz (IP directa)
+const pathPrefix = window.location.pathname.includes('/cbd_monitor') ? '/cbd_monitor' : '';
+export const API_BASE_URL = window.location.origin + pathPrefix + '/api';
