@@ -15,6 +15,10 @@ app = FastAPI(
 
 # CORS: con allow_credentials=True no se puede usar "*"; hay que listar orígenes
 _cors_origins = [
+    "https://sistemas.mopc.gov.py",
+    "http://sistemas.mopc.gov.py",
+    "http://cbd-monitor-frontend:80",
+    "http://cbd-monitor-frontend:8080",
     "http://172.16.222.222:8080",
     "http://172.16.222.222:5001",
     "http://localhost:3000",
