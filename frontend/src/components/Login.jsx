@@ -205,7 +205,7 @@ const Login = ({ onLogin, googleClientId }) => {
                 <GoogleLogin
                   onSuccess={handleGoogleSuccess}
                   onError={() => setError('Error al iniciar sesión con Google')}
-                  useOneTap
+                  // useOneTap
                   theme="outline"
                   size="large"
                   width={320}
