@@ -34,6 +34,9 @@ function App({ onLogout, user }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [adminTab, setAdminTab] = useState('users'); // 'users' | 'audit'
 
+  // Verificar si el usuario es admin
+  const isAdmin = user && user.rol === 'admin';
+
   // Detectar cambio de hash para navegación (Protegido por rol)
   useEffect(() => {
     const handleHashChange = () => {
@@ -60,9 +63,6 @@ function App({ onLogout, user }) {
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, [isAdmin]); // Dependencia importante: isAdmin
-
-  // Verificar si el usuario es admin
-  const isAdmin = user && user.rol === 'admin';
 
   // Cargar EOTs al montar el componente
   useEffect(() => {
