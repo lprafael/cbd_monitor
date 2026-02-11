@@ -383,6 +383,9 @@ def procesar_fecha(fecha: date, modo_notificacion: str = None):
                     'ifo_minimo': ifo_min_pct
                 })
                 
+                # Determinar si hay incumplimiento
+                es_incumplimiento = ifo_val < ifo_min_pct
+                
                 # Detectar incumplimientos para notificaciones
                 # Si es modo notificación o verificación, incluimos a todos (antes se filtraba solo incumplimientos)
                 incluir_en_reporte = (modo_notificacion is not None) or es_incumplimiento

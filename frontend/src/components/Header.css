@@ -168,6 +168,8 @@
   font-weight: 600;
   margin-bottom: 0.5rem;
   font-size: 0.95rem;
+  color: white;
+  /* Asegurar color blanco por defecto en el header */
 }
 
 .form-control {
@@ -332,4 +334,17 @@
     font-size: 1rem;
     padding: 0.75rem 1.5rem;
   }
+}
+
+/* Soporte específico para Tema Ejecutivo: Forzar letras blancas */
+[data-theme="ejecutivo"] .header,
+[data-theme="ejecutivo"] .header .header-title,
+[data-theme="ejecutivo"] .header label,
+[data-theme="ejecutivo"] .header .theme-label,
+[data-theme="ejecutivo"] .header .radio-label span,
+[data-theme="ejecutivo"] .header .form-hint,
+[data-theme="ejecutivo"] .header .user-name,
+[data-theme="ejecutivo"] .header .admin-button,
+[data-theme="ejecutivo"] .header .logout-button {
+  color: white !important;
 }

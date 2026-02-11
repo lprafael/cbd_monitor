@@ -20,10 +20,13 @@ _cors_origins = [
     "http://localhost:3000",
     "http://localhost:8080",
     "http://127.0.0.1:3000",
+    "http://127.0.0.1:5001",
     "http://127.0.0.1:8080",
 ]
+
 if os.getenv("CORS_ORIGINS"):
     _cors_origins.extend(o.strip() for o in os.getenv("CORS_ORIGINS").split(",") if o.strip())
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
@@ -31,6 +34,19 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+from fastapi.responses import JSONResponse
+from fastapi import Request
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    import traceback
+    error_details = traceback.format_exc()
+    print(f"ERROR GLOBAL: {error_details}")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Error interno del servidor", "exception": str(exc)},
+    )
 
 # Incluir routers de cada módulo
 app.include_router(auth.router)

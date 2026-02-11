@@ -186,8 +186,8 @@
 }
 
 .daily-table th {
-  background-color: var(--table-header-bg);
-  color: var(--text-secondary);
+  background-color: var(--primary-gradient-start, #1e3a8a);
+  color: white;
   font-weight: 600;
 }
 
