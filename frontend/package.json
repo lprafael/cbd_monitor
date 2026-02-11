@@ -2,7 +2,7 @@
   "name": "cbd-monitor-frontend",
   "version": "1.0.0",
   "description": "Frontend para monitorear Control de Buses Distintos (CBD)",
-  "homepage": "/cbd_monitor",
+  "homepage": ".",
   "private": true,
   "dependencies": {
     "@react-oauth/google": "^0.12.1",
