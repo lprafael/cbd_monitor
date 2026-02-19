@@ -85,8 +85,8 @@ def registrar_ejecucion_correcta(id_script: int = 4):
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO alertas.registro_ejecuciones 
-            (id_script, fecha_ejecucion, estado, detalles)
-            VALUES (%s, NOW(), %s, %s)
+            (id_script, fecha_proceso, fecha_ejecucion, estado, detalles)
+            VALUES (%s, NOW(), NOW(), %s, %s)
         """, (id_script, 'OK', 'Ejecución completada correctamente'))
         
         conn.commit()

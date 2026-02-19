@@ -97,7 +97,23 @@ function App({ onLogout, user }) {
       }
 
       const data = await response.json();
-      setEots(data);
+
+      // Filtrar por rol de visualizador si es necesario (solo ve su propia empresa)
+      let filteredEots = data;
+      if (user && user.rol === 'viewer') {
+        filteredEots = data.filter(e => e.e_mail === user.email);
+
+        if (filteredEots.length === 0) {
+          setError('Su usuario no tiene una empresa asignada. Por favor contacte al administrador.');
+        } else {
+          // Si hay una sola EOT para el visualizador, seleccionarla automáticamente
+          if (filteredEots.length === 1 && selectedEots.length === 0) {
+            setSelectedEots([filteredEots[0].cod_catalogo]);
+          }
+        }
+      }
+
+      setEots(filteredEots);
     } catch (err) {
       console.error('Error al cargar EOTs:', err);
       setError('No se pudieron cargar las empresas operadoras. Verifique que la API esté ejecutándose.');

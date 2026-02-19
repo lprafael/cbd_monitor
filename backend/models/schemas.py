@@ -11,6 +11,7 @@ class EOT(BaseModel):
     id_eot_vmt_hex: Optional[str] = None
     gre_nombre: Optional[str] = None
     gre_id: Optional[int] = None
+    e_mail: Optional[str] = None
     
     class Config:
         from_attributes = True

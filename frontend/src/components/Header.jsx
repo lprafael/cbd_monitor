@@ -237,17 +237,19 @@ const Header = ({
                     />
                     <span>📅 Desempeño Mensual</span>
                   </label>
-                  <label className="radio-label">
-                    <input
-                      type="radio"
-                      name="viewMode"
-                      value="system-ifo"
-                      checked={viewMode === 'system-ifo'}
-                      onChange={(e) => setViewMode(e.target.value)}
-                    />
-                    <span>📊 IFO Sistema</span>
-                  </label>
-                   {/* <label className="radio-label">
+                  {user && user.rol !== 'viewer' && (
+                    <label className="radio-label">
+                      <input
+                        type="radio"
+                        name="viewMode"
+                        value="system-ifo"
+                        checked={viewMode === 'system-ifo'}
+                        onChange={(e) => setViewMode(e.target.value)}
+                      />
+                      <span>📊 IFO Sistema</span>
+                    </label>
+                  )}
+                  {/* <label className="radio-label">
                    <input
                       type="radio"
                       name="viewMode"

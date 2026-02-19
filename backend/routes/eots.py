@@ -25,7 +25,8 @@ async def get_eots(db: DatabaseConnection = Depends(get_db_connection)):
                 e.eot_nombre,
                 e.id_eot_vmt_hex,
                 g.gre_nombre,
-                e.gre_id
+                e.gre_id,
+                e.e_mail
             FROM public.eots e
             LEFT JOIN public.gremios g ON e.gre_id = g.gre_id
             WHERE e.permisionario IS TRUE
