@@ -127,6 +127,12 @@ function App({ onLogout, user }) {
    * Obtener datos según el modo seleccionado
    */
   const handleConsulta = async () => {
+    // Si estamos en una vista de administración, volver al dashboard al consultar
+    if (currentView !== 'dashboard') {
+      setCurrentView('dashboard');
+      window.location.hash = '#';
+    }
+
     // Si es modo system-ifo, no hacemos nada aquí, el dashboard se renderiza directamente
     if (viewMode === 'system-ifo') {
       return;
