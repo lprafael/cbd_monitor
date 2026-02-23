@@ -60,6 +60,7 @@ async def resend_user_password(
         user.email,
         user.username,
         temp_password,
-        user.rol
+        user.rol,
+        delete_after_send=True
     )
     return {"message": "Se ha enviado una nueva contraseña temporal al usuario por email."}

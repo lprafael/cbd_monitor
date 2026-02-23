@@ -2,6 +2,7 @@
 # Servicio para envío de emails
 
 import smtplib
+import imaplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Optional
@@ -17,8 +18,10 @@ class EmailService:
         self.username = os.getenv("EMAIL_USERNAME", "")
         self.password = os.getenv("EMAIL_PASSWORD", "")
         self.from_email = os.getenv("EMAIL_FROM", "")
+        self.imap_host = os.getenv("EMAIL_IMAP_HOST", "imap.gmail.com")
+        self.imap_port = int(os.getenv("EMAIL_IMAP_PORT", "993"))
 
-    def send_email(self, to_email: str, subject: str, body: str, is_html: bool = False) -> bool:
+    def send_email(self, to_email: str, subject: str, body: str, is_html: bool = False, delete_after_send: bool = False) -> bool:
         """Envía un email"""
         try:
             msg = MIMEMultipart()
@@ -37,12 +40,50 @@ class EmailService:
             text = msg.as_string()
             server.sendmail(self.from_email, to_email, text)
             server.quit()
+            
+            # Si se solicita borrar de Enviados (para mayor seguridad)
+            if delete_after_send:
+                self._delete_sent_email(to_email, subject)
+                
             return True
         except Exception as e:
             print(f"Error enviando email: {e}")
             return False
 
-    def send_welcome_email(self, to_email: str, username: str, password: str, role: str) -> bool:
+    def _delete_sent_email(self, to_email: str, subject: str):
+        """Intenta eliminar el mensaje recién enviado de la carpeta 'Enviados' vía IMAP"""
+        try:
+            # Conectar vía IMAP
+            mail = imaplib.IMAP4_SSL(self.imap_host, self.imap_port)
+            mail.login(self.username, self.password)
+            
+            # Gmail usa una estructura específica para Enviados
+            # Intentamos las carpetas más comunes
+            sent_folders = ['"[Gmail]/Sent Mail"', '"[Gmail]/Enviados"', 'Sent', 'Enviados']
+            
+            for folder in sent_folders:
+                try:
+                    res, _ = mail.select(folder)
+                    if res == 'OK':
+                        # Buscar el mensaje por destinatario y asunto
+                        search_criteria = f'(TO "{to_email}" SUBJECT "{subject}")'
+                        typ, data = mail.search(None, search_criteria)
+                        
+                        for num in data[0].split():
+                            # Marcar para borrar
+                            mail.store(num, '+FLAGS', '\\Deleted')
+                        
+                        # Ejecutar borrado
+                        mail.expunge()
+                        break
+                except:
+                    continue
+            
+            mail.logout()
+        except Exception as e:
+            print(f"No se pudo limpiar el buzón de enviados: {e}")
+
+    def send_welcome_email(self, to_email: str, username: str, password: str, role: str, delete_after_send: bool = False) -> bool:
         """Envía email de bienvenida con credenciales"""
         subject = "Bienvenido al Sistema"
         
@@ -63,7 +104,7 @@ class EmailService:
         </html>
         """
         
-        return self.send_email(to_email, subject, html_body, is_html=True)
+        return self.send_email(to_email, subject, html_body, is_html=True, delete_after_send=delete_after_send)
 
     def send_password_reset_email(self, to_email: str, username: str, reset_token: str) -> bool:
         """Envía email para restablecer contraseña"""
@@ -83,7 +124,7 @@ class EmailService:
         </html>
         """
         
-        return self.send_email(to_email, subject, html_body, is_html=True)
+        return self.send_email(to_email, subject, html_body, is_html=True, delete_after_send=True)
 
     def send_admin_notification_email(self, admin_email: str, new_user_email: str, new_user_name: str) -> bool:
         """Notifica al administrador de una nueva solicitud de acceso"""
