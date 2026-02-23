@@ -1,0 +1,238 @@
+.sintra-chatbot-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.sintra-launcher {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: transparent;
+    /* Fondo transparente solicitado */
+    border: none;
+    /* Quitamos borde para un look más limpio */
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    padding: 0;
+    overflow: visible;
+    position: relative;
+}
+
+.sintra-launcher:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.sintra-logo-img {
+    width: 85%;
+    height: 85%;
+    object-fit: contain;
+    /* El usuario pidió fondo transparente, si el PNG tiene fondo blanco podemos intentar aplicarle un filtro */
+    /* mix-blend-mode: multiply; */
+}
+
+/* Badge con el nombre abajo del botón */
+.sintra-badge {
+    position: absolute;
+    bottom: -15px;
+    background: var(--primary-color, #0056b3);
+    color: white;
+    font-size: 10px;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 10px;
+    white-space: nowrap;
+}
+
+.sintra-window {
+    width: 350px;
+    height: 500px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.sintra-header {
+    background: var(--primary-color, #0056b3);
+    color: white;
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sintra-header-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sintra-logo-mini {
+    width: 35px;
+    height: 35px;
+    background: white;
+    border-radius: 50%;
+    padding: 2px;
+}
+
+.sintra-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.sintra-header span {
+    font-size: 11px;
+    opacity: 0.9;
+}
+
+.sintra-close {
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0 5px;
+}
+
+.sintra-messages {
+    flex: 1;
+    padding: 15px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: #f8f9fa;
+}
+
+.sintra-message {
+    display: flex;
+    width: 100%;
+}
+
+.sintra-message.bot {
+    justify-content: flex-start;
+}
+
+.sintra-message.user {
+    justify-content: flex-end;
+}
+
+.message-bubble {
+    max-width: 80%;
+    padding: 10px 14px;
+    border-radius: 18px;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.bot .message-bubble {
+    background: white;
+    color: #333;
+    border-bottom-left-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.user .message-bubble {
+    background: var(--primary-color, #0056b3);
+    color: white;
+    border-bottom-right-radius: 4px;
+}
+
+.sintra-input-area {
+    padding: 15px;
+    background: white;
+    border-top: 1px solid #eee;
+    display: flex;
+    gap: 10px;
+}
+
+.sintra-input-area input {
+    flex: 1;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    padding: 8px 15px;
+    outline: none;
+}
+
+.sintra-input-area input:focus {
+    border-color: var(--primary-color, #0056b3);
+}
+
+.sintra-input-area button {
+    background: var(--primary-color, #0056b3);
+    color: white;
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.sintra-input-area button:hover:not(:disabled) {
+    transform: scale(1.1);
+}
+
+.sintra-input-area button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+/* Typing animation */
+.typing span {
+    height: 8px;
+    width: 8px;
+    background: #bbb;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 4px;
+    animation: typing 1s infinite ease-in-out;
+}
+
+.typing span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.typing span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes typing {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-5px);
+    }
+}

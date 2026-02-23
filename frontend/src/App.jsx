@@ -13,6 +13,7 @@ import Verify290Dashboard from './components/Verify290Dashboard';
 import SystemIFODashboard from './components/SystemIFODashboard';
 import UserManagement from './components/UserManagement';
 import AuditSystem from './components/AuditSystem';
+import ChatBot from './components/ChatBot';
 import './App.css';
 import { API_BASE_URL } from './config';
 
@@ -286,6 +287,7 @@ function App({ onLogout, user }) {
             Monitoreo de Indicadores de Desempeño (CBD/IFO) | Resolución GVMT Nº 120/2025 | CID - VMT
           </p>
         </footer>
+        <ChatBot />
       </div>
     );
   }
@@ -372,12 +374,10 @@ function App({ onLogout, user }) {
 
       <footer className="app-footer">
         <p>
-          {/* Monitor de CBD - Control de Buses Distintos |
-          Desarrollado con FastAPI + React */}
-          {/* Sistema Integral de Control y Monitoreo | CID - Viceministerio de Transporte | Res. GVMT Nº 120/2025 */}
           Monitoreo de Indicadores de Desempeño (CBD/IFO) | Resolución GVMT Nº 120/2025 | CID - VMT
         </p>
       </footer>
+      <ChatBot />
     </div>
   );
 }

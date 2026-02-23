@@ -28,8 +28,8 @@ FROM nginx:alpine
 # 1. Copiamos el build a una carpeta con el nombre del sistema
 COPY --from=build /app/build /usr/share/nginx/html/cbd_monitor
 
-# 2. También copiamos el index a la raíz para que la IP funcione
-RUN cp /usr/share/nginx/html/cbd_monitor/index.html /usr/share/nginx/html/index.html
+# 2. También copiamos todo al root para que funcione en la raíz y en el subdirectorio
+RUN cp -r /usr/share/nginx/html/cbd_monitor/* /usr/share/nginx/html/
 
 # 3. Copiamos la configuración de Nginx
 COPY nginx.conf /etc/nginx/conf.d/default.conf
