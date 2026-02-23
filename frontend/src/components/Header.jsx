@@ -37,7 +37,7 @@ const Header = ({
       return;
     }
 
-    if (viewMode === 'monthly' || viewMode === 'verify290') {
+    if (viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'cbd-objetivo') {
       setSelectedEots([parseInt(e.target.value)]);
       return;
     }
@@ -142,8 +142,8 @@ const Header = ({
               </label>
               <select
                 id="eot-select"
-                multiple={viewMode !== 'monthly' && viewMode !== 'verify290' && viewMode !== 'system-ifo'}
-                value={(viewMode === 'monthly' || viewMode === 'verify290') && selectedEots.length > 0 ? selectedEots[0] : selectedEots.map(String)}
+                multiple={viewMode !== 'monthly' && viewMode !== 'verify290' && viewMode !== 'system-ifo' && viewMode !== 'cbd-objetivo'}
+                value={(viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'cbd-objetivo') && selectedEots.length > 0 ? selectedEots[0] : selectedEots.map(String)}
                 onChange={handleEotChange}
                 className="form-control eot-select"
                 size="5"
@@ -159,7 +159,7 @@ const Header = ({
               <small className="form-hint">
                 {viewMode === 'system-ifo'
                   ? 'No se requiere selección de EOT (incluye todas)'
-                  : (viewMode === 'monthly' || viewMode === 'verify290')
+                  : (viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'cbd-objetivo')
                     ? 'Seleccione una sola empresa para el reporte'
                     : 'Mantén presionado Ctrl (Windows) o Cmd (Mac) para seleccionar múltiples'}
               </small>
@@ -237,6 +237,16 @@ const Header = ({
                     />
                     <span>📅 Desempeño Mensual</span>
                   </label>
+                  <label className="radio-label">
+                    <input
+                      type="radio"
+                      name="viewMode"
+                      value="cbd-objetivo"
+                      checked={viewMode === 'cbd-objetivo'}
+                      onChange={(e) => setViewMode(e.target.value)}
+                    />
+                    <span>📊 CBD Objetivo</span>
+                  </label>
                   {user && user.rol !== 'viewer' && (
                     <label className="radio-label">
                       <input
@@ -262,9 +272,9 @@ const Header = ({
                 </div>
               </div>
 
-              {viewMode === 'live' && (
+              {(viewMode === 'live' || viewMode === 'cbd-objetivo') && (
                 <div className="form-group">
-                  <label>Agrupación (En Vivo):</label>
+                  <label>Agrupación:</label>
                   <div className="radio-group">
                     <label className="radio-label">
                       <input

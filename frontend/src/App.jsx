@@ -14,6 +14,7 @@ import SystemIFODashboard from './components/SystemIFODashboard';
 import UserManagement from './components/UserManagement';
 import AuditSystem from './components/AuditSystem';
 import ChatBot from './components/ChatBot';
+import CBDObjetivoTable from './components/CBDObjetivoTable';
 import './App.css';
 import { API_BASE_URL } from './config';
 
@@ -28,6 +29,7 @@ function App({ onLogout, user }) {
   const [performanceData, setPerformanceData] = useState(null);
   const [monthlyData, setMonthlyData] = useState(null);
   const [verify290Data, setVerify290Data] = useState(null);
+  const [cbdObjetivoData, setCbdObjetivoData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [theme, setTheme] = useState('ejecutivo'); // 'mopc' | 'institucional' | 'ejecutivo' | 'claro' | 'nocturno'
@@ -136,6 +138,7 @@ function App({ onLogout, user }) {
     setPerformanceData(null);
     setMonthlyData(null);
     setVerify290Data(null);
+    setCbdObjetivoData(null);
 
     try {
       let endpoint = '';
@@ -170,6 +173,12 @@ function App({ onLogout, user }) {
           month: parseInt(monthStr),
           year: parseInt(yearStr)
         };
+      } else if (viewMode === 'cbd-objetivo') {
+        endpoint = '/api/cbd-objetivo';
+        body = {
+          eot_id: selectedEots[0],
+          modo: modoVisualizacion
+        };
       }
 
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -193,6 +202,8 @@ function App({ onLogout, user }) {
         setMonthlyData(data);
       } else if (viewMode === 'verify290') {
         setVerify290Data(data);
+      } else if (viewMode === 'cbd-objetivo') {
+        setCbdObjetivoData(data);
       } else {
         setPerformanceData(data);
       }
@@ -360,8 +371,12 @@ function App({ onLogout, user }) {
           <MonthlyPerformanceDashboard data={monthlyData} />
         )}
 
-        {!loading && !error && viewMode === 'verify290' && verify290Data && (
+        {viewMode === 'verify290' && !loading && !error && verify290Data && (
           <Verify290Dashboard data={verify290Data} />
+        )}
+
+        {viewMode === 'cbd-objetivo' && !loading && !error && cbdObjetivoData && (
+          <CBDObjetivoTable data={cbdObjetivoData} />
         )}
 
         {viewMode === 'system-ifo' && (
