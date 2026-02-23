@@ -272,9 +272,9 @@ const Header = ({
                 </div>
               </div>
 
-              {(viewMode === 'live' || viewMode === 'cbd-objetivo') && (
+              {viewMode === 'live' && (
                 <div className="form-group">
-                  <label>Agrupación:</label>
+                  <label>Agrupación (En Vivo):</label>
                   <div className="radio-group">
                     <label className="radio-label">
                       <input

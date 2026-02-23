@@ -10,15 +10,20 @@ router = APIRouter(prefix="/api/cbd-objetivo", tags=["CBD Objetivo"])
 
 class CBDObjetivoRequest(BaseModel):
     eot_id: int
-    modo: str # "hora" o "franja"
+
+class FranjaMetadata(BaseModel):
+    id_franja: int
+    denominacion: str
+    hora_inicio: int
+    hora_fin: int
 
 class CBDObjetivoResponse(BaseModel):
     eot_id: int
     eot_nombre: str
-    modo: str
     fechas: List[date]
-    columnas: List[str] # Nombres de franjas o horas
-    datos: Dict[str, Dict[str, int]] # fecha -> columna -> valor
+    horas_label: List[int]
+    franjas_metadata: Dict[str, List[FranjaMetadata]] # fecha -> list of franjas
+    datos: Dict[str, Dict[str, Any]] # fecha -> { "horas": { "4": 5 }, "franjas": { "101": 12 } }
 
 def get_tipo_dia_and_franjas(cursor, fecha: date) -> tuple:
     cursor.execute("SELECT fecha FROM public.feriados WHERE fecha = %s", (fecha,))
@@ -62,23 +67,20 @@ async def get_cbd_objetivo_report(
         # 2. Determinar ventana de fechas
         cursor.execute("SELECT MAX(fecha) as max_date FROM public.servicios_diarios")
         res = cursor.fetchone()
-        if not res or not res['max_date']:
-            last_date = date.today()
-        else:
-            last_date = res['max_date']
+        last_date = res['max_date'] if res and res['max_date'] else date.today()
             
         start_date = last_date + timedelta(days=1)
         fechas_objetivo = [start_date + timedelta(days=i) for i in range(7)]
         
         # 3. Preparar respuesta
-        columnas_set = set()
         resultado_datos = {}
+        franjas_metadata_por_fecha = {}
+        horas_labels = list(range(4, 24))
         
-        # Necesitamos colectar todas las fechas históricas para precarga (batch)
+        # Colectar fechas históricas para precarga
         todas_fechas_historicas = set()
         for f in fechas_objetivo:
             todas_fechas_historicas.update(get_fechas_referencia(cursor, f))
-        
         list_fechas_todas = list(todas_fechas_historicas)
         
         # Cache de Billetaje
@@ -103,13 +105,23 @@ async def get_cbd_objetivo_report(
 
         for fecha in fechas_objetivo:
             fecha_str = fecha.strftime("%Y-%m-%d")
-            resultado_datos[fecha_str] = {}
+            resultado_datos[fecha_str] = {"horas": {}, "franjas": {}}
             
             id_tipo_dia, tipo_dia, franjas = get_tipo_dia_and_franjas(cursor, fecha)
             fechas_ref = get_fechas_referencia(cursor, fecha)
             factor_ajuste, _ = get_factores_ajuste_acumulados(cursor, fecha)
             
-            # Obtener parámetros mínimos para esta fecha/tipo_dia
+            # Metadata de franjas para el frontend
+            franjas_metadata_por_fecha[fecha_str] = [
+                FranjaMetadata(
+                    id_franja=f['id_franja'],
+                    denominacion=f['denominacion'],
+                    hora_inicio=f['hora_inicio'].hour,
+                    hora_fin=f['hora_fin'].hour
+                ) for f in franjas
+            ]
+
+            # Obtener parámetros mínimos
             cursor.execute("""
                 SELECT id_franja, cbd_minimo_hora, cbd_minimo_franja 
                 FROM control_metricas.cbd_parametros_minimos 
@@ -119,88 +131,62 @@ async def get_cbd_objetivo_report(
             """, (id_tipo_dia, fecha, fecha))
             params = {r['id_franja']: r for r in cursor.fetchall()}
             
-            if request.modo == "franja":
+            # --- CALCULO POR HORA ---
+            for hora in horas_labels:
+                min_h = 0
                 for fr in franjas:
-                    fr_id = fr['id_franja']
-                    col_name = fr['denominacion']
-                    columnas_set.add(col_name)
-                    
-                    p = params.get(fr_id, {'cbd_minimo_franja': 0})
-                    min_f = p['cbd_minimo_franja'] or 0
-                    
-                    # Para el objetivo de franja, tomamos el promedio de buses distintos en esa franja en los días de referencia
-                    sum_distintos = 0
-                    for fh in fechas_ref:
-                        h_ini, h_fin = fr['hora_inicio'].hour, fr['hora_fin'].hour
-                        # Consultar buses distintos en la franja
-                        # Billetaje
-                        cursor.execute("""
-                            SELECT COUNT(DISTINCT idsam) as cbd FROM public.servicios_diarios
-                            WHERE id_eot_catalogo = %s AND fecha = %s AND hora >= %s AND hora <= %s
-                        """, (request.eot_id, fh, h_ini, h_fin))
-                        cbd_dist_val = cursor.fetchone()['cbd'] or 0
-                        
-                        cbd_final = cbd_dist_val
-                        if cbd_dist_val < min_f and eot_vmt_hex:
-                            cursor.execute("""
-                                SELECT COUNT(DISTINCT mean_id) as cbd FROM control_metricas.cbd_detalle_buses
-                                WHERE id_eot_vmt_hex = %s AND fecha = %s AND hora >= %s AND hora <= %s
-                            """, (eot_vmt_hex, fh, h_ini, h_fin))
-                            cbd_dist_gps = cursor.fetchone()['cbd'] or 0
-                            if cbd_dist_gps > cbd_dist_val:
-                                cbd_final = cbd_dist_gps
-                        
-                        sum_distintos += cbd_final
-                    
-                    promedio = sum_distintos / len(fechas_ref) if fechas_ref else 0
-                    objetivo = math.ceil(max(promedio * factor_ajuste, min_f))
-                    resultado_datos[fecha_str][col_name] = objetivo
+                    if fr['hora_inicio'].hour <= hora <= fr['hora_fin'].hour:
+                        min_h = params.get(fr['id_franja'], {}).get('cbd_minimo_hora', 0) or 0
+                        break
+                
+                sum_hora = 0
+                for fh in fechas_ref:
+                    c_val = cache_val.get((fh, hora), 0)
+                    c_gps = cache_gps.get((fh, hora), 0)
+                    cbd_h = c_val
+                    if cbd_h < min_h and eot_vmt_hex and c_gps > cbd_h:
+                        cbd_h = c_gps
+                    sum_hora += cbd_h
+                
+                promedio = sum_hora / len(fechas_ref) if fechas_ref else 0
+                resultado_datos[fecha_str]["horas"][str(hora)] = math.ceil(max(promedio * factor_ajuste, min_h))
             
-            else: # modo == "hora"
-                # Usar horas de 4 a 23 como en el script
-                for hora in range(4, 24):
-                    col_name = f"{hora}:00"
-                    columnas_set.add(col_name)
-                    
-                    # Buscar min_h para esta hora
-                    min_h = 0
-                    for fr in franjas:
-                        if fr['hora_inicio'].hour <= hora <= fr['hora_fin'].hour:
-                            min_h = params.get(fr['id_franja'], {}).get('cbd_minimo_hora', 0)
-                            break
-                    
-                    sum_hora = 0
-                    for fh in fechas_ref:
-                        # Usar caché si es posible
-                        c_val = cache_val.get((fh, hora), 0)
-                        c_gps = cache_gps.get((fh, hora), 0)
-                        
-                        cbd_h = c_val
-                        if cbd_h < min_h and eot_vmt_hex and c_gps > cbd_h:
-                            cbd_h = c_gps
-                        
-                        sum_hora += cbd_h
-                    
-                    promedio = sum_hora / len(fechas_ref) if fechas_ref else 0
-                    objetivo = math.ceil(max(promedio * factor_ajuste, min_h))
-                    resultado_datos[fecha_str][col_name] = objetivo
+            # --- CALCULO POR FRANJA ---
+            for fr in franjas:
+                fr_id = fr['id_franja']
+                p = params.get(fr_id, {'cbd_minimo_franja': 0})
+                min_f = p['cbd_minimo_franja'] or 0
+                sum_distintos = 0
+                h_ini, h_fin = fr['hora_inicio'].hour, fr['hora_fin'].hour
 
-        # Ordenar columnas
-        if request.modo == "hora":
-            columnas_final = [f"{h}:00" for h in range(4, 24)]
-        else:
-            # Ordenar franjas por hora de inicio (usando una de las fechas para la lógica de nombres)
-            # Como los nombres varían pero mayormente son iguales, tratamos de ser estables
-            columnas_final = sorted(list(columnas_set)) # Simple alphabetical for now or based on franjas of the first day
-            dummy_id, dummy_tipo, first_franjas = get_tipo_dia_and_franjas(cursor, fechas_objetivo[0])
-            columnas_final = [f['denominacion'] for f in first_franjas]
+                for fh in fechas_ref:
+                    # Billetaje
+                    cursor.execute("""
+                        SELECT COUNT(DISTINCT idsam) as cbd FROM public.servicios_diarios
+                        WHERE id_eot_catalogo = %s AND fecha = %s AND hora >= %s AND hora <= %s
+                    """, (request.eot_id, fh, h_ini, h_fin))
+                    cbd_dist_val = cursor.fetchone()['cbd'] or 0
+                    
+                    cbd_final = cbd_dist_val
+                    if cbd_dist_val < min_f and eot_vmt_hex:
+                        cursor.execute("""
+                            SELECT COUNT(DISTINCT mean_id) as cbd FROM control_metricas.cbd_detalle_buses
+                            WHERE id_eot_vmt_hex = %s AND fecha = %s AND hora >= %s AND hora <= %s
+                        """, (eot_vmt_hex, fh, h_ini, h_fin))
+                        cbd_dist_gps = cursor.fetchone()['cbd'] or 0
+                        if cbd_dist_gps > cbd_dist_val:
+                            cbd_final = cbd_dist_gps
+                    sum_distintos += cbd_final
+                
+                promedio = sum_distintos / len(fechas_ref) if fechas_ref else 0
+                resultado_datos[fecha_str]["franjas"][str(fr_id)] = math.ceil(max(promedio * factor_ajuste, min_f))
 
         return CBDObjetivoResponse(
             eot_id=request.eot_id,
             eot_nombre=eot_nombre,
-            modo=request.modo,
             fechas=fechas_objetivo,
-            columnas=columnas_final,
+            horas_label=horas_labels,
+            franjas_metadata=franjas_metadata_por_fecha,
             datos=resultado_datos
         )
 

@@ -182,8 +182,7 @@ function App({ onLogout, user }) {
       } else if (viewMode === 'cbd-objetivo') {
         endpoint = '/api/cbd-objetivo';
         body = {
-          eot_id: selectedEots[0],
-          modo: modoVisualizacion
+          eot_id: selectedEots[0]
         };
       }
 
