@@ -20,7 +20,7 @@ const ChatBot = () => {
       return import('https://cdn.jsdelivr.net/npm/@n8n/chat/dist/chat.bundle.es.js')
         .then(({ createChat }) => {
           createChat({
-            webhookUrl: window.location.origin + '/cbd_monitor/n8n/webhook/081df528-5853-456b-8c51-6c6dc9618940/chat',
+            webhookUrl: 'https://sistemas.mopc.gov.py/cbd_monitor/n8n/webhook/081df528-5853-456b-8c51-6c6dc9618940/chat',
             i18n: {
               en: {
                 title: '¡Hola! 👋',
