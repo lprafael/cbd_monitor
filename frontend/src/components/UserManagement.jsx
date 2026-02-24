@@ -90,13 +90,14 @@ const UserManagement = () => {
     e.preventDefault();
     setLoading(true);
     try {
+      // 1. Manejar cambio de contraseña (para cualquier usuario editando su propio perfil)
       if (currentUser.id === editUser.id && passwordFields.new_password) {
         if (passwordFields.new_password !== passwordFields.confirm_password) {
           alert('Las contraseñas no coinciden');
           setLoading(false);
           return;
         }
-        await authFetch(`${API_BASE_URL}/auth/change-password`, {
+        const pwResponse = await authFetch(`${API_BASE_URL}/auth/change-password`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -104,23 +105,47 @@ const UserManagement = () => {
             new_password: passwordFields.new_password
           })
         });
+
+        if (!pwResponse.ok) {
+          const pwData = await pwResponse.json();
+          alert(pwData.detail || 'Error al cambiar contraseña');
+          setLoading(false);
+          return;
+        }
       }
-      const response = await authFetch(`${API_BASE_URL}/auth/users/${editUser.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: editUser.email,
-          nombre_completo: editUser.nombre_completo,
-          rol: editUser.rol,
-        })
-      });
-      if (response.ok) {
+
+      // 2. Manejar actualización de perfil (SOLO si es admin)
+      if (isAdmin) {
+        const response = await authFetch(`${API_BASE_URL}/auth/users/${editUser.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: editUser.email,
+            nombre_completo: editUser.nombre_completo,
+            rol: editUser.rol,
+          })
+        });
+
+        if (response.ok) {
+          alert('Usuario actualizado correctamente');
+          setShowEditModal(false);
+          fetchUsers();
+        } else {
+          const data = await response.json();
+          alert(data.detail || 'Error al actualizar usuario');
+        }
+      } else {
+        // Si no es admin, solo pudo haber cambiado la contraseña o guardado sin cambios
+        if (passwordFields.new_password) {
+          alert('Contraseña actualizada correctamente');
+        } else {
+          alert('Perfil visualizado correctamente');
+        }
         setShowEditModal(false);
-        fetchUsers();
-        alert('Usuario actualizado');
+        setPasswordFields({ current_password: '', new_password: '', confirm_password: '' });
       }
     } catch (err) {
-      alert('Error al actualizar');
+      alert('Error en la operación');
     } finally {
       setLoading(false);
     }
@@ -256,11 +281,23 @@ const UserManagement = () => {
               )}
               <div className="form-group">
                 <label className="form-label">Email</label>
-                <input name="email" value={showCreateForm ? newUser.email : editUser.email} onChange={(e) => handleChange(e, showCreateForm ? setNewUser : setEditUser)} required />
+                <input
+                  name="email"
+                  value={showCreateForm ? newUser.email : editUser.email}
+                  onChange={(e) => handleChange(e, showCreateForm ? setNewUser : setEditUser)}
+                  required
+                  disabled={!showCreateForm && !isAdmin}
+                />
               </div>
               <div className="form-group">
                 <label className="form-label">Nombre Completo</label>
-                <input name="nombre_completo" value={showCreateForm ? newUser.nombre_completo : editUser.nombre_completo} onChange={(e) => handleChange(e, showCreateForm ? setNewUser : setEditUser)} required />
+                <input
+                  name="nombre_completo"
+                  value={showCreateForm ? newUser.nombre_completo : editUser.nombre_completo}
+                  onChange={(e) => handleChange(e, showCreateForm ? setNewUser : setEditUser)}
+                  required
+                  disabled={!showCreateForm && !isAdmin}
+                />
               </div>
               <div className="form-group">
                 <label className="form-label">Rol</label>

@@ -351,23 +351,10 @@ async def get_user(
 async def update_user(
     user_id: int,
     user_data: UserUpdate,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(check_permission("usuarios_write")),
     session: AsyncSession = Depends(get_session)
 ):
-    """Actualizar usuario"""
-    # Verificar permisos: o es admin con usuarios_write, o es el propio usuario actual
-    is_self = current_user["user_id"] == user_id
-    
-    # Si no es sí mismo, debe tener permiso usuarios_write
-    if not is_self:
-        role = current_user.get("role", "viewer")
-        user_permissions = ROLES.get(role, {}).get("permissions", [])
-        if "usuarios_write" not in user_permissions:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="No tienes permisos para actualizar otros usuarios"
-            )
-
+    """Actualizar usuario (Solo Administradores)"""
     result = await session.execute(select(Usuario).where(Usuario.id == user_id))
     user = result.scalar_one_or_none()
     if not user:
@@ -375,13 +362,6 @@ async def update_user(
     
     # Actualizar campos
     update_data = user_data.model_dump(exclude_unset=True)
-    
-    # Restricciones para no-admins (incluso si es sí mismo)
-    if current_user.get("role") != "admin":
-        # No pueden cambiar su propio rol o estado activo
-        update_data.pop("rol", None)
-        update_data.pop("activo", None)
-        
     for field, value in update_data.items():
         setattr(user, field, value)
         
