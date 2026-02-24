@@ -237,7 +237,7 @@ const Header = ({
                     />
                     <span>📅 Desempeño Mensual</span>
                   </label>
-                  <label className="radio-label">
+                  {/* <label className="radio-label">
                     <input
                       type="radio"
                       name="viewMode"
@@ -246,7 +246,7 @@ const Header = ({
                       onChange={(e) => setViewMode(e.target.value)}
                     />
                     <span>📊 CBD Objetivo</span>
-                  </label>
+                  </label> */}
                   {user && user.rol !== 'viewer' && (
                     <label className="radio-label">
                       <input
