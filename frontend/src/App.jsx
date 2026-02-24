@@ -45,18 +45,18 @@ function App({ onLogout, user }) {
     const handleHashChange = () => {
       const hash = window.location.hash.replace('#', '');
 
-      // Solo permitimos estas rutas si es admin
-      if (isAdmin && (hash === '/users' || hash === '/admin/users')) {
+      // Permitimos estas rutas
+      if (hash === '/users' || hash === '/admin/users') {
         setCurrentView('users');
         setAdminTab('users');
       } else if (isAdmin && (hash === '/audit' || hash === '/admin/audit')) {
         setCurrentView('audit');
         setAdminTab('audit');
       } else {
-        // Si no es admin o es cualquier otra ruta, al dashboard
+        // Si no es admin y es otra ruta no permitida, al dashboard
         setCurrentView('dashboard');
-        // Si intentó entrar a admin sin serlo, limpiamos el hash
-        if (hash.includes('admin') || hash === '/users') {
+        // Si intentó entrar a admin audit sin serlo, limpiamos el hash
+        if (hash.includes('audit')) {
           window.location.hash = '#';
         }
       }

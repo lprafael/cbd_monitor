@@ -46,12 +46,9 @@ const UserManagement = () => {
   };
 
   useEffect(() => {
-    if (isAdmin) {
-      fetchUsers();
-    } else {
-      setLoading(false);
-      setError('Solo los administradores pueden acceder a esta sección');
-    }
+    // Todos los usuarios pueden entrar. 
+    // fetchUsers ya maneja el endpoint correcto basado en el rol.
+    fetchUsers();
   }, []);
 
   const handleEditClick = (user) => {
@@ -82,10 +79,10 @@ const UserManagement = () => {
         const data = await response.json();
         alert(data.detail || 'Error al crear usuario');
       }
-    } catch (err) { 
-      alert('Error de conexión'); 
-    } finally { 
-      setLoading(false); 
+    } catch (err) {
+      alert('Error de conexión');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -122,10 +119,10 @@ const UserManagement = () => {
         fetchUsers();
         alert('Usuario actualizado');
       }
-    } catch (err) { 
-      alert('Error al actualizar'); 
-    } finally { 
-      setLoading(false); 
+    } catch (err) {
+      alert('Error al actualizar');
+    } finally {
+      setLoading(false);
     }
   };
 

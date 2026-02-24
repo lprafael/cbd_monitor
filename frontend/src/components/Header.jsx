@@ -108,19 +108,30 @@ const Header = ({
             {user && (
               <div className="user-info">
                 <span className="user-name">{user.nombre_completo || user.username}</span>
-                {user.rol === 'admin' && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      window.location.hash = '#/admin/users';
-                      window.location.reload();
-                    }}
-                    className="admin-button"
-                    title="Administración"
-                  >
-                    ⚙️ Administración
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.location.hash = user.rol === 'admin' ? '#/admin/users' : '#/users';
+                    window.location.reload();
+                  }}
+                  className={user.rol === 'admin' ? "admin-button" : "profile-button"}
+                  title={user.rol === 'admin' ? "Administración" : "Mi Perfil"}
+                  style={user.rol !== 'admin' ? {
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: 'white',
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    marginLeft: '10px'
+                  } : {}}
+                >
+                  {user.rol === 'admin' ? '⚙️ Administración' : '👤 Mi Perfil'}
+                </button>
                 <button
                   type="button"
                   onClick={onLogout}
