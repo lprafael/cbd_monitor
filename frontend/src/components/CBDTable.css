@@ -56,14 +56,17 @@
 .table-wrapper {
   overflow-x: auto;
   overflow-y: auto;
-  max-height: 70vh; /* Adjust height as needed */
+  max-height: 70vh;
+  /* Adjust height as needed */
   margin: 1.5rem 0;
-  border: 1px solid #e0e0e0; /* Optional: adds a border around the scrollable area */
+  border: 1px solid #e0e0e0;
+  /* Optional: adds a border around the scrollable area */
 }
 
 .cbd-table {
   width: 100%;
-  border-collapse: separate; /* Changed from collapse to support sticky better in some cases, but sticking with collapse is usually fine. Let's keep collapse but ensure z-indices. */
+  border-collapse: separate;
+  /* Changed from collapse to support sticky better in some cases, but sticking with collapse is usually fine. Let's keep collapse but ensure z-indices. */
   border-collapse: collapse;
   font-size: 0.95rem;
   min-width: 800px;
@@ -81,7 +84,7 @@
   padding: 1rem 0.75rem;
   text-align: center;
   font-weight: 600;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid black;
 }
 
 .cbd-table th.sticky-col,
@@ -151,7 +154,7 @@
 
 .cbd-table td {
   padding: 0.75rem;
-  border: 1px solid #e0e0e0;
+  border: 1px solid black;
   text-align: center;
 }
 
@@ -233,6 +236,16 @@
   font-weight: 700;
   font-size: 1.1rem;
   color: #2c3e50;
+}
+
+.separador-fila {
+  height: 15px;
+  background-color: transparent !important;
+}
+
+.separador-fila td {
+  border: none !important;
+  background-color: transparent !important;
 }
 
 /* Footer de la tabla */

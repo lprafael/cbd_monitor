@@ -78,7 +78,6 @@ const CBDObjetivoTable = ({ data }) => {
                                                     key={fr.id_franja}
                                                     colSpan={span}
                                                     className="celda-datos cumple"
-                                                    style={{ borderLeft: '2px solid var(--border-color)', borderRight: '2px solid var(--border-color)' }}
                                                 >
                                                     <div className="celda-content" style={{ flexDirection: 'column', gap: '2px' }}>
                                                         <span className="cantidad" style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>
@@ -94,7 +93,7 @@ const CBDObjetivoTable = ({ data }) => {
                                     </tr>
 
                                     {/* Separador visual entre fechas */}
-                                    <tr style={{ height: '10px', background: 'transparent' }}>
+                                    <tr className="separador-fila">
                                         <td colSpan={horas_label.length + 1}></td>
                                     </tr>
                                 </React.Fragment>

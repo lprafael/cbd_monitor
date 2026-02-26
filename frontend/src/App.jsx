@@ -303,7 +303,7 @@ function App({ onLogout, user }) {
             Monitoreo de Indicadores de Desempeño (CBD/IFO) | Resolución GVMT Nº 120/2025 | CID - VMT
           </p>
         </footer>
-        {/* <ChatBot /> */}
+        <ChatBot />
       </div>
     );
   }
@@ -397,7 +397,7 @@ function App({ onLogout, user }) {
           Monitoreo de Indicadores de Desempeño (CBD/IFO) | Resolución GVMT Nº 120/2025 | CID - VMT
         </p>
       </footer>
-      {/* <ChatBot /> */}
+      <ChatBot />
     </div>
   );
 }
