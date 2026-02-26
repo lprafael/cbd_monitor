@@ -15,6 +15,7 @@ import UserManagement from './components/UserManagement';
 import AuditSystem from './components/AuditSystem';
 import ChatBot from './components/ChatBot';
 import CBDObjetivoTable from './components/CBDObjetivoTable';
+import SystemChartsDashboard from './components/SystemChartsDashboard';
 import './App.css';
 import { API_BASE_URL } from './config';
 
@@ -133,8 +134,8 @@ function App({ onLogout, user }) {
       window.location.hash = '#';
     }
 
-    // Si es modo system-ifo, no hacemos nada aquí, el dashboard se renderiza directamente
-    if (viewMode === 'system-ifo') {
+    // Si es modo system-ifo o visual-charts, no hacemos nada aquí, el dashboard se renderiza directamente
+    if (viewMode === 'system-ifo' || viewMode === 'visual-charts') {
       return;
     }
 
@@ -386,6 +387,13 @@ function App({ onLogout, user }) {
 
         {viewMode === 'system-ifo' && (
           <SystemIFODashboard
+            year={fecha ? parseInt(fecha.split('-')[0]) : new Date().getFullYear()}
+            month={fecha ? parseInt(fecha.split('-')[1]) : new Date().getMonth() + 1}
+          />
+        )}
+
+        {viewMode === 'visual-charts' && (
+          <SystemChartsDashboard
             year={fecha ? parseInt(fecha.split('-')[0]) : new Date().getFullYear()}
             month={fecha ? parseInt(fecha.split('-')[1]) : new Date().getMonth() + 1}
           />

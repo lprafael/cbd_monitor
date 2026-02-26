@@ -31,9 +31,8 @@ const Header = ({
     const options = e.target.options;
     const selected = [];
 
-    // Si estamos en modo mensual, verificar 290 o system-ifo, solo permitimos una selección o ninguna
-    if (viewMode === 'system-ifo') {
-      // No se requiere selección de EOT para IFO Sistema
+    if (viewMode === 'system-ifo' || viewMode === 'visual-charts') {
+      // No se requiere selección de EOT para IFO Sistema o Gráficos
       return;
     }
 
@@ -53,8 +52,8 @@ const Header = ({
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // Para IFO Sistema no se requiere selección de EOT
-    if (viewMode !== 'system-ifo' && selectedEots.length === 0) {
+    // Para IFO Sistema y Gráficos no se requiere selección de EOT
+    if (viewMode !== 'system-ifo' && viewMode !== 'visual-charts' && selectedEots.length === 0) {
       alert('Por favor seleccione al menos una EOT');
       return;
     }
@@ -153,13 +152,13 @@ const Header = ({
               </label>
               <select
                 id="eot-select"
-                multiple={viewMode !== 'monthly' && viewMode !== 'verify290' && viewMode !== 'system-ifo' && viewMode !== 'cbd-objetivo'}
+                multiple={viewMode !== 'monthly' && viewMode !== 'verify290' && viewMode !== 'system-ifo' && viewMode !== 'visual-charts' && viewMode !== 'cbd-objetivo'}
                 value={(viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'cbd-objetivo') && selectedEots.length > 0 ? selectedEots[0] : selectedEots.map(String)}
                 onChange={handleEotChange}
                 className="form-control eot-select"
                 size="5"
-                disabled={viewMode === 'system-ifo'}
-                style={viewMode === 'system-ifo' ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+                disabled={viewMode === 'system-ifo' || viewMode === 'visual-charts'}
+                style={viewMode === 'system-ifo' || viewMode === 'visual-charts' ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
               >
                 {eots.map((eot) => (
                   <option key={eot.cod_catalogo} value={eot.cod_catalogo}>
@@ -168,7 +167,7 @@ const Header = ({
                 ))}
               </select>
               <small className="form-hint">
-                {viewMode === 'system-ifo'
+                {viewMode === 'system-ifo' || viewMode === 'visual-charts'
                   ? 'No se requiere selección de EOT (incluye todas)'
                   : (viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'cbd-objetivo')
                     ? 'Seleccione una sola empresa para el reporte'
@@ -179,14 +178,14 @@ const Header = ({
             <div className="form-controls-column">
               <div className="form-group">
                 <label htmlFor="fecha-input">
-                  {viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'system-ifo' ? 'Mes y Año:' : 'Fecha:'}
+                  {viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'system-ifo' || viewMode === 'visual-charts' ? 'Mes y Año:' : 'Fecha:'}
                 </label>
                 <input
                   id="fecha-input"
-                  key={viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'system-ifo' ? 'month' : 'date'}
-                  type={viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'system-ifo' ? "month" : "date"}
+                  key={viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'system-ifo' || viewMode === 'visual-charts' ? 'month' : 'date'}
+                  type={viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'system-ifo' || viewMode === 'visual-charts' ? "month" : "date"}
                   value={
-                    (viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'system-ifo')
+                    (viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'system-ifo' || viewMode === 'visual-charts')
                       ? (fecha && String(fecha).length >= 7
                         ? String(fecha).slice(0, 7)
                         : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`)
@@ -194,7 +193,7 @@ const Header = ({
                   }
                   onChange={(e) => {
                     const v = e.target.value;
-                    if (viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'system-ifo') {
+                    if (viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'system-ifo' || viewMode === 'visual-charts') {
                       setFecha(v.length === 7 ? v + '-01' : v);
                     } else {
                       setFecha(v);
@@ -259,16 +258,28 @@ const Header = ({
                     <span>📊 CBD Objetivo</span>
                   </label>
                   {user && user.rol !== 'viewer' && (
-                    <label className="radio-label">
-                      <input
-                        type="radio"
-                        name="viewMode"
-                        value="system-ifo"
-                        checked={viewMode === 'system-ifo'}
-                        onChange={(e) => setViewMode(e.target.value)}
-                      />
-                      <span>📊 IFO Sistema</span>
-                    </label>
+                    <>
+                      <label className="radio-label">
+                        <input
+                          type="radio"
+                          name="viewMode"
+                          value="system-ifo"
+                          checked={viewMode === 'system-ifo'}
+                          onChange={(e) => setViewMode(e.target.value)}
+                        />
+                        <span>📊 IFO Sistema</span>
+                      </label>
+                      <label className="radio-label">
+                        <input
+                          type="radio"
+                          name="viewMode"
+                          value="visual-charts"
+                          checked={viewMode === 'visual-charts'}
+                          onChange={(e) => setViewMode(e.target.value)}
+                        />
+                        <span>📈 Gráficos Visuales</span>
+                      </label>
+                    </>
                   )}
                   {/* <label className="radio-label">
                    <input
