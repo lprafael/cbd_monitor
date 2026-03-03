@@ -155,7 +155,7 @@ const ChatBot = () => {
               }
             },
             initialMessages: [
-              '👋 ¡Hola de nuevo! Soy **SINTRA**.',
+              userName ? ('👋 ¡Hola ' + userName + '! Soy **SINTRA**.') : '👋 ¡Hola! Soy **SINTRA**.',
               'Mantengo el contexto de nuestra última charla. ¿En qué más puedo ayudarte?'
             ],
             theme: {
