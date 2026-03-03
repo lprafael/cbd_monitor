@@ -89,6 +89,14 @@ function App({ onLogout, user }) {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
+  // Persistir empresa seleccionada para el chatbot (nombre para saludos y contexto en N8N)
+  useEffect(() => {
+    if (selectedEots.length > 0 && eots.length > 0) {
+      const first = eots.find(e => e.cod_catalogo === selectedEots[0]);
+      localStorage.setItem('user_empresa', first?.eot_nombre || '');
+    }
+  }, [selectedEots, eots]);
+
   /**
    * Obtener lista de EOTs desde la API
    */
@@ -110,9 +118,10 @@ function App({ onLogout, user }) {
         if (filteredEots.length === 0) {
           setError('Su usuario no tiene una empresa asignada. Por favor contacte al administrador.');
         } else {
-          // Si hay una sola EOT para el visualizador, seleccionarla automáticamente
-          if (filteredEots.length === 1 && selectedEots.length === 0) {
-            setSelectedEots([filteredEots[0].cod_catalogo]);
+          // Si hay una sola EOT para el visualizador, seleccionarla automáticamente y guardar nombre para el chatbot
+          if (filteredEots.length === 1) {
+            if (selectedEots.length === 0) setSelectedEots([filteredEots[0].cod_catalogo]);
+            localStorage.setItem('user_empresa', filteredEots[0].eot_nombre || '');
           }
         }
       }

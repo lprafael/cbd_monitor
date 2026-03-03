@@ -122,6 +122,15 @@ const ChatBot = () => {
 
     const loadChat = new Function(`
       const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const userEmpresa = localStorage.getItem('user_empresa') || '';
+      // Nombre para saludo: nombre completo o username
+      const userName = (user.nombre_completo && user.nombre_completo.trim()) ? user.nombre_completo.trim() : (user.username || '');
+      // Metadata que N8N recibe en cada mensaje: nombre y empresa para personalizar saludos
+      const metadata = {
+        userName: userName,
+        empresa: userEmpresa
+      };
+
       // Usar el email si existe, sino un ID aleatorio persistente
       let sessionId = localStorage.getItem('sintra_chat_session');
       if (!sessionId) {
@@ -136,6 +145,7 @@ const ChatBot = () => {
             mode: 'window',
             showWelcomeScreen: true,
             sessionId: sessionId, // <--- Aquí pasamos el ID para mantener la memoria
+            metadata: metadata, // userName y empresa para que el chatbot salude por nombre y tenga contexto de empresa
             i18n: {
               en: {
                 title: 'SINTRA 👋',
