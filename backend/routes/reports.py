@@ -12,8 +12,13 @@ from models.report_schemas import (
 
 router = APIRouter(prefix="/api/reports/res120", tags=["Reports Resolution 120/2025"])
 
-def get_tipo_dia_id(fecha_obj: date) -> int:
-    """Determinar el id_tipo_dia basado en la fecha (5=LABORAL, 6=SABADO, 7=NO LABORAL)."""
+def get_tipo_dia_id(fecha_obj: date, feriados_set: Optional[set] = None) -> int:
+    """
+    Determinar el id_tipo_dia basado en la fecha (5=LABORAL, 6=SABADO, 7=NO LABORAL).
+    Si feriados_set está definido, las fechas en ese conjunto se consideran NO LABORAL (7).
+    """
+    if feriados_set is not None and str(fecha_obj) in feriados_set:
+        return 7
     dia_semana = fecha_obj.weekday()
     if dia_semana == 5:
         return 6
@@ -79,10 +84,17 @@ async def get_monthly_summary(
                 )
             tipos_dia_info[id_tipo_dia]['franjas'] = franjas_info
 
+        # Feriados del mes (para clasificar como Domingo/Feriado)
+        cursor.execute(
+            "SELECT fecha FROM public.feriados WHERE fecha >= %s AND fecha <= %s",
+            (primer_dia_mes, fecha_referencia)
+        )
+        feriados_set = {str(row['fecha']) for row in cursor.fetchall()}
+
         # 2. Inicializar todas las fechas del mes
         fecha_actual = primer_dia_mes
         while fecha_actual <= fecha_referencia:
-            td_id = get_tipo_dia_id(fecha_actual)
+            td_id = get_tipo_dia_id(fecha_actual, feriados_set)
             if td_id in tipos_dia_info:
                 tipos_dia_info[td_id]['dias'][str(fecha_actual)] = {'franjas': {}, 'ifo_diario': None}
             fecha_actual += timedelta(days=1)
@@ -101,7 +113,7 @@ async def get_monthly_summary(
         for row in datos_ifo:
             fecha_str = str(row['fecha'])
             id_franja = str(row['id_franja'])
-            td_id = get_tipo_dia_id(row['fecha'])
+            td_id = get_tipo_dia_id(row['fecha'], feriados_set)
             
             if td_id in tipos_dia_info and fecha_str in tipos_dia_info[td_id]['dias']:
                 tipos_dia_info[td_id]['dias'][fecha_str]['franjas'][id_franja] = {
