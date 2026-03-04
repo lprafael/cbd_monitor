@@ -109,7 +109,8 @@ def get_tipo_dia_id(fecha_obj):
 def obtener_datos_mensuales_eot(id_eot_vmt_hex: str, fecha_referencia: date):
     """Obtiene los datos mensuales de IFO desde la API del backend."""
     # Obtener API_URL desde el entorno
-    API_BASE_URL = os.getenv('CBD_API_URL', 'http://localhost:8000')
+    # API_BASE_URL = os.getenv('CBD_API_URL', 'http://localhost:8000')
+    API_BASE_URL = os.getenv('CBD_API_URL', 'http://localhost:5001')
     API_URL = f"{API_BASE_URL}/api"
     
     try:
@@ -151,7 +152,8 @@ def obtener_datos_mensuales_eot(id_eot_vmt_hex: str, fecha_referencia: date):
 def obtener_ifo_sistema_mes_anterior(fecha_referencia: date) -> float:
     """Obtiene el IFO del sistema del mes anterior desde la API."""
     # Obtener API_URL desde el entorno
-    API_BASE_URL = os.getenv('CBD_API_URL', 'http://localhost:8000')
+    # API_BASE_URL = os.getenv('CBD_API_URL', 'http://localhost:8000')
+    API_BASE_URL = os.getenv('CBD_API_URL', 'http://localhost:5001')
     API_URL = f"{API_BASE_URL}/api"
     
     try:
@@ -168,7 +170,8 @@ def obtener_ifo_sistema_mes_anterior(fecha_referencia: date) -> float:
 def obtener_parametros_ifo_resumen(fecha_referencia: date) -> str:
     """Obtiene el resumen de parámetros de IFO desde la API."""
     # Obtener API_URL desde el entorno
-    API_BASE_URL = os.getenv('CBD_API_URL', 'http://localhost:8000')
+    # API_BASE_URL = os.getenv('CBD_API_URL', 'http://localhost:8000')
+    API_BASE_URL = os.getenv('CBD_API_URL', 'http://localhost:5001')
     API_URL = f"{API_BASE_URL}/api"
     
     try:

@@ -59,7 +59,10 @@ except ImportError:
 load_dotenv()
 
 # Configuración del API
-API_BASE_URL = os.getenv('CBD_API_URL', 'http://localhost:8000')
+# API_BASE_URL = os.getenv('CBD_API_URL', 'http://localhost:8000')
+# Primero intenta tomar CBD_API_URL del entorno; si no existe, por defecto usa el backend
+# publicado en el host en el puerto 5001 (mapeado desde el contenedor FastAPI).
+API_BASE_URL = os.getenv('CBD_API_URL', 'http://localhost:5001')
 API_URL = f"{API_BASE_URL}/api"
 
 # Configuración de procesamiento
