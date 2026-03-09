@@ -8,6 +8,27 @@ import './IndicesDashboard.css';
 
 import { API_BASE_URL } from '../config';
 
+/**
+ * Formatea una fecha ISO (YYYY-MM-DD) a un formato largo con el día de la semana
+ * Ejemplo: "Lunes, 06-03-2026"
+ */
+const formatDateLong = (dateStr) => {
+  if (!dateStr) return '';
+
+  // Forzamos el parseo como hora local añadiendo T00:00:00
+  const dateObj = new Date(dateStr + 'T00:00:00');
+
+  const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  const dayName = days[dateObj.getDay()];
+
+  // Formatear DD-MM-YYYY
+  const day = String(dateObj.getDate()).padStart(2, '0');
+  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const year = dateObj.getFullYear();
+
+  return `${dayName}, ${day}-${month}-${year}`;
+};
+
 const IndicesDashboard = ({ performanceData, fecha }) => {
   const [activeTab, setActiveTab] = useState('cbd'); // 'cbd' | 'ifo'
   const [modalData, setModalData] = useState(null);
@@ -312,7 +333,7 @@ const CBDDetailModal = ({ data, onClose, onEmail, onPrint, onDownload }) => {
         <div>
           <h3>📊 Desglose del Índice de Cumplimiento CBD Mínimo</h3>
           <div className="eot-info">
-            {data.eot_nombre} • {data.denominacion_franja} • {data.fecha}
+            {data.eot_nombre} • {data.denominacion_franja} • {formatDateLong(data.fecha)}
           </div>
         </div>
         <div className="header-right">
@@ -450,7 +471,7 @@ const IFODetailModal = ({ data, onClose, onEmail, onPrint, onDownload }) => {
         <div>
           <h3>📉 Desglose del IFO (Índice de Flota Operativa)</h3>
           <div className="eot-info">
-            {data.eot_nombre} • {data.denominacion_franja} • {data.fecha}
+            {data.eot_nombre} • {data.denominacion_franja} • {formatDateLong(data.fecha)}
           </div>
         </div>
         <div className="header-right">
@@ -497,7 +518,7 @@ const IFODetailModal = ({ data, onClose, onEmail, onPrint, onDownload }) => {
                   key={idx}
                   className={`historico-date-tag ${item.usada ? 'historico-date-used' : 'historico-date-discarded'}`}
                 >
-                  {item.fecha}
+                  {formatDateLong(item.fecha)}
                 </span>
               ))}
           </div>

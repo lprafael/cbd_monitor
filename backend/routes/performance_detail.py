@@ -12,6 +12,20 @@ import os
 router = APIRouter(prefix="/api/performance-detail", tags=["Performance Detail"])
 
 
+def _format_date_long(date_val) -> str:
+    """Invierte fecha ISO a DD-MM-YYYY y agrega día de la semana."""
+    if not date_val: return ""
+    if isinstance(date_val, str):
+        try:
+            date_val = date.fromisoformat(date_val)
+        except:
+            return str(date_val)
+    
+    dias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
+    dia_semana = dias[date_val.weekday()]
+    return f"{dia_semana}, {date_val.strftime('%d-%m-%Y')}"
+
+
 class EmailDetailRequest(BaseModel):
     """Solicitud para enviar desglose por email."""
     type: str  # 'cbd' | 'ifo'
@@ -625,7 +639,7 @@ def _format_cbd_email(data: dict) -> str:
             <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
                 <p style="margin: 5px 0;"><strong>Empresa:</strong> {data['eot_nombre']}</p>
                 <p style="margin: 5px 0;"><strong>Franja:</strong> {data['denominacion_franja']}</p>
-                <p style="margin: 5px 0;"><strong>Fecha:</strong> {data['fecha']}</p>
+                <p style="margin: 5px 0;"><strong>Fecha:</strong> {_format_date_long(data['fecha'])}</p>
             </div>
             
             <h3 style="color: #2c3e50;">📋 Parámetros de la Franja</h3>
@@ -749,7 +763,7 @@ def _format_ifo_email(data: dict) -> str:
             <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
                 <p style="margin: 5px 0;"><strong>Empresa:</strong> {data['eot_nombre']}</p>
                 <p style="margin: 5px 0;"><strong>Franja:</strong> {data['denominacion_franja']}</p>
-                <p style="margin: 5px 0;"><strong>Fecha:</strong> {data['fecha']}</p>
+                <p style="margin: 5px 0;"><strong>Fecha:</strong> {_format_date_long(data['fecha'])}</p>
                 <p style="margin: 5px 0;"><strong>Tipo de Día:</strong> {data.get('tipo_dia', 'N/A')}</p>
             </div>
             
@@ -758,7 +772,7 @@ def _format_ifo_email(data: dict) -> str:
             <h3 style="color: #2c3e50;">📅 Fechas Históricas de Referencia</h3>
             <p style="font-size: 0.9em; color: #666;">Se utilizan las 4 semanas anteriores del mismo tipo de día:</p>
             <div style="margin-bottom: 20px;">
-                {", ".join([f'<span style="background: #e8f5e9; padding: 3px 8px; border-radius: 3px; display: inline-block; margin: 2px;">{f}</span>' for f in data.get('fechas_historicas', [])])}
+                {", ".join([f'<span style="background: #e8f5e9; padding: 3px 8px; border-radius: 3px; display: inline-block; margin: 2px;">{_format_date_long(f)}</span>' for f in data.get('fechas_historicas', [])])}
             </div>
             
             <h3 style="color: #2c3e50;">🕐 Detalle Comparativo por Hora</h3>
