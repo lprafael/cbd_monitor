@@ -90,10 +90,9 @@ const PerformanceDashboard = ({ performanceData }) => {
                     <th>Franja</th>
                     {/* <th>Índice Cumpl. CBD</th> */}
                     <th>ICCBDM</th>
-                    <th>IFO Calc</th>
                     <th>
                       <div className="info-tooltip">
-                        Nivel de servicio
+                        IFO Calc / Nivel
                         <span style={{ fontSize: '1.1em', marginLeft: '6px' }}>ℹ️</span>
                         <div className="tooltip-content">
                           <div style={{ marginBottom: '6px', fontWeight: 'bold', borderBottom: '1px solid rgba(255,255,255,0.2)', paddingBottom: '4px', fontSize: '0.9rem' }}>
@@ -126,13 +125,13 @@ const PerformanceDashboard = ({ performanceData }) => {
                           );
                         })()}
                       </td>
-                      <td className="metric-value">
-                        <span style={{ fontFamily: 'Courier New, monospace' }}>{row.ifo_franja_calculado.toFixed(2)}%</span>
-                      </td>
                       <td>
-                        <span className={`badge ${getComplianceClass(row.ifo_estado_cumplimiento)}`}>
-                          {row.ifo_estado_cumplimiento}
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold' }}>
+                          <span style={{ fontFamily: 'Courier New, monospace' }}>{row.ifo_franja_calculado.toFixed(2)}%</span>
+                          <span className={`badge ${getComplianceClass(row.ifo_estado_cumplimiento)}`} style={{ fontFamily: 'Courier New, monospace' }}>
+                            {row.ifo_estado_cumplimiento}
+                          </span>
+                        </div>
                       </td>
                       <td className="source-tag">{row.ajuste_aplicado}</td>
                     </tr>
@@ -144,7 +143,7 @@ const PerformanceDashboard = ({ performanceData }) => {
                     <td className="metric-value summary-value">
                       <span style={{ fontFamily: 'Courier New, monospace' }}>{ifoPromedio.toFixed(2)}%</span>
                     </td>
-                    <td colSpan="2"></td>
+                    <td colSpan="1"></td>
                   </tr>
                 </tfoot>
               </table>
