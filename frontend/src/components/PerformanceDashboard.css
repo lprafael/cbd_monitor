@@ -59,8 +59,8 @@
 }
 
 .performance-table th {
-  background-color: var(--bg-secondary);
-  color: var(--text-primary);
+  background-color: var(--primary-color);
+  color: white;
   font-weight: 600;
   position: sticky;
   top: 0;

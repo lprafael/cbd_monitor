@@ -257,11 +257,11 @@ const IndicesDashboard = ({ performanceData, fecha }) => {
 
                           const tooltipText = `IFO Real (Promedio ponderado por horas)\nTotal horas analizadas: ${totalHoras}\nIFO = (Sumatoria IFO_franja * Horas_franja) / Total_horas`;
 
-                          return (
-                            <div className="ifo-dia-sub" title={tooltipText}>
-                              H: {ifoHoraAvg.toFixed(2)}%
-                            </div>
-                          );
+                          // return (
+                          //   <div className="ifo-dia-sub" title={tooltipText}>
+                          //     H: {ifoHoraAvg.toFixed(2)}%
+                          //   </div>
+                          // );
                         })()}
                       </div>
                     </td>
