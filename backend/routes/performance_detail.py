@@ -6,8 +6,16 @@ from pydantic import BaseModel
 from datetime import date, timedelta
 import math
 from database.connection import DatabaseConnection, get_db_connection
+from auth_email_service import email_service
+import os
 
 router = APIRouter(prefix="/api/performance-detail", tags=["Performance Detail"])
+
+
+class EmailDetailRequest(BaseModel):
+    """Solicitud para enviar desglose por email."""
+    type: str  # 'cbd' | 'ifo'
+    data: dict
 
 
 class CBDDetailRequest(BaseModel):
@@ -544,3 +552,242 @@ async def get_ifo_detail(
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         cursor.close()
+@router.post("/send-email")
+async def send_performance_detail_email(
+    request: EmailDetailRequest,
+    db: DatabaseConnection = Depends(get_db_connection)
+):
+    """Envía el desglose detallado por email a la empresa."""
+    cursor = db.get_cursor()
+    try:
+        # 1. Obtener email de la empresa
+        eot_id = request.data.get('eot_id')
+        cursor.execute("SELECT e_mail, eot_nombre FROM public.eots WHERE cod_catalogo = %s", (eot_id,))
+        eot = cursor.fetchone()
+        
+        if not eot:
+            raise HTTPException(status_code=404, detail="EOT no encontrada")
+            
+        to_email = eot['e_mail']
+        if not to_email:
+            # Fallback al email general configurado si la empresa no tiene email
+            to_email = os.getenv("EMAIL_TO", "transporte.mopc@gmail.com")
+            
+        # 2. Formatear HTML según el tipo
+        if request.type == 'cbd':
+            subject = f"📊 Desglose CBD - {eot['eot_nombre']} - {request.data.get('fecha')}"
+            html_content = _format_cbd_email(request.data)
+        else:
+            subject = f"📉 Desglose IFO - {eot['eot_nombre']} - {request.data.get('fecha')}"
+            html_content = _format_ifo_email(request.data)
+            
+        # 3. Enviar email
+        success = email_service.send_email(
+            to_email=to_email,
+            subject=subject,
+            body=html_content,
+            is_html=True
+        )
+        
+        if not success:
+            raise HTTPException(status_code=500, detail="Error de conexión al servidor de correo")
+            
+        return {"message": f"Correo enviado correctamente a {to_email}"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error enviando email: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+
+
+def _format_cbd_email(data: dict) -> str:
+    """Formatea el desglose de CBD en HTML para el email."""
+    horas_rows = ""
+    for h in data.get('horas_data', []):
+        horas_rows += f"""
+        <tr>
+            <td style="padding: 8px; border: 1px solid #ddd;">{h['hora']}:00</td>
+            <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">{h['cbd_observado']}</td>
+            <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">{h['cbd_minimo_hora']}</td>
+            <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">{float(h.get('ratio_hora', 0)):.2f}</td>
+        </tr>
+        """
+    
+    html = f"""
+    <html>
+    <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6;">
+        <div style="max-width: 800px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
+            <h2 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px;">📊 Desglose del Índice de Cumplimiento CBD Mínimo</h2>
+            
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                <p style="margin: 5px 0;"><strong>Empresa:</strong> {data['eot_nombre']}</p>
+                <p style="margin: 5px 0;"><strong>Franja:</strong> {data['denominacion_franja']}</p>
+                <p style="margin: 5px 0;"><strong>Fecha:</strong> {data['fecha']}</p>
+            </div>
+            
+            <h3 style="color: #2c3e50;">📋 Parámetros de la Franja</h3>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                <thead>
+                    <tr style="background-color: #3498db; color: white;">
+                        <th style="padding: 10px; border: 1px solid #2980b9; text-align: left;">Parámetro</th>
+                        <th style="padding: 10px; border: 1px solid #2980b9; text-align: center;">Valor</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="padding: 10px; border: 1px solid #ddd;">CBD Mínimo por Hora</td>
+                        <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">{data['cbd_minimo_hora']}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px; border: 1px solid #ddd;">CBD Mínimo por Franja</td>
+                        <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">{data['cbd_minimo_franja']}</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <h3 style="color: #2c3e50;">🕐 Detalle por Hora</h3>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                <thead>
+                    <tr style="background-color: #f2f2f2;">
+                        <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Hora</th>
+                        <th style="padding: 10px; border: 1px solid #ddd; text-align: center;">CBD Obs.</th>
+                        <th style="padding: 10px; border: 1px solid #ddd; text-align: center;">CBD Mín.</th>
+                        <th style="padding: 10px; border: 1px solid #ddd; text-align: center;">Ratio</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {horas_rows}
+                </tbody>
+            </table>
+            
+            <h3 style="color: #2c3e50;">🏢 Detalle por Franja</h3>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                <thead>
+                    <tr style="background-color: #f2f2f2;">
+                        <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Nivel</th>
+                        <th style="padding: 10px; border: 1px solid #ddd; text-align: center;">CBD Obs.</th>
+                        <th style="padding: 10px; border: 1px solid #ddd; text-align: center;">CBD Mín.</th>
+                        <th style="padding: 10px; border: 1px solid #ddd; text-align: center;">Ratio</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="background-color: #e6eaf3; font-weight: bold;">
+                        <td style="padding: 10px; border: 1px solid #ddd;">FRANJA</td>
+                        <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">{data['cbd_franja_observado']}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">{data['cbd_minimo_franja']}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">{float(data.get('ratio_franja', 0)):.2f}</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <h3 style="color: #2c3e50;">🧮 Cálculo del Índice Final</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr style="background-color: #f2f2f2;">
+                    <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Componente</th>
+                    <th style="padding: 10px; border: 1px solid #ddd; text-align: center;">Cálculo</th>
+                    <th style="padding: 10px; border: 1px solid #ddd; text-align: center;">Resultado</th>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;">Promedio Ratios Hora (I_H)</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">{float(data.get('promedio_ratio_hora', 0)):.4f} × 0.7</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">{float(data.get('componente_hora', 0)):.4f}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;">Ratio Franja (I_F)</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">{float(data.get('ratio_franja', 0)):.4f} × 0.3</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">{float(data.get('componente_franja', 0)):.4f}</td>
+                </tr>
+                <tr style="background-color: #2c3e50; color: white; font-weight: bold; font-size: 1.1em;">
+                    <td colspan="2" style="padding: 15px; border: 1px solid #2c3e50;">ÍNDICE DE CUMPLIMIENTO CBD</td>
+                    <td style="padding: 15px; border: 1px solid #2c3e50; text-align: center;">{(float(data.get('indice_cbd', 0))*100):.2f}%</td>
+                </tr>
+            </table>
+            
+            <div style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px; font-size: 0.85em; color: #7f8c8d; text-align: center;">
+                <p>Este es un reporte automático generado por el Sistema de Monitoreo de CBD - VMT/MOPC.</p>
+                <p>Fecha de generación: {date.today().strftime('%d/%m/%Y')}</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    return html
+
+
+def _format_ifo_email(data: dict) -> str:
+    """Formatea el desglose de IFO en HTML para el email."""
+    horas_rows = ""
+    for h in data.get('horas_data', []):
+        color = '#27ae60' if h['ifo_hora'] >= 90 else '#f39c12' if h['ifo_hora'] >= 80 else '#e74c3c'
+        horas_rows += f"""
+        <tr>
+            <td style="padding: 8px; border: 1px solid #ddd;">{h['hora']}:00</td>
+            <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">{h['cbd_dia_analizado']}</td>
+            <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">{float(h.get('promedio_historico', 0)):.2f}</td>
+            <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">{float(h.get('b_dist_ajustado', 0)):.2f}</td>
+            <td style="padding: 8px; border: 1px solid #ddd; text-align: center; font-weight: bold; color: {color};">{float(h.get('ifo_hora', 0)):.2f}%</td>
+        </tr>
+        """
+    
+    ajuste_html = ""
+    if data.get('ajuste_aplicado') and data['ajuste_aplicado'] != 'Ninguno':
+        ajuste_html = f"""
+        <div style="background-color: #fff9c4; border-left: 5px solid #fbc02d; padding: 15px; margin-bottom: 20px;">
+            <p style="margin: 0; color: #856404;"><strong>⚠️ Ajuste aplicado:</strong> {data['ajuste_aplicado']} (Factor: {data.get('factor_ajuste', 1)})</p>
+        </div>
+        """
+
+    html = f"""
+    <html>
+    <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6;">
+        <div style="max-width: 850px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
+            <h2 style="color: #2c3e50; border-bottom: 2px solid #e74c3c; padding-bottom: 10px;">📉 Desglose del IFO (Índice de Flota Operativa)</h2>
+            
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                <p style="margin: 5px 0;"><strong>Empresa:</strong> {data['eot_nombre']}</p>
+                <p style="margin: 5px 0;"><strong>Franja:</strong> {data['denominacion_franja']}</p>
+                <p style="margin: 5px 0;"><strong>Fecha:</strong> {data['fecha']}</p>
+                <p style="margin: 5px 0;"><strong>Tipo de Día:</strong> {data.get('tipo_dia', 'N/A')}</p>
+            </div>
+            
+            {ajuste_html}
+            
+            <h3 style="color: #2c3e50;">📅 Fechas Históricas de Referencia</h3>
+            <p style="font-size: 0.9em; color: #666;">Se utilizan las 4 semanas anteriores del mismo tipo de día:</p>
+            <div style="margin-bottom: 20px;">
+                {", ".join([f'<span style="background: #e8f5e9; padding: 3px 8px; border-radius: 3px; display: inline-block; margin: 2px;">{f}</span>' for f in data.get('fechas_historicas', [])])}
+            </div>
+            
+            <h3 style="color: #2c3e50;">🕐 Detalle Comparativo por Hora</h3>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                <thead>
+                    <tr style="background-color: #f2f2f2;">
+                        <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Hora</th>
+                        <th style="padding: 10px; border: 1px solid #ddd; text-align: center;">CBD Día</th>
+                        <th style="padding: 10px; border: 1px solid #ddd; text-align: center;">Prom. Histórico</th>
+                        <th style="padding: 10px; border: 1px solid #ddd; text-align: center;">Denom. Ajustado</th>
+                        <th style="padding: 10px; border: 1px solid #ddd; text-align: center;">IFO Hora</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {horas_rows}
+                </tbody>
+            </table>
+            
+            <div style="background-color: #2c3e50; color: white; padding: 20px; border-radius: 5px; text-align: center;">
+                <span style="font-size: 1.2em; display: block; margin-bottom: 5px;">RESULTADO FINAL FRANJA</span>
+                <span style="font-size: 2.5em; font-weight: bold;">{float(data.get('ifo_franja', 0)):.2f}%</span>
+            </div>
+            
+            <div style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px; font-size: 0.85em; color: #7f8c8d; text-align: center;">
+                <p>Este es un reporte automático generado por el Sistema de Monitoreo de CBD - VMT/MOPC.</p>
+                <p>Fecha de generación: {date.today().strftime('%d/%m/%Y')}</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    return html

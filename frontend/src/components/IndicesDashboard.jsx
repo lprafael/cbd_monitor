@@ -109,9 +109,32 @@ const IndicesDashboard = ({ performanceData, fecha }) => {
     setModalType(null);
   };
 
-  const handleEmailSend = (eotNombre) => {
+  const handleEmailSend = async (eotNombre, data, type) => {
     if (window.confirm(`¿Confirma que desea enviar el desglose a la empresa ${eotNombre}?`)) {
-      alert(`Desglose enviado correctamente a la empresa ${eotNombre}`);
+      setLoading(true);
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/performance-detail/send-email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: type,
+            data: data
+          })
+        });
+
+        const resData = await response.json();
+
+        if (!response.ok) {
+          throw new Error(resData.detail || 'Error al enviar el correo');
+        }
+
+        alert(`Desglose enviado correctamente. ${resData.message}`);
+      } catch (err) {
+        console.error('Error:', err);
+        alert('Error al enviar el correo: ' + err.message);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -242,7 +265,7 @@ const IndicesDashboard = ({ performanceData, fecha }) => {
               <CBDDetailModal
                 data={modalData}
                 onClose={closeModal}
-                onEmail={() => handleEmailSend(modalData.eot_nombre)}
+                onEmail={() => handleEmailSend(modalData.eot_nombre, modalData, 'cbd')}
                 onPrint={handlePrint}
                 onDownload={handleDownloadPDF}
               />
@@ -250,7 +273,7 @@ const IndicesDashboard = ({ performanceData, fecha }) => {
               <IFODetailModal
                 data={modalData}
                 onClose={closeModal}
-                onEmail={() => handleEmailSend(modalData.eot_nombre)}
+                onEmail={() => handleEmailSend(modalData.eot_nombre, modalData, 'ifo')}
                 onPrint={handlePrint}
                 onDownload={handleDownloadPDF}
               />
@@ -287,7 +310,7 @@ const CBDDetailModal = ({ data, onClose, onEmail, onPrint, onDownload }) => {
     <>
       <div className="modal-header">
         <div>
-          <h3>📊 Desglose del Índice de Cumplimiento CBD</h3>
+          <h3>📊 Desglose del Índice de Cumplimiento CBD Mínimo</h3>
           <div className="eot-info">
             {data.eot_nombre} • {data.denominacion_franja} • {data.fecha}
           </div>
@@ -339,6 +362,24 @@ const CBDDetailModal = ({ data, onClose, onEmail, onPrint, onDownload }) => {
                   </td>
                 </tr>
               ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Tabla de CBD por franja */}
+        <div className="hours-table-container">
+          <h4>🏢 CBD por Franja</h4>
+          <table className="hours-table">
+            <thead>
+              <tr>
+                <th>Nivel</th>
+                <th>CBD Observado</th>
+                <th>CBD Mínimo</th>
+                <th>Índice (Ratio)</th>
+                <th>Fórmula</th>
+              </tr>
+            </thead>
+            <tbody>
               <tr style={{ background: 'rgba(102, 126, 234, 0.1)' }}>
                 <td><strong>FRANJA</strong></td>
                 <td><strong>{data.cbd_franja_observado}</strong></td>

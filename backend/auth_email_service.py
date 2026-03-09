@@ -21,13 +21,26 @@ class EmailService:
         self.imap_host = os.getenv("EMAIL_IMAP_HOST", "imap.gmail.com")
         self.imap_port = int(os.getenv("EMAIL_IMAP_PORT", "993"))
 
-    def send_email(self, to_email: str, subject: str, body: str, is_html: bool = False, delete_after_send: bool = False) -> bool:
+    def send_email(self, to_email: str, subject: str, body: str, is_html: bool = False, delete_after_send: bool = False, cc_emails: Optional[list] = None) -> bool:
         """Envía un email"""
         try:
             msg = MIMEMultipart()
             msg['From'] = self.from_email
             msg['To'] = to_email
             msg['Subject'] = subject
+
+            # Añadir CC si se proporcionan o están configurados en .env
+            final_cc = []
+            if cc_emails:
+                final_cc.extend(cc_emails)
+            
+            # También añadir CC globales del .env
+            env_cc = os.getenv("EMAIL_CC", "")
+            if env_cc:
+                final_cc.extend([email.strip() for email in env_cc.split(",") if email.strip()])
+            
+            if final_cc:
+                msg['Cc'] = ", ".join(final_cc)
 
             if is_html:
                 msg.attach(MIMEText(body, 'html'))
@@ -36,9 +49,16 @@ class EmailService:
 
             server = smtplib.SMTP(self.host, self.port)
             server.starttls()
-            server.login(self.username, self.password)
+            
+            # Solo loguear si hay credenciales
+            if self.username and self.password:
+                server.login(self.username, self.password)
+            
+            # Todos los destinatarios para sendmail
+            all_recipients = [to_email] + final_cc
+            
             text = msg.as_string()
-            server.sendmail(self.from_email, to_email, text)
+            server.sendmail(self.from_email, all_recipients, text)
             server.quit()
             
             # Si se solicita borrar de Enviados (para mayor seguridad)
@@ -47,7 +67,9 @@ class EmailService:
                 
             return True
         except Exception as e:
-            print(f"Error enviando email: {e}")
+            print(f"Error enviando email a {to_email}: {e}")
+            import traceback
+            traceback.print_exc()
             return False
 
     def _delete_sent_email(self, to_email: str, subject: str):
