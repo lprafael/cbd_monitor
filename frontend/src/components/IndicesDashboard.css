@@ -420,7 +420,6 @@
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
-    color-adjust: exact !important;
     filter: grayscale(100%) !important;
   }
 }
@@ -696,6 +695,20 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+
+.modal-footer-info {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: center;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.8rem;
+}
+
+.modal-footer-info p {
+  margin: 4px 0;
 }
 
 /* Responsive */

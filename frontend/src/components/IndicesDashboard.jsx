@@ -321,6 +321,13 @@ const ModalActions = ({ onEmail, onPrint, onDownload }) => (
   </div>
 );
 
+const ModalFooter = () => (
+  <div className="modal-footer-info">
+    <p>Reporte generado automáticamente por el Sistema de Monitoreo de Indicadores de Desempeño.</p>
+    <p>VMT - CID | Resolución GVMT Nº 120/2025</p>
+  </div>
+);
+
 /**
  * Modal de desglose de CBD
  */
@@ -450,6 +457,7 @@ const CBDDetailModal = ({ data, onClose, onEmail, onPrint, onDownload }) => {
             </tbody>
           </table>
         </div>
+        <ModalFooter />
       </div>
     </>
   );
@@ -618,6 +626,7 @@ const IFODetailModal = ({ data, onClose, onEmail, onPrint, onDownload }) => {
             </tbody>
           </table>
         </div>
+        <ModalFooter />
       </div>
     </>
   );
