@@ -395,31 +395,31 @@ const CBDDetailModal = ({ data, onClose, onEmail, onPrint, onDownload }) => {
 
         {/* Cálculo del Índice */}
         <div className="calculation-section">
-          <h4>🧮 Cálculo del Índice de Cumplimiento CBD</h4>
+          <h4>🧮 Cálculo del Índice de Cumplimiento CBD Mínimo</h4>
           <table className="calc-table">
             <thead>
               <tr>
                 <th>Componente</th>
                 <th>Valor</th>
-                <th>Factor</th>
+                <th>Peso</th>
                 <th>Resultado</th>
               </tr>
             </thead>
             <tbody>
               <tr>
                 <td>Promedio Ratio Hora (I_H)</td>
-                <td>{(data.promedio_ratio_hora || 0).toFixed(4)}</td>
+                <td>{(data.promedio_ratio_hora || 0).toFixed(2)}</td>
                 <td>× 0.7</td>
-                <td>{(data.componente_hora || 0).toFixed(4)}</td>
+                <td>{(data.componente_hora || 0).toFixed(2)}</td>
               </tr>
               <tr>
                 <td>Ratio Franja (I_F)</td>
-                <td>{(data.ratio_franja || 0).toFixed(4)}</td>
+                <td>{(data.ratio_franja || 0).toFixed(2)}</td>
                 <td>× 0.3</td>
-                <td>{(data.componente_franja || 0).toFixed(4)}</td>
+                <td>{(data.componente_franja || 0).toFixed(2)}</td>
               </tr>
               <tr className="calc-result-row">
-                <td colSpan="3">ÍNDICE DE CUMPLIMIENTO CBD</td>
+                <td colSpan="3">ÍNDICE DE CUMPLIMIENTO CBD MÍNIMO</td>
                 <td>
                   <span className={`resultado-badge ${data.indice_cbd >= 0.99995 ? 'cumple' : 'no-cumple'}`}>
                     {((data.indice_cbd || 0) * 100).toFixed(2)}%
@@ -587,8 +587,7 @@ const IFODetailModal = ({ data, onClose, onEmail, onPrint, onDownload }) => {
                 <td>Ver tabla arriba</td>
               </tr>
               <tr className="calc-result-row">
-                <td>IFO FRANJA</td>
-                <td className="formula-cell">Promedio de IFO_hora</td>
+                <td colSpan="2">IFO FRANJA (Promedio de IFO_hora)</td>
                 <td>
                   <span className={`resultado-badge ${data.ifo_franja >= 90 ? 'cumple' : data.ifo_franja >= 80 ? 'leve' : 'no-cumple'}`}>
                     {(data.ifo_franja || 0).toFixed(2)}%
