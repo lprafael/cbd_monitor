@@ -25,7 +25,7 @@ function App({ onLogout, user }) {
   const [selectedEots, setSelectedEots] = useState([]);
   const [fecha, setFecha] = useState('');
   const [modoVisualizacion, setModoVisualizacion] = useState('franja');
-  const [viewMode, setViewMode] = useState('live'); // 'live' | 'performance' | 'indices'
+  const [viewMode, setViewMode] = useState(user && user.rol === 'viewer' ? 'indices' : 'live'); // 'live' | 'performance' | 'indices'
   const [cbdData, setCbdData] = useState(null);
   const [performanceData, setPerformanceData] = useState(null);
   const [monthlyData, setMonthlyData] = useState(null);

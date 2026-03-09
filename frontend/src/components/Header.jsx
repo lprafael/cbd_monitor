@@ -207,16 +207,18 @@ const Header = ({
               <div className="form-group">
                 <label>Tipo de Vista:</label>
                 <div className="radio-group">
-                  <label className="radio-label">
-                    <input
-                      type="radio"
-                      name="viewMode"
-                      value="live"
-                      checked={viewMode === 'live'}
-                      onChange={(e) => setViewMode(e.target.value)}
-                    />
-                    <span>📊 Cant. Buses</span>
-                  </label>
+                  {user && user.rol !== 'viewer' && (
+                    <label className="radio-label">
+                      <input
+                        type="radio"
+                        name="viewMode"
+                        value="live"
+                        checked={viewMode === 'live'}
+                        onChange={(e) => setViewMode(e.target.value)}
+                      />
+                      <span>📊 Cant. Buses</span>
+                    </label>
+                  )}
                   <label className="radio-label">
                     <input
                       type="radio"
