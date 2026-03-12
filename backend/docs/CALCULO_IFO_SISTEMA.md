@@ -29,8 +29,9 @@ IFO Sistema = Promedio(IFO Mensual de todas las EOTs)
 ### **Nivel 1: IFO Franja**
 - **Fuente**: Tabla `control_metricas.ifo_historico`
 - **Descripción**: Índice de Flota Operativa calculado para cada franja horaria operativa
-- **Formato**: Valor decimal entre 0 y ~1.05 (0% a ~105%)
-- **Almacenamiento**: Ya está precalculado en la base de datos
+- **Formato**: Valor decimal entre 0 y 1.10 (0% a 110%)
+- **Tope Diario**: Desde Marzo 2026, el IFO se topeará a **1.10** (110%) para efectos de medición y sanción.
+- **Almacenamiento**: Se guarda en el campo `ifo_topeado` de la tabla `ifo_historico`.
 
 ### **Nivel 2: IFO Día**
 - **Fórmula**: 
@@ -82,12 +83,14 @@ IFO Sistema = Promedio(IFO Mensual de todas las EOTs)
 
 ## Cálculo del IFO Objetivo
 
-Una vez calculado el IFO Sistema del mes anterior, se determina el **IFO Objetivo** para el mes actual:
+### **Reglas del IFO Objetivo**
+Según la nueva reglamentación de Marzo 2026:
 
-### **Fórmula del IFO Objetivo**
-```
-IFO Objetivo (Mes n) = IFO Sistema (Mes n-1) - 5 puntos porcentuales
-```
+- **Escenario 1**: Si `IFO Sistema (Mes n-1) > 95%` → **IFO Objetivo = 95%**
+- **Escenario 2**: Si `IFO Sistema (Mes n-1) < 90%` → **IFO Objetivo = 90%**
+- **Escenario 3**: Si `90% ≤ IFO Sistema (Mes n-1) ≤ 95%` → **IFO Objetivo = IFO Sistema (Mes n-1)**
+
+*Nota: Se utiliza el IFO Sistema Topeado (máximo 110%) para estos cálculos.*
 
 ### **Ejemplo Práctico**
 - **Mes anterior (noviembre 2025)**: IFO Sistema = 106.35%
@@ -105,14 +108,14 @@ Para ciertos análisis, se calcula también el **IFO Sistema Topeado**:
 
 ### **Fórmula**
 ```
-IFO Mensual EOT Topeado = AVG(MIN(IFO Día, 1.05))
+IFO Franja Topeado = MIN(IFO Franja, 1.10)
+IFO Mensual EOT Topeado = AVG(IFO Franja Topeado)
 IFO Sistema Topeado = AVG(IFO Mensual EOT Topeado)
 ```
 
 ### **Propósito**
-- Limita el impacto de valores excepcionalmente altos (>105%)
-- Proporciona una visión más conservadora del rendimiento del sistema
-- Útil para análisis de tendencias y comparaciones históricas
+- Limita el impacto de valores excepcionalmente proyectados
+- Cumple con lo establecido en el Artículo 2° de la nueva reglamentación.
 
 ---
 
@@ -129,7 +132,7 @@ FROM (
     SELECT 
         id_eot_vmt_hex,
         AVG(daily_ifo) as eot_monthly_ifo,
-        AVG(LEAST(daily_ifo, 1.05)) as eot_monthly_ifo_topeado
+        AVG(daily_ifo_topeado) as eot_monthly_ifo_topeado
     FROM (
         -- Nivel 2: IFO Día
         SELECT 

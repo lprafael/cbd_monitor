@@ -173,10 +173,11 @@ async def get_system_ifo_baseline(fecha: date, db: DatabaseConnection = Depends(
         query = """
         WITH ifo_diario AS (
             -- Paso 1: Calcular IFO Diario = Promedio de IFO Franja por día y EOT
+            -- Usamos ifo_topeado (max 1.1) según Res 120/2025
             SELECT 
                 h.id_eot_vmt_hex,
                 h.fecha,
-                AVG(h.ifo) as ifo_dia
+                AVG(COALESCE(h.ifo_topeado, LEAST(h.ifo, 1.1))) as ifo_dia
             FROM control_metricas.ifo_historico h
             WHERE h.fecha >= %s AND h.fecha <= %s
             GROUP BY h.id_eot_vmt_hex, h.fecha
@@ -308,7 +309,8 @@ async def get_system_ifo_breakdown(
             SELECT 
                 h.id_eot_vmt_hex,
                 h.fecha,
-                AVG(h.ifo) as ifo_dia
+                AVG(h.ifo) as ifo_dia,
+                AVG(COALESCE(h.ifo_topeado, LEAST(h.ifo, 1.1))) as ifo_dia_topeado
             FROM control_metricas.ifo_historico h
             WHERE h.fecha >= %s AND h.fecha <= %s
             GROUP BY h.id_eot_vmt_hex, h.fecha
@@ -318,7 +320,7 @@ async def get_system_ifo_breakdown(
             SELECT 
                 id_eot_vmt_hex,
                 AVG(ifo_dia) * 100 as ifo_mensual,
-                AVG(LEAST(ifo_dia, 1.05)) * 100 as ifo_mensual_topeado,
+                AVG(ifo_dia_topeado) * 100 as ifo_mensual_topeado,
                 COUNT(DISTINCT fecha) as dias_validos
             FROM ifo_diario
             GROUP BY id_eot_vmt_hex

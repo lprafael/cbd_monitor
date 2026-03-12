@@ -307,6 +307,7 @@ def save_ifo_historico(resultados_ifo):
                     "fecha": r["fecha"].strftime("%Y-%m-%d"),
                     "id_franja": r["id_franja"],
                     "ifo": r["ifo"],
+                    "ifo_topeado": r.get("ifo_topeado"),
                     "ifo_minimo": r["ifo_minimo"],
                     "cbd_indice": r["cbd_indice"],
                     "cbd_cantidad": r["cbd_cantidad"]
@@ -373,6 +374,7 @@ def procesar_fecha(fecha: date, modo_notificacion: str = None):
                 id_franja = franja_result['id_franja']
                 denominacion_franja = franja_result['denominacion_franja']
                 ifo_val = franja_result['ifo_franja_calculado']
+                ifo_topeado = franja_result.get('ifo_franja_topeado', min(ifo_val, 110.0))
                 ifo_min_pct = franja_result.get('ifo_minimo_exigido', 80.0)
                 
                 # Agregar a la lista para guardar
@@ -381,13 +383,14 @@ def procesar_fecha(fecha: date, modo_notificacion: str = None):
                     'fecha': fecha,
                     'id_franja': id_franja,
                     'ifo': ifo_val,
+                    'ifo_topeado': ifo_topeado,
                     'cbd_indice': franja_result['cbd_cumplimiento_franja_indice'],
                     'cbd_cantidad': int(franja_result['cbd_obs_promedio']),
                     'ifo_minimo': ifo_min_pct
                 })
                 
-                # Determinar si hay incumplimiento
-                es_incumplimiento = ifo_val < ifo_min_pct
+                # Determinar si hay incumplimiento (basado en el topeado según Artículo 2°)
+                es_incumplimiento = ifo_topeado < ifo_min_pct
                 
                 # Detectar incumplimientos para notificaciones
                 # Si es modo notificación o verificación, incluimos a todos (antes se filtraba solo incumplimientos)
@@ -403,7 +406,8 @@ def procesar_fecha(fecha: date, modo_notificacion: str = None):
                         'franja_horaria': denominacion_franja,
                         'id_franja': id_franja,
                         'umbral_requerido': f"{ifo_min_pct:.0f}%",
-                        'valor_observado': f"{ifo_val:.1f}%",
+                        'valor_observado': f"{ifo_topeado:.1f}%",
+                        'valor_original': f"{ifo_val:.1f}%",
                         'tipo_infraccion': franja_result.get('ifo_estado_cumplimiento', 'IFO Insuficiente'),
                         'normativa': 'Res. 120/2025',
                         'ajuste_aplicado': franja_result.get('ajuste_aplicado', ''),

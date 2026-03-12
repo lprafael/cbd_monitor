@@ -483,6 +483,7 @@ async def get_performance_data(
                     origen_cbd_final=cbd_res['origen'],
                     b_dist_ajustado=ifo_res['b_dist_ajustado'],
                     ifo_franja_calculado=round(ifo_res['ifo_franja'], 2),
+                    ifo_franja_topeado=round(min(ifo_res['ifo_franja'], 110.0), 2),
                     ifo_minimo_exigido=float(p['ifo_min']),
                     ifo_estado_cumplimiento=get_estado_cumplimiento_ifo(ifo_res['ifo_franja']),
                     ajuste_aplicado=ifo_res['ajuste_aplicado'],
@@ -555,14 +556,21 @@ async def save_ifo_historico(
                 # El IFO viene como porcentaje (0-100) desde la API
                 # La BD espera decimal (0-1), así que convertimos
                 ifo_val_pct = float(item.ifo)  # Porcentaje (0-100)
-                ifo_val_decimal = ifo_val_pct / 100.0  # Decimal (0-1) para guardar en BD
-                
                 ifo_min_pct = float(item.ifo_minimo)  # Porcentaje (0-100)
                 
+                # Determinar ifo_topeado si no viene en el item
+                if item.ifo_topeado is not None:
+                    ifo_topeado_pct = float(item.ifo_topeado)
+                else:
+                    ifo_topeado_pct = min(ifo_val_pct, 110.0)
+                
+                ifo_topeado_decimal = ifo_topeado_pct / 100.0
+                
                 # determinar_nivel_ifo espera porcentaje
-                nivel = determinar_nivel_ifo(ifo_val_pct)
+                # Según Res 120/2025, el nivel se determina sobre el valor topeado
+                nivel = determinar_nivel_ifo(ifo_topeado_pct)
                 # Para comparar, ambos en porcentaje
-                cumple_parametros = ifo_val_pct >= ifo_min_pct
+                cumple_parametros = ifo_topeado_pct >= ifo_min_pct
                 
                 # Verificar si ya existe el registro
                 cursor.execute("""
@@ -576,21 +584,22 @@ async def save_ifo_historico(
                     cursor.execute("""
                         UPDATE control_metricas.ifo_historico
                         SET ifo = %s,
+                            ifo_topeado = %s,
                             cumple_parametros = %s,
                             nivel = %s,
                             cbd_indice = %s,
                             cbd_cantidad = %s,
                             updated_at = CURRENT_TIMESTAMP
                         WHERE id_eot_vmt_hex = %s AND fecha = %s AND id_franja = %s
-                    """, (ifo_val_decimal, cumple_parametros, nivel, item.cbd_indice, item.cbd_cantidad, item.id_eot_vmt_hex, item.fecha, item.id_franja))
+                    """, (ifo_val_decimal, ifo_topeado_decimal, cumple_parametros, nivel, item.cbd_indice, item.cbd_cantidad, item.id_eot_vmt_hex, item.fecha, item.id_franja))
                     actualizados += 1
                 else:
                     # Insertar nuevo registro
                     cursor.execute("""
                         INSERT INTO control_metricas.ifo_historico
-                        (id_eot_vmt_hex, fecha, id_franja, ifo, cumple_parametros, nivel, cbd_indice, cbd_cantidad, created_at, updated_at)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                    """, (item.id_eot_vmt_hex, item.fecha, item.id_franja, ifo_val_decimal, cumple_parametros, nivel, item.cbd_indice, item.cbd_cantidad))
+                        (id_eot_vmt_hex, fecha, id_franja, ifo, ifo_topeado, cumple_parametros, nivel, cbd_indice, cbd_cantidad, created_at, updated_at)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                    """, (item.id_eot_vmt_hex, item.fecha, item.id_franja, ifo_val_decimal, ifo_topeado_decimal, cumple_parametros, nivel, item.cbd_indice, item.cbd_cantidad))
                     guardados += 1
             except Exception as item_error:
                 print(f"Error procesando item IFO (EOT: {item.id_eot_vmt_hex}, fecha: {item.fecha}, franja: {item.id_franja}): {item_error}")

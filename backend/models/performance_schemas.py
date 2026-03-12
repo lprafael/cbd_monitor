@@ -21,6 +21,7 @@ class PerformanceResult(BaseModel):
     ifo_franja_calculado: float
     ifo_minimo_exigido: float
     ifo_estado_cumplimiento: str
+    ifo_franja_topeado: Optional[float] = None  # Topped at 110%
     ajuste_aplicado: str
     cant_horas: int
 
@@ -52,6 +53,7 @@ class IFOHistoricoItem(BaseModel):
     id_franja: int
     ifo: float
     ifo_minimo: float
+    ifo_topeado: Optional[float] = None
     cbd_indice: Optional[float] = None
     cbd_cantidad: Optional[int] = None
 

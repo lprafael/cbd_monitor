@@ -9,10 +9,10 @@ const MonthlyPerformanceDashboard = ({ data }) => {
         year,
         eot_nombre,
         ifo_mensual_eot,
+        ifo_mensual_eot_topeado,
         ifo_sistema_anterior,
         ifo_sistema_anterior_topeado,
-        umbral_teorico,
-        umbral_aplicable,
+        umbral_objetivo,
         infraccion,
         sancion,
         ifo_diarios
@@ -23,14 +23,11 @@ const MonthlyPerformanceDashboard = ({ data }) => {
         return date.toLocaleString('es-ES', { month: 'long' }).toUpperCase();
     };
 
+    // Use 110 as top for daily display
     const capped_ifo_diarios = ifo_diarios ? ifo_diarios.map(d => ({
         ...d,
-        ifo_topeado: Math.min(d.ifo, 105)
+        ifo_topeado: Math.min(d.ifo, 110)
     })) : [];
-
-    const ifo_mensual_eot_topeado = capped_ifo_diarios.length > 0
-        ? capped_ifo_diarios.reduce((sum, d) => sum + d.ifo_topeado, 0) / capped_ifo_diarios.length
-        : Math.min(ifo_mensual_eot, 105);
 
     return (
         <div className="monthly-dashboard">
@@ -68,16 +65,10 @@ const MonthlyPerformanceDashboard = ({ data }) => {
                     <span className="metric-desc">Referencia Sistema</span>
                 </div>
 
-                <div className="metric-card">
-                    <span className="metric-label">Umbral Teórico</span>
-                    <span className="metric-value">{umbral_teorico.toFixed(2)}%</span>
-                    <span className="metric-desc">Sistema(mes n-1) - 5 pp</span>
-                </div>
-
                 <div className="metric-card highlight">
-                    <span className="metric-label">Umbral Aplicable</span>
-                    <span className="metric-value">{umbral_aplicable.toFixed(2)}%</span>
-                    <span className="metric-desc">Mínimo Requerido</span>
+                    <span className="metric-label">IFO Objetivo</span>
+                    <span className="metric-value">{umbral_objetivo.toFixed(2)}%</span>
+                    <span className="metric-desc">Basado en Res. 120/2025</span>
                 </div>
             </div>
 
@@ -103,8 +94,8 @@ const MonthlyPerformanceDashboard = ({ data }) => {
                                         <td>{d.ifo.toFixed(2)}%</td>
                                         <td>{d.ifo_topeado.toFixed(2)}%</td>
                                         <td>
-                                            <span className={`badge ${d.ifo < umbral_aplicable ? 'badge-danger' : 'badge-success'}`}>
-                                                {d.ifo < umbral_aplicable ? 'Bajo Umbral' : 'Ok'}
+                                            <span className={`badge ${d.ifo_topeado < umbral_objetivo ? 'badge-danger' : 'badge-success'}`}>
+                                                {d.ifo_topeado < umbral_objetivo ? 'Bajo Objetivo' : 'Ok'}
                                             </span>
                                         </td>
                                     </tr>

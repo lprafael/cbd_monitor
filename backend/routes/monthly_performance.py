@@ -62,16 +62,19 @@ async def get_monthly_performance(
         # Note: ifo in DB is 0-1 decimal. We convert to 0-100 for final result.
         query_ifo_mensual = """
             SELECT 
-                AVG(daily_ifo) as monthly_ifo
+                AVG(daily_ifo) as monthly_ifo,
+                AVG(daily_ifo_topeado) as monthly_ifo_topeado
             FROM (
                 SELECT 
                     fecha, 
-                    AVG(franja_avg) as daily_ifo
+                    AVG(franja_avg) as daily_ifo,
+                    AVG(franja_avg_topeado) as daily_ifo_topeado
                 FROM (
                     SELECT 
                         fecha, 
                         h.id_franja,
-                        AVG(ifo) as franja_avg
+                        AVG(ifo) as franja_avg,
+                        AVG(COALESCE(ifo_topeado, LEAST(ifo, 1.1))) as franja_avg_topeado
                     FROM control_metricas.ifo_historico h
                     JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
                     WHERE h.id_eot_vmt_hex = %s
@@ -85,8 +88,10 @@ async def get_monthly_performance(
         cursor.execute(query_ifo_mensual, (eot_hex, start_date, end_date))
         res_eot = cursor.fetchone()
         ifo_mensual_val = res_eot['monthly_ifo'] if res_eot and res_eot['monthly_ifo'] is not None else 0.0
-        # Convert to percentage
         ifo_mensual_pct = float(ifo_mensual_val * 100)
+        
+        ifo_mensual_topeado_val = res_eot['monthly_ifo_topeado'] if res_eot and res_eot['monthly_ifo_topeado'] is not None else 0.0
+        ifo_mensual_topeado_pct = float(ifo_mensual_topeado_val * 100)
         
         # Get details for chart (daily IFOs)
         query_daily = """
@@ -125,18 +130,20 @@ async def get_monthly_performance(
                 SELECT 
                     id_eot_vmt_hex,
                     AVG(daily_ifo) as eot_monthly_ifo,
-                    AVG(LEAST(daily_ifo, 1.05)) as eot_monthly_ifo_topeado
+                    AVG(daily_ifo_topeado) as eot_monthly_ifo_topeado
                 FROM (
                     SELECT 
                         id_eot_vmt_hex,
                         fecha, 
-                        AVG(franja_avg) as daily_ifo
+                        AVG(franja_avg) as daily_ifo,
+                        AVG(franja_avg_topeado) as daily_ifo_topeado
                     FROM (
                         SELECT 
                             id_eot_vmt_hex,
                             fecha, 
                             h.id_franja,
-                            AVG(ifo) as franja_avg
+                            AVG(ifo) as franja_avg,
+                            AVG(COALESCE(ifo_topeado, LEAST(ifo, 1.1))) as franja_avg_topeado
                         FROM control_metricas.ifo_historico h
                         JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
                         WHERE h.fecha BETWEEN %s AND %s
@@ -156,17 +163,19 @@ async def get_monthly_performance(
         system_ifo_topeado_val = res_sys['system_ifo_topeado'] if res_sys and res_sys['system_ifo_topeado'] is not None else 0.0
         system_ifo_topeado_pct = float(system_ifo_topeado_val * 100)
         
-        # 4. Thresholds
-        # Umbral Teórico: System(n-1) - 5 percentage points
-        umbral_teorico = system_ifo_pct - 5
+        # 4. Target Calculation (IFO mensual objetivo)
+        # Basado en IFO Sistema del mes anterior (topeado a 110 por la query actual)
+        # La nueva reglamentación usa los siguientes umbrales:
+        if system_ifo_topeado_pct > 95:
+            umbral_objetivo = 95.0
+        elif system_ifo_topeado_pct < 90:
+            umbral_objetivo = 90.0
+        else:
+            umbral_objetivo = system_ifo_topeado_pct
         
-        # Umbral Aplicable
-        # "Redondear resultados finales... al entero superior inmediato"
-        umbral_aplicable_official = math.ceil(umbral_teorico)
-
         # 5. Infraction
-        # "Si el IFO Mensual (EOT) ... es inferior al Umbral Aplicable"
-        infraccion = ifo_mensual_pct < umbral_aplicable_official
+        # "Si el IFO Mensual (EOT) topeado es inferior al Umbral Objetivo"
+        infraccion = ifo_mensual_topeado_pct < umbral_objetivo
         sancion = "Infracción Gravísima (173 jornales)" if infraccion else "Sin Infracción"
         
         return MonthlyPerformanceResult(
@@ -174,10 +183,10 @@ async def get_monthly_performance(
             year=request.year,
             eot_nombre=eot_nombre,
             ifo_mensual_eot=round(ifo_mensual_pct, 4),
+            ifo_mensual_eot_topeado=round(ifo_mensual_topeado_pct, 4),
             ifo_sistema_anterior=round(system_ifo_pct, 4),
             ifo_sistema_anterior_topeado=round(system_ifo_topeado_pct, 4),
-            umbral_teorico=round(umbral_teorico, 4),
-            umbral_aplicable=umbral_aplicable_official,
+            umbral_objetivo=round(umbral_objetivo, 4),
             infraccion=infraccion,
             sancion=sancion,
             ifo_diarios=ifo_diarios
