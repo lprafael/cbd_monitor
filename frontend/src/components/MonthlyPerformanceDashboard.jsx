@@ -35,7 +35,7 @@ const MonthlyPerformanceDashboard = ({ data }) => {
     return (
         <div className="monthly-dashboard">
             <div className="monthly-header">
-                <h2>📅 Reporte de Desempeño Mensual</h2>
+                <h2>📅 Reporte de Desempeño Mensual (IFO)</h2>
                 <h3>{eot_nombre}</h3>
                 <p className="period-subtitle">{getMonthName(month)} {year}</p>
             </div>
