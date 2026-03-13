@@ -28,7 +28,7 @@ const CalculationMethodologyModal = ({ isOpen, onClose }) => {
                         </p>
                         <p>
                             Este indicador se utiliza como <strong>base de referencia</strong> para calcular el{' '}
-                            <strong>IFO Objetivo</strong> del mes siguiente, que es el umbral mínimo obligatorio
+                            <strong>Umbral Obligatorio del IFO</strong> del mes siguiente, que es el umbral mínimo obligatorio
                             que cada EOT debe cumplir.
                         </p>
                     </section>
@@ -50,8 +50,8 @@ const CalculationMethodologyModal = ({ isOpen, onClose }) => {
                                 <div className="level-number">2</div>
                                 <div className="level-content">
                                     <h4>IFO Día</h4>
-                                    <p>Promedio de IFO Franja por día y EOT</p>
-                                    <code>IFO Día = AVG(IFO Franja)</code>
+                                    <p>Promedio de IFO Franja (Topeado al 110%)</p>
+                                    <code>IFO Día = MIN(AVG(IFO Franja), 1.10)</code>
                                 </div>
                             </div>
                             <div className="hierarchy-arrow">↓</div>
@@ -109,11 +109,15 @@ const CalculationMethodologyModal = ({ isOpen, onClose }) => {
                     </section>
 
                     <section className="methodology-section">
-                        <h3>🎯 Cálculo del IFO Objetivo</h3>
+                        <h3>🎯 Cálculo del Umbral Obligatorio del IFO</h3>
                         <div className="formula-box">
-                            <div className="formula-title">Fórmula del IFO Objetivo</div>
-                            <div className="formula-content">
-                                IFO Objetivo (Mes n) = IFO Sistema (Mes n-1) - 5 puntos porcentuales
+                            <div className="formula-title">Reglas del Umbral Obligatorio</div>
+                            <div className="formula-content" style={{ fontSize: '0.9rem' }}>
+                                • Si IFO Sistema &gt; 95% → Umbral = 95%
+                                <br />
+                                • Si IFO Sistema &lt; 90% → Umbral = 90%
+                                <br />
+                                • Si 90% ≤ IFO Sistema ≤ 95% → Umbral = IFO Sistema
                             </div>
                         </div>
 
@@ -127,7 +131,7 @@ const CalculationMethodologyModal = ({ isOpen, onClose }) => {
                                     </tr>
                                     <tr>
                                         <td><strong>Mes actual (diciembre 2025):</strong></td>
-                                        <td>IFO Objetivo = 106.35% - 5 = <strong>101.35%</strong></td>
+                                        <td>Umbral Obligatorio = <strong>≥ 95.00%</strong></td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -136,7 +140,7 @@ const CalculationMethodologyModal = ({ isOpen, onClose }) => {
                         <div className="infraction-box">
                             <h4>⚖️ Regla de Validación (Infracción 15.1)</h4>
                             <p>
-                                Si <code>IFO Mensual EOT &lt; IFO Objetivo</code> → <strong>Infracción Gravísima</strong> (173 jornales)
+                                Si <code>IFO Mensual EOT &lt; Umbral Obligatorio</code> → <strong>Infracción Gravísima</strong> (173 jornales)
                             </p>
                             <p className="legal-reference">
                                 Base legal: Artículo 15.1, Resolución GVMT N° 120/2025
@@ -152,17 +156,17 @@ SELECT
     AVG(eot_monthly_ifo) as ifo_sistema,
     AVG(eot_monthly_ifo_topeado) as ifo_sistema_topeado
 FROM (
-    -- Nivel 3: IFO Mensual por EOT
+    -- Nivel 3: IFO Mensual por EOT (Promedio de promedios diarios)
     SELECT 
         id_eot_vmt_hex,
-        AVG(daily_ifo) as eot_monthly_ifo,
-        AVG(LEAST(daily_ifo, 1.05)) as eot_monthly_ifo_topeado
+        AVG(daily_ifo) * 100 as eot_monthly_ifo,
+        AVG(daily_ifo) * 100 as eot_monthly_ifo_topeado
     FROM (
-        -- Nivel 2: IFO Día
+        -- Nivel 2: IFO Día (Topeado al 110% según Art 2°)
         SELECT 
             id_eot_vmt_hex,
             fecha, 
-            AVG(franja_avg) as daily_ifo
+            LEAST(AVG(franja_avg), 1.1) as daily_ifo
         FROM (
             -- Nivel 1: IFO Franja
             SELECT 
@@ -189,7 +193,7 @@ FROM (
                         <p>Para ciertos análisis, se calcula también el <strong>IFO Sistema Topeado</strong>:</p>
                         <div className="formula-box secondary">
                             <div className="formula-content">
-                                IFO Mensual EOT Topeado = AVG(MIN(IFO Día, 1.05))
+                                IFO Mensual EOT Topeado = AVG(MIN(IFO Día, 1.1))
                                 <br />
                                 IFO Sistema Topeado = AVG(IFO Mensual EOT Topeado)
                             </div>
@@ -197,7 +201,7 @@ FROM (
                         <div className="purpose-box">
                             <h4>Propósito</h4>
                             <ul>
-                                <li>Limita el impacto de valores excepcionalmente altos (&gt;105%)</li>
+                                <li>Limita el impacto de valores excepcionalmente altos (&gt;110%)</li>
                                 <li>Proporciona una visión más conservadora del rendimiento del sistema</li>
                                 <li>Útil para análisis de tendencias y comparaciones históricas</li>
                             </ul>

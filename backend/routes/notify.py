@@ -9,7 +9,7 @@ from auth_email_service import email_service
 from auth_security import get_password_hash
 from pydantic import BaseModel
 
-router = APIRouter(prefix="/notify", tags=["Notificaciones"])
+router = APIRouter(prefix="/api/notify", tags=["Notificaciones"])
 
 class ForgotPasswordRequest(BaseModel):
     username: str

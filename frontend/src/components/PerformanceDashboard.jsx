@@ -59,9 +59,10 @@ const PerformanceDashboard = ({ performanceData }) => {
       </div>
 
       {resultados_eots.map((eot) => {
-        const ifoPromedio = eot.resultados_franjas.length > 0
+        const ifoPromedioRaw = eot.resultados_franjas.length > 0
           ? eot.resultados_franjas.reduce((acc, row) => acc + (row.ifo_franja_calculado || 0), 0) / eot.resultados_franjas.length
           : 0;
+        const ifoPromedio = Math.min(ifoPromedioRaw, 110);
 
         return (
           <div key={eot.eot_id} className="eot-section">

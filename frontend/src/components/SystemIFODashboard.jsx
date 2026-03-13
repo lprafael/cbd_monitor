@@ -14,7 +14,7 @@ const SystemIFODashboard = ({ year, month }) => {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch(`${API_BASE_URL}/api/reports/res120/system-ifo-breakdown/${year}/${month}`);
+            const response = await fetch(`${API_BASE_URL}/reports/res120/system-ifo-breakdown/${year}/${month}`);
             if (!response.ok) {
                 throw new Error('Error al obtener datos del IFO Sistema');
             }
@@ -48,7 +48,7 @@ const SystemIFODashboard = ({ year, month }) => {
         }));
 
         try {
-            const response = await fetch(`${API_BASE_URL}/api/reports/res120/eot-monthly-breakdown/${eotId}/${year}/${month}`);
+            const response = await fetch(`${API_BASE_URL}/reports/res120/eot-monthly-breakdown/${eotId}/${year}/${month}`);
             if (!response.ok) throw new Error('Error al cargar desglose');
             const breakdownData = await response.json();
 
@@ -126,7 +126,7 @@ const SystemIFODashboard = ({ year, month }) => {
                     <div className="summary-card secondary">
                         <span className="card-label">IFO Sistema (Topeado)</span>
                         <span className="card-value">{data.ifo_sistema_topeado.toFixed(2)}%</span>
-                        <span className="card-desc">Limitado a 105%</span>
+                        <span className="card-desc">Limitado a 110%</span>
                     </div>
                     <div className="summary-card info">
                         <span className="card-label">EOTs con Datos</span>
@@ -134,9 +134,9 @@ const SystemIFODashboard = ({ year, month }) => {
                         <span className="card-desc">Empresas incluidas</span>
                     </div>
                     <div className="summary-card highlight">
-                        <span className="card-label">IFO Objetivo (Mes siguiente)</span>
-                        <span className="card-value">{(data.ifo_sistema - 5).toFixed(2)}%</span>
-                        <span className="card-desc">Sistema - 5 pp</span>
+                        <span className="card-label">Umbral Obligatorio del IFO (Mes n+1)</span>
+                        <span className="card-value">≥ {data.umbral_obligatorio_mes_siguiente?.toFixed(2) || (data.ifo_sistema_topeado).toFixed(2)}%</span>
+                        <span className="card-desc">Según Res. 120/2025</span>
                     </div>
                 </div>
             </div>
@@ -285,7 +285,13 @@ const SystemIFODashboard = ({ year, month }) => {
                     <li><strong>IFO Sistema:</strong> Promedio de IFO Mensual de todas las EOTs</li>
                 </ol>
                 <p className="formula">
-                    <strong>IFO Objetivo (mes siguiente) = IFO Sistema (mes actual) - 5 puntos porcentuales</strong>
+                    <strong>Umbral Obligatorio (mes n+1) se define según el IFO Sistema Topeado (mes n):</strong>
+                    <br />
+                    - Si &gt; 95% → Umbral = 95%
+                    <br />
+                    - Si &lt; 90% → Umbral = 90%
+                    <br />
+                    - Si entre 90% y 95% → Umbral = IFO Sistema
                 </p>
             </div>
 

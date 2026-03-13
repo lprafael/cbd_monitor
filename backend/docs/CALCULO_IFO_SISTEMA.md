@@ -4,7 +4,7 @@
 
 El **IFO Sistema** es el promedio del Índice de Flota Operativa de todas las Empresas Operadoras de Transporte (EOT) del sistema de transporte público durante un mes calendario específico.
 
-Este indicador se utiliza como **base de referencia** para calcular el **IFO Objetivo** del mes siguiente, que es el umbral mínimo obligatorio que cada EOT debe cumplir.
+Este indicador se utiliza como **base de referencia** para calcular el **Umbral Obligatorio del IFO** del mes siguiente, que es el umbral mínimo obligatorio que cada EOT debe cumplir.
 
 ---
 
@@ -30,8 +30,8 @@ IFO Sistema = Promedio(IFO Mensual de todas las EOTs)
 - **Fuente**: Tabla `control_metricas.ifo_historico`
 - **Descripción**: Índice de Flota Operativa calculado para cada franja horaria operativa
 - **Formato**: Valor decimal entre 0 y 1.10 (0% a 110%)
-- **Tope Diario**: Desde Marzo 2026, el IFO se topeará a **1.10** (110%) para efectos de medición y sanción.
-- **Almacenamiento**: Se guarda en el campo `ifo_topeado` de la tabla `ifo_historico`.
+- **Tope Diario**: Conforme al Artículo 2° de la Res. 120/2025, el **IFO Diario** (promedio de las franjas del día) es el que se topea al **1.10** (110%) para efectos de medición y sanción.
+- **Cálculo**: Se calcula dinámicamente en las consultas usando `LEAST(AVG(ifo), 1.1)`.
 
 ### **Nivel 2: IFO Día**
 - **Fórmula**: 
@@ -81,24 +81,24 @@ IFO Sistema = Promedio(IFO Mensual de todas las EOTs)
 
 ---
 
-## Cálculo del IFO Objetivo
-
-### **Reglas del IFO Objetivo**
-Según la nueva reglamentación de Marzo 2026:
-
-- **Escenario 1**: Si `IFO Sistema (Mes n-1) > 95%` → **IFO Objetivo = 95%**
-- **Escenario 2**: Si `IFO Sistema (Mes n-1) < 90%` → **IFO Objetivo = 90%**
-- **Escenario 3**: Si `90% ≤ IFO Sistema (Mes n-1) ≤ 95%` → **IFO Objetivo = IFO Sistema (Mes n-1)**
-
-*Nota: Se utiliza el IFO Sistema Topeado (máximo 110%) para estos cálculos.*
-
-### **Ejemplo Práctico**
-- **Mes anterior (noviembre 2025)**: IFO Sistema = 106.35%
-- **Mes actual (diciembre 2025)**: IFO Objetivo = 106.35% - 5 = **101.35%**
-
-### **Regla de Validación (Infracción 15.1)**
-- Si `IFO Mensual EOT < IFO Objetivo` → **Infracción Gravísima** (173 jornales)
-- Base legal: Artículo 15.1, Resolución GVMT N° 120/2025
+## Cálculo del Umbral Obligatorio del IFO
+ 
+ ### **Reglas del Umbral Obligatorio**
+ Según la nueva reglamentación de Marzo 2026:
+ 
+ - **Escenario 1**: Si `IFO Sistema (Mes n-1) > 95%` → **Umbral = 95%**
+ - **Escenario 2**: Si `IFO Sistema (Mes n-1) < 90%` → **Umbral = 90%**
+ - **Escenario 3**: Si `90% ≤ IFO Sistema (Mes n-1) ≤ 95%` → **Umbral = IFO Sistema (Mes n-1)**
+ 
+ *Nota: Se utiliza el IFO Sistema Topeado (máximo 110%) para estos cálculos.*
+ 
+ ### **Ejemplo Práctico**
+ - **Mes anterior (noviembre 2025)**: IFO Sistema = 106.35%
+ - **Mes actual (diciembre 2025)**: Umbral Obligatorio = **95%** (Ya que 106.35 > 95)
+ 
+ ### **Regla de Validación (Infracción 15.1)**
+ - Si `IFO Mensual EOT < Umbral Obligatorio` → **Infracción Gravísima** (173 jornales)
+ - Base legal: Artículo 15.1, Resolución GVMT N° 120/2025
 
 ---
 
@@ -108,8 +108,9 @@ Para ciertos análisis, se calcula también el **IFO Sistema Topeado**:
 
 ### **Fórmula**
 ```
-IFO Franja Topeado = MIN(IFO Franja, 1.10)
-IFO Mensual EOT Topeado = AVG(IFO Franja Topeado)
+IFO Franja = (valor raw de la tabla ifo_historico.ifo)
+IFO Día Topeado = MIN(AVG(IFO Franja del día), 1.10)
+IFO Mensual EOT Topeado = AVG(IFO Día Topeado)
 IFO Sistema Topeado = AVG(IFO Mensual EOT Topeado)
 ```
 

@@ -41,7 +41,7 @@ class EOTMonthlyIFO(BaseModel):
     id_eot_vmt_hex: str
     eot_nombre: str
     ifo_mensual: float  # Porcentaje (0-100+)
-    ifo_mensual_topeado: float  # Porcentaje topeado a 105%
+    ifo_mensual_topeado: float  # Porcentaje topeado a 110% (Res 120/2025)
     dias_validos: int  # Cantidad de días con datos válidos
 
 class SystemIFOBreakdownResponse(BaseModel):
@@ -52,4 +52,5 @@ class SystemIFOBreakdownResponse(BaseModel):
     ifo_sistema_topeado: float  # Promedio topeado
     total_eots: int  # Cantidad de EOTs con datos
     eots: List[EOTMonthlyIFO]  # Detalle por EOT
+    umbral_obligatorio_mes_siguiente: float  # Calculado para el mes n+1
     dias_excluidos: Dict[str, List[str]]  # Días excluidos por tipo

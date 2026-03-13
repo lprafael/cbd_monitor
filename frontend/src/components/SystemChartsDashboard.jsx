@@ -24,7 +24,7 @@ const SystemChartsDashboard = ({ year, month }) => {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch(`${API_BASE_URL}/api/reports/res120/system-ifo-breakdown/${year}/${month}`);
+            const response = await fetch(`${API_BASE_URL}/reports/res120/system-ifo-breakdown/${year}/${month}`);
             if (!response.ok) throw new Error('Error al obtener datos para gráficos');
             const result = await response.json();
             setData(result);

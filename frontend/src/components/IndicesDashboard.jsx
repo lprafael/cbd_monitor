@@ -97,8 +97,8 @@ const IndicesDashboard = ({ performanceData, fecha }) => {
 
     try {
       const endpoint = activeTab === 'cbd'
-        ? '/api/performance-detail/cbd'
-        : '/api/performance-detail/ifo';
+        ? '/performance-detail/cbd'
+        : '/performance-detail/ifo';
 
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: 'POST',
@@ -134,7 +134,7 @@ const IndicesDashboard = ({ performanceData, fecha }) => {
     if (window.confirm(`¿Confirma que desea enviar el desglose a la empresa ${eotNombre}?`)) {
       setLoading(true);
       try {
-        const response = await fetch(`${API_BASE_URL}/api/performance-detail/send-email`, {
+        const response = await fetch(`${API_BASE_URL}/performance-detail/send-email`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -236,9 +236,10 @@ const IndicesDashboard = ({ performanceData, fecha }) => {
                   );
                 })}
                 {activeTab === 'ifo' && (() => {
-                  const ifoDia = eot.resultados_franjas.length > 0
+                  const ifoDiaRaw = eot.resultados_franjas.length > 0
                     ? eot.resultados_franjas.reduce((acc, r) => acc + (r.ifo_franja_calculado || 0), 0) / eot.resultados_franjas.length
                     : 0;
+                  const ifoDia = Math.min(ifoDiaRaw, 110);
 
                   const estadoPromedio = ifoDia >= 90 ? 'Nivel A' : ifoDia >= 80 ? 'Nivel B' : 'Nivel C';
                   const statusClassAlt = getStatusClass(estadoPromedio);

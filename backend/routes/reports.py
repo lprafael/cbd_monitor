@@ -129,7 +129,7 @@ async def get_monthly_summary(
                 franjas_dia = dia_data['franjas']
                 ifos = [f['ifo'] for f in franjas_dia.values() if f.get('ifo') is not None]
                 if ifos:
-                    avg_diario = sum(ifos) / len(ifos)
+                    avg_diario = min(sum(ifos) / len(ifos), 110.0)
                     dia_data['ifo_diario'] = avg_diario
                     ifos_diarios_mes.append(avg_diario)
 
@@ -173,11 +173,11 @@ async def get_system_ifo_baseline(fecha: date, db: DatabaseConnection = Depends(
         query = """
         WITH ifo_diario AS (
             -- Paso 1: Calcular IFO Diario = Promedio de IFO Franja por día y EOT
-            -- Usamos ifo_topeado (max 1.1) según Res 120/2025
+            -- Calculamos el tope al 110% (max 1.1) sobre el promedio diario según Res 120/2025
             SELECT 
                 h.id_eot_vmt_hex,
                 h.fecha,
-                AVG(COALESCE(h.ifo_topeado, LEAST(h.ifo, 1.1))) as ifo_dia
+                LEAST(AVG(h.ifo), 1.1) as ifo_dia
             FROM control_metricas.ifo_historico h
             WHERE h.fecha >= %s AND h.fecha <= %s
             GROUP BY h.id_eot_vmt_hex, h.fecha
@@ -310,7 +310,7 @@ async def get_system_ifo_breakdown(
                 h.id_eot_vmt_hex,
                 h.fecha,
                 AVG(h.ifo) as ifo_dia,
-                AVG(COALESCE(h.ifo_topeado, LEAST(h.ifo, 1.1))) as ifo_dia_topeado
+                LEAST(AVG(h.ifo), 1.1) as ifo_dia_topeado
             FROM control_metricas.ifo_historico h
             WHERE h.fecha >= %s AND h.fecha <= %s
             GROUP BY h.id_eot_vmt_hex, h.fecha
@@ -362,6 +362,15 @@ async def get_system_ifo_breakdown(
         ifo_sistema = sum(ifo_values) / len(ifo_values) if ifo_values else 0.0
         ifo_sistema_topeado = sum(ifo_topeado_values) / len(ifo_topeado_values) if ifo_topeado_values else 0.0
         
+        # 5. Calcular Umbral Obligatorio del IFO (Mes n+1)
+        # Basado en IFO Sistema Topeado del mes actual (Mes n)
+        if ifo_sistema_topeado > 95:
+            umbral_obligatorio = 95.0
+        elif ifo_sistema_topeado < 90:
+            umbral_obligatorio = 90.0
+        else:
+            umbral_obligatorio = ifo_sistema_topeado
+            
         return SystemIFOBreakdownResponse(
             year=year,
             month=month,
@@ -369,6 +378,7 @@ async def get_system_ifo_breakdown(
             ifo_sistema_topeado=round(ifo_sistema_topeado, 2),
             total_eots=len(eots_list),
             eots=eots_list,
+            umbral_obligatorio_mes_siguiente=round(umbral_obligatorio, 2),
             dias_excluidos=dias_excluidos
         )
         
@@ -448,7 +458,7 @@ async def get_eot_monthly_breakdown(
         # Calcular promedio diario por cada día
         for fecha, info in breakdown.items():
             if info["franjas"]:
-                info["ifo_dia"] = round(sum(f["ifo"] for f in info["franjas"]) / len(info["franjas"]), 2)
+                info["ifo_dia"] = round(min(sum(f["ifo"] for f in info["franjas"]) / len(info["franjas"]), 110.0), 2)
 
         return sorted(breakdown.values(), key=lambda x: x["fecha"])
 

@@ -102,7 +102,7 @@ function App({ onLogout, user }) {
    */
   const fetchEots = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/eots`);
+      const response = await fetch(`${API_BASE_URL}/eots`);
 
       if (!response.ok) {
         throw new Error('Error al cargar EOTs');
@@ -161,20 +161,20 @@ function App({ onLogout, user }) {
       let body = {};
 
       if (viewMode === 'live') {
-        endpoint = '/api/cbd-data';
+        endpoint = '/cbd-data';
         body = {
           eot_ids: selectedEots,
           fecha: fecha,
           modo_visualizacion: modoVisualizacion,
         };
       } else if (viewMode === 'performance' || viewMode === 'indices') {
-        endpoint = '/api/performance';
+        endpoint = '/performance';
         body = {
           eot_ids: selectedEots,
           fecha: fecha,
         };
       } else if (viewMode === 'monthly') {
-        endpoint = '/api/monthly-performance';
+        endpoint = '/monthly-performance';
         const [yearStr, monthStr] = fecha.split('-');
         body = {
           eot_id: selectedEots[0],
@@ -182,7 +182,7 @@ function App({ onLogout, user }) {
           year: parseInt(yearStr)
         };
       } else if (viewMode === 'verify290') {
-        endpoint = '/api/verify-290';
+        endpoint = '/verify-290';
         const [yearStr, monthStr] = fecha.split('-');
         body = {
           eot_id: selectedEots[0],
@@ -190,7 +190,7 @@ function App({ onLogout, user }) {
           year: parseInt(yearStr)
         };
       } else if (viewMode === 'cbd-objetivo') {
-        endpoint = '/api/cbd-objetivo';
+        endpoint = '/cbd-objetivo';
         body = {
           eot_id: selectedEots[0]
         };

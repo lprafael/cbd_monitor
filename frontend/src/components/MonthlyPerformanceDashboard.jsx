@@ -53,22 +53,22 @@ const MonthlyPerformanceDashboard = ({ data }) => {
             <div className="metrics-grid">
                 <div className="metric-card primary">
                     <span className="metric-label">IFO Mensual (EOT)</span>
-                    <span className="metric-value">{ifo_mensual_eot.toFixed(2)}%</span>
-                    <span className="metric-value-capped">Topeado: {ifo_mensual_eot_topeado.toFixed(2)}%</span>
-                    <span className="metric-desc">Promedio mensual</span>
+                    <span className="metric-value">{ifo_mensual_eot_topeado.toFixed(2)}%</span>
+                    <span className="metric-value-capped">Real: {ifo_mensual_eot.toFixed(2)}%</span>
+                    <span className="metric-desc">Promedio mensual topeado</span>
                 </div>
 
                 <div className="metric-card secondary">
                     <span className="metric-label">IFO Sistema (Mes n-1)</span>
-                    <span className="metric-value">{ifo_sistema_anterior.toFixed(2)}%</span>
-                    <span className="metric-value-capped">Topeado: {ifo_sistema_anterior_topeado.toFixed(2)}%</span>
-                    <span className="metric-desc">Referencia Sistema</span>
+                    <span className="metric-value">{ifo_sistema_anterior_topeado.toFixed(2)}%</span>
+                    <span className="metric-value-capped">Real: {ifo_sistema_anterior.toFixed(2)}%</span>
+                    <span className="metric-desc">Referencia Sistema (Topeado)</span>
                 </div>
 
                 <div className="metric-card highlight">
-                    <span className="metric-label">IFO Objetivo</span>
-                    <span className="metric-value">{umbral_objetivo.toFixed(2)}%</span>
-                    <span className="metric-desc">Basado en Res. 120/2025</span>
+                    <span className="metric-label">Umbral Obligatorio</span>
+                    <span className="metric-value">≥ {umbral_objetivo.toFixed(2)}%</span>
+                    <span className="metric-desc">Res. 120/2025</span>
                 </div>
             </div>
 
@@ -95,7 +95,7 @@ const MonthlyPerformanceDashboard = ({ data }) => {
                                         <td>{d.ifo_topeado.toFixed(2)}%</td>
                                         <td>
                                             <span className={`badge ${d.ifo_topeado < umbral_objetivo ? 'badge-danger' : 'badge-success'}`}>
-                                                {d.ifo_topeado < umbral_objetivo ? 'Bajo Objetivo' : 'Ok'}
+                                                {d.ifo_topeado < umbral_objetivo ? 'Bajo Umbral' : 'Ok'}
                                             </span>
                                         </td>
                                     </tr>

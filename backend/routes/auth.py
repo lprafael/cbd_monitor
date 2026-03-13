@@ -36,7 +36,7 @@ except ImportError:
     google_auth_available = False
     print("ADVERTENCIA: google-auth no está instalado. El login con Google no estará disponible.")
 
-router = APIRouter(prefix="/auth", tags=["Autenticación"])
+router = APIRouter(prefix="/api/auth", tags=["Autenticación"])
 
 # Función para generar contraseña aleatoria
 def generate_random_password(length: int = 12) -> str:

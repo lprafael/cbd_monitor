@@ -242,7 +242,7 @@ def obtener_datos_mensuales_eot(id_eot_vmt_hex: str, fecha_referencia: date):
                 franjas_dia = dia_data['franjas']
                 ifos = [f['ifo'] for f in franjas_dia.values() if f.get('ifo') is not None]
                 if ifos:
-                    dia_data['ifo_diario'] = sum(ifos) / len(ifos)
+                    dia_data['ifo_diario'] = min(sum(ifos) / len(ifos), 110.0)
         
         # YA NO SE NECESITA LLAMAR A LA API (Optimización completa)
         # Los datos ya se cargaron desde la BD arriba
