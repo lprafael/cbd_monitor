@@ -234,6 +234,7 @@ const SystemIFODashboard = ({ year, month }) => {
                                                                         <th>Fecha</th>
                                                                         <th>Día</th>
                                                                         <th>IFO Día</th>
+                                                                        <th>Ajustes</th>
                                                                         {expandedEots[eot.id_eot_vmt_hex].data[0]?.franjas.map(f => (
                                                                             <th key={f.id_franja}>{f.denominacion}</th>
                                                                         ))}
@@ -248,6 +249,17 @@ const SystemIFODashboard = ({ year, month }) => {
                                                                             </td>
                                                                             <td>{new Intl.DateTimeFormat('es-PY', { weekday: 'long' }).format(new Date(dia.fecha + 'T00:00:00'))}</td>
                                                                             <td className="ifo-day-val">{dia.ifo_dia.toFixed(2)}%</td>
+                                                                            <td className="adjustments-cell-compact">
+                                                                                {dia.ajustes && dia.ajustes.length > 0 ? (
+                                                                                    <div className="adjustments-tags">
+                                                                                        {dia.ajustes.map((a, i) => (
+                                                                                            <span key={i} className="adj-tag" title={a}>
+                                                                                                {a.split(' ')[0]}
+                                                                                            </span>
+                                                                                        ))}
+                                                                                    </div>
+                                                                                ) : '-'}
+                                                                            </td>
                                                                             {dia.franjas.map(f => (
                                                                                 <td key={f.id_franja} className="franja-val">{f.ifo.toFixed(2)}%</td>
                                                                             ))}
@@ -287,11 +299,11 @@ const SystemIFODashboard = ({ year, month }) => {
                 <p className="formula">
                     <strong>Umbral Obligatorio (mes n+1) se define según el IFO Sistema Topeado (mes n):</strong>
                     <br />
-                    - Si &gt; 95% → Umbral = 95%
+                    - Si &gt;= 95% → Umbral &gt;= 95%
                     <br />
-                    - Si &lt; 90% → Umbral = 90%
+                    - Si &lt;= 90% → Umbral &lt;= 90%
                     <br />
-                    - Si entre 90% y 95% → Umbral = IFO Sistema
+                    - Si 90% &lt; IFO Sistema &lt; 95% → Umbral = IFO Sistema
                 </p>
             </div>
 

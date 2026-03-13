@@ -4,6 +4,7 @@ from typing import List, Optional
 import math
 from models.monthly_schemas import MonthlyPerformanceRequest, MonthlyPerformanceResult
 from database.connection import DatabaseConnection, get_db_connection
+from .performance import get_factores_ajuste_acumulados
 
 router = APIRouter(prefix="/api/monthly-performance", tags=["Monthly Performance"])
 
@@ -113,7 +114,14 @@ async def get_monthly_performance(
         """
         cursor.execute(query_daily, (eot_hex, start_date, end_date))
         daily_rows = cursor.fetchall()
-        ifo_diarios = [{'fecha': str(r['fecha']), 'ifo': float(r['daily_ifo'] * 100)} for r in daily_rows]
+        ifo_diarios = []
+        for r in daily_rows:
+            _, lista_ajustes = get_factores_ajuste_acumulados(cursor, r['fecha'])
+            ifo_diarios.append({
+                'fecha': str(r['fecha']),
+                'ifo': float(r['daily_ifo'] * 100),
+                'ajustes': lista_ajustes
+            })
         
         # 3. Calculate IFO Sistema (Month n-1)
         # IMPORTANTE: Excluir días atípicos según Resolución 120/2025

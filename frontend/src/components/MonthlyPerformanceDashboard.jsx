@@ -83,6 +83,7 @@ const MonthlyPerformanceDashboard = ({ data }) => {
                                     <th>Día</th>
                                     <th>IFO Diario</th>
                                     <th>IFO Diario(Topeado)</th>
+                                    <th>Ajustes</th>
                                     <th>Estado</th>
                                 </tr>
                             </thead>
@@ -93,6 +94,19 @@ const MonthlyPerformanceDashboard = ({ data }) => {
                                         <td>{new Intl.DateTimeFormat('es-PY', { weekday: 'long' }).format(new Date(d.fecha + 'T00:00:00'))}</td>
                                         <td>{d.ifo.toFixed(2)}%</td>
                                         <td>{d.ifo_topeado.toFixed(2)}%</td>
+                                        <td className="adjustments-cell">
+                                            {d.ajustes && d.ajustes.length > 0 ? (
+                                                <div className="adjustments-list">
+                                                    {d.ajustes.map((a, i) => (
+                                                        <span key={i} className="adjustment-tag" title={a}>
+                                                            {a.split(' ')[0]} {/* Mostrar solo el nombre principal, el resto en tooltip */}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <span className="no-adjustments">-</span>
+                                            )}
+                                        </td>
                                         <td>
                                             <span className={`badge ${d.ifo_topeado < umbral_objetivo ? 'badge-danger' : 'badge-success'}`}>
                                                 {d.ifo_topeado < umbral_objetivo ? 'Bajo Umbral' : 'Ok'}

@@ -252,7 +252,7 @@ def obtener_clima(fecha: date) -> Optional[Dict[str, Any]]:
         'comprobado': comprobado
     }
 
-def analizar_infracciones_res_120(eot_nombre, datos_mensuales, fecha_referencia):
+def analizar_infracciones_res_120(eot_nombre, datos_mensuales, fecha_referencia, umbral_obligatorio):
     """
     Analiza las infracciones según los Artículos 15 y 16 de la Resolución 120/2025.
     Retorna una lista de todas las sanciones detectadas en el mes hasta la fecha_referencia.
@@ -280,6 +280,19 @@ def analizar_infracciones_res_120(eot_nombre, datos_mensuales, fecha_referencia)
     # Acumuladores y estado
     acum_b = {'PICO': 0, 'POS_PICO': 0}
     historial_faltas = [] # Lista de todas las sanciones detectadas
+
+    # 0. Verificar Art 15.1 (IFO Mensual EOT < Umbral Obligatorio)
+    # Se evalúa solo a fin de mes o diario según el acumulado actual
+    ifo_mes_eot = datos_mensuales.get('ifo_mes', 0)
+    if ifo_mes_eot < umbral_obligatorio:
+        historial_faltas.append({
+            'fecha': fecha_referencia, 
+            'base': 'Art. 15.1', 
+            'desc': f'IFO Mensual ({ifo_mes_eot:.2f}%) inferior al Umbral Obligatorio ({umbral_obligatorio:.2f}%)', 
+            'jornales': 173
+        })
+    
+    # Acumuladores y estado Art 15.2-15.6
     
     # Trackers para reincidencia
     ultimo_15_3 = None # Fecha del último Art 15.3 (C Pico)
@@ -404,9 +417,14 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
     fecha_formato = fecha_referencia.strftime("%Y-%m-%d")
     fecha_envio = datetime.now().strftime("%Y-%m-%d %I:%M %p")
     
-    # Calcular IFO Objetivo (Sistema Mes Anterior - 5)
-    # ifo_sistema_anterior = obtener_ifo_sistema_mes_anterior(fecha_referencia)
-    # ifo_objetivo = round(ifo_sistema_anterior - 5.0, 2) if ifo_sistema_anterior > 0 else 0.0
+    # Calcular Umbral Obligatorio del IFO (Res. 120/2025)
+    ifo_sistema_anterior = obtener_ifo_sistema_mes_anterior(fecha_referencia)
+    if ifo_sistema_anterior > 95:
+        umbral_obligatorio = 95.0
+    elif ifo_sistema_anterior < 90:
+        umbral_obligatorio = 90.0
+    else:
+        umbral_obligatorio = round(ifo_sistema_anterior, 2)
     
     # Obtener descripción dinámica de parámetros
     nota_parametros = obtener_parametros_ifo_resumen(fecha_referencia)
@@ -548,7 +566,7 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
         
         # Analizar infracciones para el resumen (Art 15/16)
         if datos_mensuales:
-            inf_detectadas = analizar_infracciones_res_120(eot_nombre, datos_mensuales, fecha_referencia)
+            inf_detectadas = analizar_infracciones_res_120(eot_nombre, datos_mensuales, fecha_referencia, umbral_obligatorio)
             for inf in inf_detectadas:
                 resumen_infracciones_lista.append({
                     'empresa': eot_nombre,
@@ -577,7 +595,14 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
         secciones_eot_html += f"""
         <div style="margin-top: 30px; page-break-inside: avoid;">
             <h4 style="color: #004a99; margin-bottom: 10px;">{eot_nombre}</h4>
-            <p style="margin-bottom: 15px;"><strong>IFO MES(Acumulado):</strong> {ifo_mes:.2f}%</p>
+            <div style="margin-bottom: 15px;">
+                <span style="background-color: #f0f7ff; padding: 5px 10px; border-radius: 4px; margin-right: 15px;">
+                    <strong>IFO MES (Acumulado):</strong> {ifo_mes:.2f}%
+                </span>
+                <span style="background-color: #fff3cd; padding: 5px 10px; border-radius: 4px;">
+                    <strong>Umbral Obligatorio:</strong> &ge; {umbral_obligatorio:.2f}%
+                </span>
+            </div>
         """
         
         # Generar tabla para cada tipo de día (5=Laboral, 6=Sábado, 7=Domingo/Feriado)
@@ -609,7 +634,7 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
                     <th style="border: 1px solid #ccc; padding: 8px; text-align: center; vertical-align: top;">
                         <div style="font-weight: bold;">{nombre}</div>
                         <div style="font-size: 10px; color: #666;">{hora_inicio} - {hora_fin}</div>
-                        <div style="font-size: 10px; color: #cc0000;">CBD Mín: {cbd_min if cbd_min else '-'}</div>
+                        <div style="font-size: 10px; color: #cc0000; cursor: help;" title="Cantidad Mínima de Buses Diferentes exigida para esta franja">CBD Mín: {cbd_min if cbd_min else '-'}</div>
                     </th>
                 """
             
@@ -876,6 +901,13 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
                                 <li><strong>• CBD:</strong> Cantidad de Buses Diferentes (unidades físicas observadas).</li>
                                 <li><strong>• ICCBDM:</strong> Índice de Cumplimiento de Cantidad de Buses Diferentes Mínimos.</li>
                                 <li><strong>• IFO:</strong> Índice de Flota Operativa (Regularidad de la oferta).</li>
+                                <li><strong>• Umbral Obligatorio:</strong> Mínimo exigible según el IFO Sistema del mes anterior:
+                                    <ul style="margin: 2px 0 2px 10px; font-size: 11px; color: #475569; list-style-type: none;">
+                                        <li>- Si Sistema &gt; 95% &rarr; Umbral = 95%</li>
+                                        <li>- Si Sistema &lt; 90% &rarr; Umbral = 90%</li>
+                                        <li>- Si 90% &le; Sistema &le; 95% &rarr; Umbral = IFO Sistema</li>
+                                    </ul>
+                                </li>
                             </ul>
                         </div>
                         <div style="flex: 1; min-width: 250px;">
@@ -883,7 +915,7 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
                             <div style="margin-top: 5px;">
                                 <div style="display: flex; gap: 10px; margin-bottom: 5px;">
                                     <span style="background-color: #e6ffe6; border: 1px solid #b7eb8f; padding: 2px 8px; border-radius: 3px; font-size: 10px;">Verde</span>
-                                    <span>Cumplimiento Óptimo (IFO &ge; 90%(Nivel A) | ICCBDM &ge; 100%)</span>
+                                    <span>Cumplimiento Óptimo (IFO &ge; 90%(Nivel A) | ICCBDM &ge; 100% | Mensual &ge; Umbral)</span>
                                 </div>
                                 <div style="display: flex; gap: 10px; margin-bottom: 5px;">
                                     <span style="background-color: #ffffe6; border: 1px solid #ffe58f; padding: 2px 8px; border-radius: 3px; font-size: 10px;">Amarillo</span>

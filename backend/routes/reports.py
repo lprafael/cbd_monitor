@@ -9,6 +9,7 @@ from models.report_schemas import (
     TipoDiaReport, FranjaInfo, DiaData,
     SystemIFOBreakdownResponse, EOTMonthlyIFO
 )
+from .performance import get_factores_ajuste_acumulados
 
 router = APIRouter(prefix="/api/reports/res120", tags=["Reports Resolution 120/2025"])
 
@@ -173,7 +174,7 @@ async def get_system_ifo_baseline(fecha: date, db: DatabaseConnection = Depends(
         query = """
         WITH ifo_diario AS (
             -- Paso 1: Calcular IFO Diario = Promedio de IFO Franja por día y EOT
-            -- Calculamos el tope al 110% (max 1.1) sobre el promedio diario según Res 120/2025
+            -- Calculamos el tope al 110%% (max 1.1) sobre el promedio diario según Res 120/2025
             SELECT 
                 h.id_eot_vmt_hex,
                 h.fecha,
@@ -441,10 +442,14 @@ async def get_eot_monthly_breakdown(
                 es_feriado = fecha_str in feriados
                 es_atipico = fecha_str in atipicos
                 
+                # Calcular factores de ajuste
+                _, lista_ajustes = get_factores_ajuste_acumulados(cursor, row['fecha'])
+                
                 breakdown[fecha_str] = {
                     "fecha": fecha_str,
                     "es_excluido": False, # Etapa 1: Todos los días se consideran para el promedio
                     "motivo_exclusion": "Domingo" if es_domingo else "Feriado" if es_feriado else "Atípico" if es_atipico else None,
+                    "ajustes": lista_ajustes,
                     "ifo_dia": 0,
                     "franjas": []
                 }

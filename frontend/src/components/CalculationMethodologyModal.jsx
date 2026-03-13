@@ -113,11 +113,11 @@ const CalculationMethodologyModal = ({ isOpen, onClose }) => {
                         <div className="formula-box">
                             <div className="formula-title">Reglas del Umbral Obligatorio</div>
                             <div className="formula-content" style={{ fontSize: '0.9rem' }}>
-                                • Si IFO Sistema &gt; 95% → Umbral = 95%
+                                • Si IFO Sistema &gt;= 95% → Umbral &gt;= 95%
                                 <br />
-                                • Si IFO Sistema &lt; 90% → Umbral = 90%
+                                • Si IFO Sistema &lt;= 90% → Umbral &lt;= 90%
                                 <br />
-                                • Si 90% ≤ IFO Sistema ≤ 95% → Umbral = IFO Sistema
+                                • Si 90% &lt; IFO Sistema &lt; 95% → Umbral = IFO Sistema
                             </div>
                         </div>
 
