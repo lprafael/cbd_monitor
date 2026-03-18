@@ -28,7 +28,9 @@ class MonthlyReportResponse(BaseModel):
     total_dias: int
 
 class SystemIFOResponse(BaseModel):
-    ifo_sistema_mes_anterior: float
+    ifo_sistema_mes_anterior: float  # Topeado
+    ifo_sistema_real_mes_anterior: float  # Sin topear
+    ifo_objetivo: float  # Entre 90% y 95% según Res 120/2025
     anio: int
     mes: int
 

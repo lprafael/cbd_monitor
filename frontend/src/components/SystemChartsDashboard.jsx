@@ -16,6 +16,7 @@ const UMBRAL_WARNING = 80;
 
 const SystemChartsDashboard = ({ year, month }) => {
     const [data, setData] = useState(null);
+    const [baseline, setBaseline] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [activeChart, setActiveChart] = useState('ranking');
@@ -24,10 +25,20 @@ const SystemChartsDashboard = ({ year, month }) => {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch(`${API_BASE_URL}/reports/res120/system-ifo-breakdown/${year}/${month}`);
-            if (!response.ok) throw new Error('Error al obtener datos para gráficos');
-            const result = await response.json();
-            setData(result);
+            const formattedMonth = month.toString().padStart(2, '0');
+            const [dataRes, baselineRes] = await Promise.all([
+                fetch(`${API_BASE_URL}/reports/res120/system-ifo-breakdown/${year}/${month}`),
+                fetch(`${API_BASE_URL}/reports/res120/system-ifo-baseline/${year}-${formattedMonth}-01`)
+            ]);
+
+            if (!dataRes.ok) throw new Error('Error al obtener datos');
+            const dataResult = await dataRes.json();
+            setData(dataResult);
+
+            if (baselineRes.ok) {
+                const baselineResult = await baselineRes.json();
+                setBaseline(baselineResult);
+            }
         } catch (err) {
             setError(err.message);
         } finally {
@@ -50,19 +61,17 @@ const SystemChartsDashboard = ({ year, month }) => {
     // 1. Ranking de Empresas
     const rankingData = data.eots
         .map(e => ({
-            name: e.eot_nombre.split(' ')[0], // Nombre corto
-            full_name: e.eot_nombre,
-            ifo: parseFloat(e.ifo_mensual.toFixed(2)),
-            color: e.ifo_mensual >= UMBRAL_GOOD ? '#059669' : e.ifo_mensual >= UMBRAL_WARNING ? '#d97706' : '#dc2626'
+            name: e.eot_nombre,
+            ifo: parseFloat(e.ifo_mensual_topeado.toFixed(2)),
+            color: e.ifo_mensual_topeado >= UMBRAL_GOOD ? '#059669' : e.ifo_mensual_topeado >= UMBRAL_WARNING ? '#d97706' : '#dc2626'
         }))
         .sort((a, b) => b.ifo - a.ifo);
 
     // 2. Meta Sistema (Gauge con PieChart)
-    const systemIfo = data.ifo_sistema;
-    const targetIfo = data.ifo_sistema - 5; // Simulado según lógica de la resolución
+    const systemIfo = data.ifo_sistema_topeado;
     const gaugeData = [
         { name: 'Logrado', value: systemIfo },
-        { name: 'Restante', value: Math.max(0, 100 - systemIfo) }
+        { name: 'Restante', value: Math.max(0, 110 - systemIfo) } // Referencia al 110% tope
     ];
 
     // 3. Distribución de Niveles
@@ -87,53 +96,64 @@ const SystemChartsDashboard = ({ year, month }) => {
                             <h3>🏆 Ranking de Cumplimiento por EOT</h3>
                             <p>Comparativa del IFO Mensual entre todas las empresas operadoras del sistema. Los colores indican el nivel de cumplimiento (Verde: Óptimo, Naranja: Alerta, Rojo: Crítico).</p>
                         </div>
-                        <ResponsiveContainer width="100%" height={800}>
-                            <BarChart data={rankingData} layout="vertical" margin={{ left: 20, right: 30, top: 20, bottom: 20 }}>
+                        <ResponsiveContainer width="100%" height={1000}>
+                            <BarChart data={rankingData} layout="vertical" margin={{ left: 10, right: 60, top: 20, bottom: 20 }}>
                                 <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
-                                <XAxis type="number" domain={[0, 105]} unit="%" />
+                                <XAxis type="number" domain={[0, 115]} unit="%" />
                                 <YAxis
                                     dataKey="name"
                                     type="category"
-                                    width={150}
-                                    tick={{ fontSize: 11, fontWeight: 600 }}
+                                    width={280}
+                                    tick={{ fontSize: 10, fontWeight: 600 }}
                                 />
                                 <Tooltip
-                                    formatter={(value) => [`${value}%`, 'IFO Mensual']}
+                                    formatter={(value) => [`${value}%`, 'IFO Topeado']}
                                     contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                                 />
-                                <Bar dataKey="ifo" radius={[0, 4, 4, 0]} barSize={25}>
+                                <Bar dataKey="ifo" radius={[0, 4, 4, 0]} barSize={20}>
                                     {rankingData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={entry.color} />
                                     ))}
                                 </Bar>
-                                <ReferenceLine
-                                    x={data.ifo_sistema}
-                                    stroke="#1e293b"
-                                    strokeDasharray="7 3"
-                                    strokeWidth={3}
-                                >
-                                    <Label
-                                        value={`PROMEDIO SISTEMA: ${data.ifo_sistema.toFixed(1)}%`}
-                                        position="insideTopRight"
-                                        fill="#1e293b"
-                                        fontSize={12}
-                                        fontWeight={700}
-                                        offset={10}
+                                {baseline && (
+                                    <ReferenceLine
+                                        x={baseline.ifo_objetivo}
+                                        stroke="#dc2626"
+                                        strokeDasharray="5 5"
+                                        strokeWidth={4}
+                                    >
+                                        <Label
+                                            value={`IFO BASE (${baseline.mes}/${baseline.anio}): ${baseline.ifo_objetivo.toFixed(2)}%`}
+                                            position="insideBottomRight"
+                                            fill="#dc2626"
+                                            fontSize={12}
+                                            fontWeight={900}
+                                            offset={20}
+                                        />
+                                    </ReferenceLine>
+                                )}
+                                {baseline && (
+                                    <ReferenceLine
+                                        x={baseline.ifo_objetivo}
+                                        stroke="#1e293b"
+                                        strokeDasharray="3 3"
+                                        strokeWidth={2}
+                                        strokeOpacity={0.8}
                                     />
-                                </ReferenceLine>
+                                )}
                                 <ReferenceLine
-                                    x={data.ifo_sistema - 5}
-                                    stroke="#dc2626"
-                                    strokeDasharray="5 5"
-                                    strokeWidth={3}
+                                    x={110}
+                                    stroke="#10b981"
+                                    strokeDasharray="3 3"
+                                    strokeWidth={2}
                                 >
                                     <Label
-                                        value={`IFO OBJETIVO: ${(data.ifo_sistema - 5).toFixed(1)}%`}
-                                        position="insideBottomRight"
-                                        fill="#dc2626"
-                                        fontSize={12}
-                                        fontWeight={800}
-                                        offset={20}
+                                        value="TOPE: 110%"
+                                        position="insideTopRight"
+                                        fill="#10b981"
+                                        fontSize={11}
+                                        fontWeight={700}
+                                        offset={30}
                                     />
                                 </ReferenceLine>
                             </BarChart>
@@ -166,17 +186,17 @@ const SystemChartsDashboard = ({ year, month }) => {
                                         <Cell fill="#f1f5f9" />
                                     </Pie>
                                     <text x="50%" y="70%" textAnchor="middle" dominantBaseline="middle" style={{ fontSize: '3rem', fontWeight: 800, fill: '#1e293b' }}>
-                                        {systemIfo.toFixed(1)}%
+                                        {systemIfo.toFixed(2)}%
                                     </text>
                                     <text x="50%" y="85%" textAnchor="middle" dominantBaseline="middle" style={{ fontSize: '1rem', fontWeight: 600, fill: '#64748b' }}>
-                                        IFO SISTEMA
+                                        IFO SISTEMA (TOPEADO)
                                     </text>
                                 </PieChart>
                             </ResponsiveContainer>
                         </div>
                         <div className="chart-legend-custom">
                             <div className="legend-item-custom"><div className="legend-color" style={{ backgroundColor: '#0066cc' }}></div> IFO Logrado</div>
-                            <div className="legend-item-custom"><div className="legend-color" style={{ backgroundColor: '#f1f5f9' }}></div> Brecha al 100%</div>
+                            <div className="legend-item-custom"><div className="legend-color" style={{ backgroundColor: '#f1f5f9' }}></div> Brecha al 110%</div>
                         </div>
                     </div>
                 );
@@ -247,27 +267,28 @@ const SystemChartsDashboard = ({ year, month }) => {
                 );
 
             case 'deficit':
+                const targetValue = baseline?.ifo_objetivo || 100;
                 const deficitData = data.eots.map(e => ({
-                    name: e.eot_nombre.split(' ')[0],
-                    real: e.ifo_mensual,
-                    gap: Math.max(0, 100 - e.ifo_mensual)
+                    name: e.eot_nombre.split(' ')[0], // Mantenemos recorte por espacio en eje X
+                    real: e.ifo_mensual_topeado,
+                    gap: Math.max(0, targetValue - e.ifo_mensual_topeado)
                 })).sort((a, b) => b.gap - a.gap).slice(0, 10);
 
                 return (
                     <div className="chart-container-card">
                         <div className="chart-info">
                             <h3>🚩 Top 10 - Brecha de Incumplimiento</h3>
-                            <p>Visualización de la brecha (Gap) para alcanzar el 100% de cumplimiento. Las empresas con barras amarillas más grandes requieren mayor intervención.</p>
+                            <p>Visualización del Gap necesario para alcanzar el <b>IFO BASE ({targetValue.toFixed(2)}%)</b>. Las empresas con mayor brecha (amarillo) requieren mayor intervención.</p>
                         </div>
                         <ResponsiveContainer width="100%" height={450}>
                             <BarChart data={deficitData}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                 <XAxis dataKey="name" />
-                                <YAxis />
-                                <Tooltip />
+                                <YAxis domain={[0, Math.max(110, targetValue + 5)]} />
+                                <Tooltip formatter={(value) => [`${value.toFixed(2)}%`]} />
                                 <Legend />
-                                <Bar dataKey="real" name="Cumplimiento Real %" stackId="a" fill="#0066cc" />
-                                <Bar dataKey="gap" name="Brecha Faltante %" stackId="a" fill="#ffd700" />
+                                <Bar dataKey="real" name="IFO Logrado (Topeado) %" stackId="a" fill="#0066cc" />
+                                <Bar dataKey="gap" name="Brecha al Objetivo %" stackId="a" fill="#ffd700" />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>

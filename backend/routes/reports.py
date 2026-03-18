@@ -174,11 +174,11 @@ async def get_system_ifo_baseline(fecha: date, db: DatabaseConnection = Depends(
         query = """
         WITH ifo_diario AS (
             -- Paso 1: Calcular IFO Diario = Promedio de IFO Franja por día y EOT
-            -- Calculamos el tope al 110%% (max 1.1) sobre el promedio diario según Res 120/2025
             SELECT 
                 h.id_eot_vmt_hex,
                 h.fecha,
-                LEAST(AVG(h.ifo), 1.1) as ifo_dia
+                AVG(h.ifo) as ifo_dia_real,
+                LEAST(AVG(h.ifo), 1.1) as ifo_dia_topeado
             FROM control_metricas.ifo_historico h
             WHERE h.fecha >= %s AND h.fecha <= %s
             GROUP BY h.id_eot_vmt_hex, h.fecha
@@ -187,23 +187,37 @@ async def get_system_ifo_baseline(fecha: date, db: DatabaseConnection = Depends(
             -- Paso 2: Calcular IFO Mensual por EOT = Promedio de IFO Diario
             SELECT 
                 i.id_eot_vmt_hex,
-                AVG(i.ifo_dia) * 100 as ifo_mensual
+                AVG(i.ifo_dia_real) * 100 as ifo_mensual_real,
+                AVG(i.ifo_dia_topeado) * 100 as ifo_mensual_topeado
             FROM ifo_diario i
             JOIN public.eots e ON i.id_eot_vmt_hex = e.id_eot_vmt_hex
             WHERE e.cod_catalogo NOT IN (72)
             GROUP BY i.id_eot_vmt_hex
         )
         -- Paso 3: Calcular IFO Sistema = Promedio de IFO Mensual de todas las EOTs
-        SELECT AVG(ifo_mensual) as ifo_sistema
+        SELECT 
+            AVG(ifo_mensual_real) as ifo_sistema_real,
+            AVG(ifo_mensual_topeado) as ifo_sistema_topeado
         FROM ifo_mensual_eot;
         """
         cursor.execute(query, (inicio_mes_ant, fin_mes_ant))
         res = cursor.fetchone()
         
-        # La columna se llama 'ifo_sistema' según el alias en el SELECT
-        value = float(res['ifo_sistema']) if res and res['ifo_sistema'] is not None else 0.0
+        ifo_topeado = float(res['ifo_sistema_topeado']) if res and res['ifo_sistema_topeado'] is not None else 0.0
+        ifo_real = float(res['ifo_sistema_real']) if res and res['ifo_sistema_real'] is not None else 0.0
+
+        # Lógica Res 120/2025 para el IFO Objetivo (Mes n basado en n-1)
+        if ifo_topeado > 95:
+            ifo_objetivo = 95.0
+        elif ifo_topeado < 90:
+            ifo_objetivo = 90.0
+        else:
+            ifo_objetivo = ifo_topeado
+
         return SystemIFOResponse(
-            ifo_sistema_mes_anterior=round(value, 2),
+            ifo_sistema_mes_anterior=round(ifo_topeado, 2),
+            ifo_sistema_real_mes_anterior=round(ifo_real, 2),
+            ifo_objetivo=round(ifo_objetivo, 2),
             anio=anio_ant,
             mes=mes_ant
         )
