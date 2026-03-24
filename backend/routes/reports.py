@@ -342,7 +342,7 @@ async def get_advanced_daily_report(fecha: date, db: DatabaseConnection = Depend
     try:
         baseline = await get_system_ifo_baseline(fecha, db)
         query_ranking = """
-        SELECT e.id_eot_vmt_hex, e.eot_nombre, AVG(h.ifo) * 100 as ifo_dia
+        SELECT e.id_eot_vmt_hex, e.eot_nombre, LEAST(AVG(h.ifo), 1.1) * 100 as ifo_dia
         FROM public.eots e JOIN control_metricas.ifo_historico h ON e.id_eot_vmt_hex = h.id_eot_vmt_hex
         WHERE h.fecha = %s AND e.cod_catalogo NOT IN (72)
         GROUP BY e.id_eot_vmt_hex, e.eot_nombre ORDER BY ifo_dia DESC;
@@ -419,7 +419,9 @@ async def get_eot_monthly_breakdown(eot_id: str, year: int, month: int, db: Data
                 breakdown[fs] = {"fecha": fs, "es_excluido": False, "ajustes": adjustments, "ifo_dia": 0, "franjas": [], "motivo_exclusion": "Domingo" if row['fecha'].weekday() == 6 else "Feriado" if fs in feriados else "Atípico" if fs in atipicos else None}
             breakdown[fs]["franjas"].append({"id_franja": row['id_franja'], "denominacion": row['denominacion'], "ifo": round(float(row['ifo_franja']), 2)})
         for info in breakdown.values():
-            if info["franjas"]: info["ifo_dia"] = round(min(sum(f["ifo"] for f in info["franjas"]) / len(info["franjas"]), 110.0), 2)
+            if info["franjas"]:
+                # Topear cada día al 110% según Res. 120
+                info["ifo_dia"] = round(min(sum(f["ifo"] for f in info["franjas"]) / len(info["franjas"]), 110.0), 2)
         return sorted(breakdown.values(), key=lambda x: x["fecha"])
     finally:
         cursor.close()

@@ -262,8 +262,8 @@ const AdvancedPerformanceModal = ({ isOpen, onClose, fecha, theme }) => {
                       <>
                         <div className="kpi-row">
                           <div className="kpi-card border-shadow">
-                            <h3>IFO Promedio Mensual</h3>
-                            <div className="kpi-value" style={{color: GREEN}}>{monthlyData.ifo_sistema.toFixed(2)}%</div>
+                            <h3>IFO Promedio Mensual (Tope 110%)</h3>
+                            <div className="kpi-value" style={{color: GREEN}}>{monthlyData.ifo_sistema_topeado.toFixed(2)}%</div>
                           </div>
                           <div className="kpi-card border-shadow">
                             <h3>Umbral Objetivo</h3>
@@ -292,8 +292,8 @@ const AdvancedPerformanceModal = ({ isOpen, onClose, fecha, theme }) => {
                         <div className="kpi-row">
                           <div className="kpi-card border-shadow">
                             <h3>Histórico Mensual: {selectedEot.eot_nombre}</h3>
-                            <div className="kpi-value" style={{color: selectedEot.ifo_mensual >= 90 ? GREEN : RED}}>
-                              {selectedEot.ifo_mensual.toFixed(2)}%
+                            <div className="kpi-value" style={{color: selectedEot.ifo_mensual_topeado >= 90 ? GREEN : RED}}>
+                              {selectedEot.ifo_mensual_topeado.toFixed(2)}%
                             </div>
                             <div className="kpi-sub">{selectedEot.dias_validos} días operados</div>
                           </div>
