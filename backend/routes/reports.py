@@ -140,8 +140,21 @@ async def get_monthly_summary(
     finally:
         cursor.close()
 
+# Cache global para baselines mensuales para mejorar performance
+baseline_cache = {}
+
 @router.get("/system-ifo-baseline/{fecha}", response_model=SystemIFOResponse)
 async def get_system_ifo_baseline(fecha: date, db: DatabaseConnection = Depends(get_db_connection)):
+    # Usar cache si ya se calculó para este mes anterior
+    if fecha.month == 1:
+        mes_ant, anio_ant = 12, fecha.year - 1
+    else:
+        mes_ant, anio_ant = fecha.month - 1, fecha.year
+    
+    cache_key = f"{anio_ant}-{mes_ant}"
+    if cache_key in baseline_cache:
+        return SystemIFOResponse(**baseline_cache[cache_key])
+
     cursor = db.get_cursor()
     try:
         if fecha.month == 1:
@@ -192,13 +205,15 @@ async def get_system_ifo_baseline(fecha: date, db: DatabaseConnection = Depends(
         else:
             ifo_objetivo = ifo_topeado
 
-        return SystemIFOResponse(
-            ifo_sistema_mes_anterior=round(ifo_topeado, 2),
-            ifo_sistema_real_mes_anterior=round(ifo_real, 2),
-            ifo_objetivo=round(ifo_objetivo, 2),
-            anio=anio_ant,
-            mes=mes_ant
-        )
+        response_data = {
+            "ifo_sistema_mes_anterior": round(ifo_topeado, 2),
+            "ifo_sistema_real_mes_anterior": round(ifo_real, 2),
+            "ifo_objetivo": round(ifo_objetivo, 2),
+            "anio": anio_ant,
+            "mes": mes_ant
+        }
+        baseline_cache[cache_key] = response_data
+        return SystemIFOResponse(**response_data)
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -373,18 +388,27 @@ async def get_advanced_daily_report(fecha: date, db: DatabaseConnection = Depend
                 "ifo": round((obs / base * 100) if base > 0 else 0.0, 2), "diff": obs - base
             })
 
-        selected_ids = [r["id_eot_vmt_hex"] for r in ranking_res[:1]] + ([r["id_eot_vmt_hex"] for r in ranking_res[-1:]] if len(ranking_res) > 1 else [])
-        franjas_by_eot = []
-        for eot_id in selected_ids:
-            cursor.execute("""
-                SELECT e.eot_nombre, f.denominacion, h.ifo * 100 as ifo_franja
-                FROM control_metricas.ifo_historico h
-                JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
-                JOIN public.eots e ON h.id_eot_vmt_hex = e.id_eot_vmt_hex
-                WHERE h.fecha = %s AND h.id_eot_vmt_hex = %s ORDER BY f.hora_inicio;
-            """, (fecha, eot_id))
-            f_res = cursor.fetchall()
-            if f_res: franjas_by_eot.append({"eot": f_res[0]["eot_nombre"], "franjas": [{"denominacion": fr["denominacion"], "ifo": round(float(fr["ifo_franja"]), 2)} for fr in f_res]})
+        # 3. Detalles por Franja para TODAS las EOTs (Una sola query rápida)
+        cursor.execute("""
+            SELECT e.id_eot_vmt_hex, e.eot_nombre, f.denominacion, h.ifo * 100 as ifo_franja
+            FROM control_metricas.ifo_historico h
+            JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
+            JOIN public.eots e ON h.id_eot_vmt_hex = e.id_eot_vmt_hex
+            WHERE h.fecha = %s ORDER BY e.eot_nombre, f.hora_inicio;
+        """, (fecha,))
+        f_res = cursor.fetchall()
+        
+        franjas_map = {}
+        for row in f_res:
+            eot_name = row["eot_nombre"]
+            if eot_name not in franjas_map:
+                franjas_map[eot_name] = []
+            franjas_map[eot_name].append({
+                "denominacion": row["denominacion"], 
+                "ifo": round(float(row["ifo_franja"]), 2)
+            })
+        
+        franjas_by_eot = [{"eot": name, "franjas": frs} for name, frs in franjas_map.items()]
 
         return AdvancedDailyReportResponse(
             fecha=fecha, ifo_sistema=round(ifo_sistema, 2), ifo_objetivo=round(baseline.ifo_objetivo, 2),
