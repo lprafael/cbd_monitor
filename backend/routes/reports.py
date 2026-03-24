@@ -349,16 +349,21 @@ async def get_advanced_daily_report(fecha: date, db: DatabaseConnection = Depend
         """
         cursor.execute(query_ranking, (fecha,))
         ranking_res = cursor.fetchall()
-        ranking_eots = [{"name": r["eot_nombre"], "ifo": round(float(r["ifo_dia"]), 2)} for r in ranking_res]
+        ranking_eots = [{"name": r["eot_nombre"], "ifo": round(float(r["ifo_dia"]), 2), "id_eot_vmt_hex": r["id_eot_vmt_hex"]} for r in ranking_res]
         ifo_sistema = sum(r["ifo"] for r in ranking_eots) / len(ranking_eots) if ranking_eots else 0.0
 
+        td_id = get_tipo_dia_id(fecha)
         query_hourly = """
-        SELECT EXTRACT(HOUR FROM hora_inicio) as hora, SUM(cbd_cantidad) as obs, SUM(cbd_minimo_franja) as base
+        SELECT EXTRACT(HOUR FROM f.hora_inicio) as hora, SUM(h.cbd_cantidad) as obs, SUM(p.cbd_minimo_franja) as base
         FROM control_metricas.ifo_historico h
         JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
+        LEFT JOIN control_metricas.cbd_parametros_minimos p ON h.id_franja = p.id_franja 
+            AND p.id_tipo_dia = %s 
+            AND (p.vigencia_desde IS NULL OR p.vigencia_desde <= %s)
+            AND (p.vigencia_hasta IS NULL OR p.vigencia_hasta >= %s)
         WHERE h.fecha = %s GROUP BY 1 ORDER BY 1;
         """
-        cursor.execute(query_hourly, (fecha,))
+        cursor.execute(query_hourly, (td_id, fecha, fecha, fecha))
         hourly_res = cursor.fetchall()
         buses_by_hour = []
         for r in hourly_res:

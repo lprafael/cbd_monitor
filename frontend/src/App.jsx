@@ -338,7 +338,7 @@ function App({ onLogout, user }) {
         onClick={() => setHeaderVisible(!headerVisible)}
         title={headerVisible ? "Esconder panel" : "Mostrar panel"}
       >
-        {headerVisible ? "✖️" : "🍔"}
+        ☰
       </button>
 
       {headerVisible && (

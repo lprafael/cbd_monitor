@@ -282,6 +282,10 @@ const Header = ({
                         />
                         <span>📈 Gráficos Visuales</span>
                       </label>
+                      <label className="radio-label advanced-trigger" onClick={onOpenAdvanced} style={{ cursor: 'pointer' }}>
+                        <input type="radio" name="viewMode" checked={false} readOnly />
+                        <span>🚀 Gráfico Avanzado (BI)</span>
+                      </label>
                     </>
                   )}
                   {/* <label className="radio-label">
@@ -331,15 +335,6 @@ const Header = ({
                 disabled={loading}
               >
                 {loading ? '⏳ Cargando...' : '🔍 Obtener Datos'}
-              </button>
-
-              <button
-                type="button"
-                className="btn-advanced"
-                onClick={onOpenAdvanced}
-                title="Abrir Dashboard Avanzado Power BI Style"
-              >
-                📊 Gráfico Avanzado
               </button>
             </div>
           </div>
