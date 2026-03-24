@@ -1,7 +1,7 @@
 import React from 'react';
 import './MonthlyPerformanceDashboard.css';
 
-const MonthlyPerformanceDashboard = ({ data }) => {
+const MonthlyPerformanceDashboard = ({ data, user }) => {
     if (!data) return null;
 
     const {
@@ -51,25 +51,33 @@ const MonthlyPerformanceDashboard = ({ data }) => {
             </div>
 
             <div className="metrics-grid">
-                <div className="metric-card primary">
-                    <span className="metric-label">IFO Mensual (EOT)</span>
-                    <span className="metric-value">{ifo_mensual_eot_topeado.toFixed(2)}%</span>
-                    <span className="metric-value-capped">Real: {ifo_mensual_eot.toFixed(2)}%</span>
-                    <span className="metric-desc">Promedio mensual topeado</span>
-                </div>
 
-                <div className="metric-card secondary">
-                    <span className="metric-label">IFO Sistema (Mes n-1)</span>
-                    <span className="metric-value">{ifo_sistema_anterior_topeado.toFixed(2)}%</span>
-                    <span className="metric-value-capped">Real: {ifo_sistema_anterior.toFixed(2)}%</span>
-                    <span className="metric-desc">Referencia Sistema (Topeado)</span>
-                </div>
+                {user?.rol !== 'viewer' && (
+                    <div className="metric-card secondary">
+                        <span className="metric-label">IFO Sistema (Mes n-1)</span>
+                        <span className="metric-value">{ifo_sistema_anterior_topeado.toFixed(2)}%</span>
+                        <span className="metric-value-capped">Real: {ifo_sistema_anterior.toFixed(2)}%</span>
+                        <span className="metric-desc">Referencia Sistema (Topeado)</span>
+                    </div>
+                )}
 
                 <div className="metric-card highlight">
                     <span className="metric-label">Umbral Obligatorio</span>
                     <span className="metric-value">≥ {umbral_objetivo.toFixed(2)}%</span>
                     <span className="metric-desc">Res. 120/2025</span>
                 </div>
+
+                <div className="metric-card primary">
+                    <span className="metric-label">IFO Mensual (EOT)</span>
+                    <span className="metric-value">{ifo_mensual_eot_topeado.toFixed(2)}%</span>
+                    {user?.rol !== 'viewer' && (
+                        <span className="metric-value-capped">Real: {ifo_mensual_eot.toFixed(2)}%</span>
+                    )}
+                    <span className="metric-desc">Promedio mensual topeado</span>
+                </div>
+
+
+
             </div>
 
             {ifo_diarios && ifo_diarios.length > 0 && (

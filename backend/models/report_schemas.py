@@ -56,3 +56,4 @@ class SystemIFOBreakdownResponse(BaseModel):
     eots: List[EOTMonthlyIFO]  # Detalle por EOT
     umbral_obligatorio_mes_siguiente: float  # Calculado para el mes n+1
     dias_excluidos: Dict[str, List[str]]  # Días excluidos por tipo
+    daily_averages: Optional[List[Dict[str, Any]]] = None

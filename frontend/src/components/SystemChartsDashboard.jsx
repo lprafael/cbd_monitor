@@ -20,6 +20,7 @@ const SystemChartsDashboard = ({ year, month }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [activeChart, setActiveChart] = useState('ranking');
+    const [selectedLevel, setSelectedLevel] = useState(null);
 
     const fetchChartData = useCallback(async () => {
         setLoading(true);
@@ -60,11 +61,18 @@ const SystemChartsDashboard = ({ year, month }) => {
 
     // 1. Ranking de Empresas
     const rankingData = data.eots
-        .map(e => ({
-            name: e.eot_nombre,
-            ifo: parseFloat(e.ifo_mensual_topeado.toFixed(2)),
-            color: e.ifo_mensual_topeado >= UMBRAL_GOOD ? '#059669' : e.ifo_mensual_topeado >= UMBRAL_WARNING ? '#d97706' : '#dc2626'
-        }))
+        .map(e => {
+            const ifo = parseFloat(e.ifo_mensual_topeado.toFixed(2));
+            // Se compara exclusivamente con el IFO Base (Objetivo sistema)
+            // Si no hay baseline cargado, se usa 80% como referencia técnica por defecto
+            const threshold = baseline ? baseline.ifo_objetivo : UMBRAL_WARNING;
+            
+            return {
+                name: e.eot_nombre,
+                ifo: ifo,
+                color: ifo >= threshold ? '#059669' : '#dc2626'
+            };
+        })
         .sort((a, b) => b.ifo - a.ifo);
 
     // 2. Meta Sistema (Gauge con PieChart)
@@ -74,15 +82,24 @@ const SystemChartsDashboard = ({ year, month }) => {
         { name: 'Restante', value: Math.max(0, 110 - systemIfo) } // Referencia al 110% tope
     ];
 
-    // 3. Distribución de Niveles
-    const niveles = { 'Nivel A (>90%)': 0, 'Nivel B (80-90%)': 0, 'Nivel C (70-80%)': 0, 'Sanción (<70%)': 0 };
+    // 3. Distribución de Niveles (Guardamos empresas por nivel para desglose)
+    const niveles = { 
+        'Nivel A (≥90%)': [], 
+        'Nivel B (80-90%)': [], 
+        'Nivel C (<80%)': [] 
+    };
     data.eots.forEach(e => {
-        if (e.ifo_mensual >= 90) niveles['Nivel A (>90%)']++;
-        else if (e.ifo_mensual >= 80) niveles['Nivel B (80-90%)']++;
-        else if (e.ifo_mensual >= 70) niveles['Nivel C (70-80%)']++;
-        else niveles['Sanción (<70%)']++;
+        const item = { name: e.eot_nombre, ifo: e.ifo_mensual_topeado };
+        if (e.ifo_mensual >= 90) niveles['Nivel A (≥90%)'].push(item);
+        else if (e.ifo_mensual >= 80) niveles['Nivel B (80-90%)'].push(item);
+        else niveles['Nivel C (<80%)'].push(item);
     });
-    const distData = Object.keys(niveles).map(key => ({ name: key, value: niveles[key] }));
+    
+    const distData = Object.keys(niveles).map(key => ({ 
+        name: key, 
+        value: niveles[key].length,
+        companies: niveles[key]
+    }));
 
     // 4. Mapa de Calor (Simulado con los promedios de EOTs por posición)
     // Para un heatmap real necesitaríamos datos por día del sistema completo
@@ -218,35 +235,71 @@ const SystemChartsDashboard = ({ year, month }) => {
                                     outerRadius={140}
                                     paddingAngle={5}
                                     dataKey="value"
-                                    label={({ name, value }) => `${name}: ${value}`}
+                                    label={({ name, value }) => `${name.split(' ')[1]}: ${value}`}
+                                    onClick={(event) => setSelectedLevel(event.name)}
+                                    style={{ cursor: 'pointer' }}
                                 >
-                                    <Cell fill="#059669" />
-                                    <Cell fill="#d97706" />
-                                    <Cell fill="#f59e0b" />
-                                    <Cell fill="#dc2626" />
+                                    <Cell fill="#059669" /> {/* Nivel A - Verde */}
+                                    <Cell fill="#d97706" /> {/* Nivel B - Naranja */}
+                                    <Cell fill="#dc2626" /> {/* Nivel C - Rojo */}
                                 </Pie>
                                 <Tooltip />
                                 <Legend />
                             </PieChart>
                         </ResponsiveContainer>
+
+                        {selectedLevel && (
+                            <div className="level-detail-box">
+                                <h4>📋 Empresas en {selectedLevel}</h4>
+                                <div className="company-grid">
+                                    {distData.find(d => d.name === selectedLevel)?.companies.map((c, i) => (
+                                        <div key={i} className="company-chip">
+                                            <span className="name">{c.name}</span>
+                                            <span className="value">{c.ifo.toFixed(2)}%</span>
+                                        </div>
+                                    ))}
+                                </div>
+                                <button className="clear-selection" onClick={() => setSelectedLevel(null)}>Cerrar detalle</button>
+                            </div>
+                        )}
                     </div>
                 );
 
             case 'trend':
-                const trendData = [
-                    { day: 'Lun', ifo: systemIfo - 2 },
-                    { day: 'Mar', ifo: systemIfo + 1 },
-                    { day: 'Mie', ifo: systemIfo - 0.5 },
-                    { day: 'Jue', ifo: systemIfo + 2 },
-                    { day: 'Vie', ifo: systemIfo - 3 },
-                    { day: 'Sab', ifo: systemIfo - 5 },
-                    { day: 'Dom', ifo: systemIfo - 8 },
-                ];
+                const weekdaysLabels = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
+                const statsByDay = [0, 1, 2, 3, 4, 5, 6].map(i => ({
+                    day: weekdaysLabels[i],
+                    ifoSum: 0,
+                    minSum: 0,
+                    maxSum: 0,
+                    count: 0
+                }));
+
+                (data.daily_averages || []).forEach(d => {
+                    const date = new Date(d.fecha + 'T00:00:00');
+                    let dayIdx = date.getDay() - 1; // 0 index for Monday
+                    if (dayIdx === -1) dayIdx = 6; // Sunday
+                    
+                    statsByDay[dayIdx].ifoSum += d.promedio;
+                    statsByDay[dayIdx].minSum += d.minimo;
+                    statsByDay[dayIdx].maxSum += d.maximo;
+                    statsByDay[dayIdx].count++;
+                });
+
+                const trendData = statsByDay
+                    .filter(s => s.count > 0)
+                    .map(s => ({
+                        day: s.day,
+                        ifo: parseFloat((s.ifoSum / s.count).toFixed(2)),
+                        min: parseFloat((s.minSum / s.count).toFixed(2)),
+                        max: parseFloat((s.maxSum / s.count).toFixed(2))
+                    }));
+
                 return (
                     <div className="chart-container-card">
                         <div className="chart-info">
-                            <h3>📈 Tendencia Semanal (Estimada)</h3>
-                            <p>Evolución del IFO Sistema durante la semana. Muestra los picos de cumplimiento y las caídas típicas de fines de semana.</p>
+                            <h3>📈 Perfil de Desempeño por Día de la Semana</h3>
+                            <p>Análisis agregado del comportamiento del sistema según el día de la semana. Muestra el promedio consolidado del periodo y sus rangos de variación típicos.</p>
                         </div>
                         <ResponsiveContainer width="100%" height={400}>
                             <AreaChart data={trendData}>
@@ -257,10 +310,37 @@ const SystemChartsDashboard = ({ year, month }) => {
                                     </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                <XAxis dataKey="day" />
-                                <YAxis domain={[data.ifo_sistema - 15, 100]} />
-                                <Tooltip />
-                                <Area type="monotone" dataKey="ifo" stroke="#0066cc" fillOpacity={1} fill="url(#colorIfo)" strokeWidth={3} />
+                                <XAxis dataKey="day" label={{ value: 'Día de la Semana', position: 'insideBottom', offset: -10 }} />
+                                <YAxis domain={[Math.max(0, Math.min(...trendData.map(d => d.min)) - 5), 115]} unit="%" />
+                                <Tooltip formatter={(value) => [`${value}%`]} />
+                                <Legend verticalAlign="top" height={36}/>
+                                <Area 
+                                    type="monotone" 
+                                    dataKey="ifo" 
+                                    name="Promedio Diario" 
+                                    stroke="#0066cc" 
+                                    fillOpacity={1} 
+                                    fill="url(#colorIfo)" 
+                                    strokeWidth={3} 
+                                />
+                                <Line 
+                                    type="monotone" 
+                                    dataKey="min" 
+                                    name="Mínimo Típico" 
+                                    stroke="#dc2626" 
+                                    strokeDasharray="5 5" 
+                                    dot={false} 
+                                    strokeWidth={2} 
+                                />
+                                <Line 
+                                    type="monotone" 
+                                    dataKey="max" 
+                                    name="Máximo Típico" 
+                                    stroke="#059669" 
+                                    strokeDasharray="5 5" 
+                                    dot={false} 
+                                    strokeWidth={2} 
+                                />
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>

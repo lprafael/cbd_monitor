@@ -386,6 +386,37 @@ async def get_system_ifo_breakdown(
         else:
             umbral_obligatorio = ifo_sistema_topeado
             
+        # 6. Calcular promedios diarios sistema para gráficas de tendencia
+        query_daily = """
+        WITH ifo_diario_eot AS (
+            SELECT 
+                h.id_eot_vmt_hex,
+                h.fecha,
+                AVG(h.ifo) as ifo_dia_real
+            FROM control_metricas.ifo_historico h
+            WHERE h.fecha >= %s AND h.fecha <= %s
+            GROUP BY h.id_eot_vmt_hex, h.fecha
+        )
+        SELECT 
+            fecha,
+            AVG(ifo_dia_real) * 100 as promedio,
+            MIN(ifo_dia_real) * 100 as minimo,
+            MAX(ifo_dia_real) * 100 as maximo
+        FROM ifo_diario_eot
+        GROUP BY fecha
+        ORDER BY fecha;
+        """
+        cursor.execute(query_daily, (inicio_mes, fin_mes))
+        daily_res = cursor.fetchall()
+        daily_averages = [
+            {
+                "fecha": str(row['fecha']), 
+                "promedio": round(float(row['promedio']), 2) if row['promedio'] is not None else 0.0,
+                "minimo": round(float(row['minimo']), 2) if row['minimo'] is not None else 0.0,
+                "maximo": round(float(row['maximo']), 2) if row['maximo'] is not None else 0.0
+            } for row in daily_res
+        ]
+
         return SystemIFOBreakdownResponse(
             year=year,
             month=month,
@@ -394,7 +425,8 @@ async def get_system_ifo_breakdown(
             total_eots=len(eots_list),
             eots=eots_list,
             umbral_obligatorio_mes_siguiente=round(umbral_obligatorio, 2),
-            dias_excluidos=dias_excluidos
+            dias_excluidos=dias_excluidos,
+            daily_averages=daily_averages
         )
         
     except HTTPException:

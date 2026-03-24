@@ -383,7 +383,7 @@ function App({ onLogout, user }) {
         )}
 
         {!loading && !error && viewMode === 'monthly' && monthlyData && (
-          <MonthlyPerformanceDashboard data={monthlyData} />
+          <MonthlyPerformanceDashboard data={monthlyData} user={user} />
         )}
 
         {viewMode === 'verify290' && !loading && !error && verify290Data && (

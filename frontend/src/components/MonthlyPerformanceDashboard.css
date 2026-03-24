@@ -123,7 +123,71 @@
 }
 
 .metric-card.highlight {
-  border-left: 4px solid var(--accent-color);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(251, 191, 36, 0.08) 100%);
+  border: 2px solid #f59e0b;
+  border-left: 8px solid #d97706; /* Más grueso aún */
+  box-shadow: 0 0 25px -5px rgba(217, 119, 6, 0.3);
+  transform: translateY(-8px); /* Más levantado */
+  position: relative;
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Etiqueta oficial en la esquina */
+.metric-card.highlight::before {
+  content: 'REFERENCIA';
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: #d97706;
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 900;
+  padding: 3px 10px;
+  border-bottom-right-radius: 8px;
+  letter-spacing: 0.8px;
+  z-index: 1;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.metric-card.highlight::after {
+  content: '⚖️'; /* Balanza de justicia/obligatorio */
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  opacity: 0.2;
+  font-size: 1.5rem;
+}
+
+.metric-card.highlight .metric-label {
+  color: #92400e;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-top: 8px; /* Espacio para el label ::before */
+}
+
+.metric-card.highlight .metric-value {
+  color: #78350f;
+  font-size: 2.5rem; /* Más grande aún */
+  font-family: 'Inter', sans-serif;
+  letter-spacing: -0.5px;
+}
+
+.metric-card.highlight .metric-desc {
+  color: #92400e;
+  font-weight: 700;
+  opacity: 1;
+  background: rgba(217, 119, 6, 0.1);
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.metric-card.highlight:hover {
+  transform: translateY(-12px) scale(1.02);
+  box-shadow: 0 20px 40px -10px rgba(217, 119, 6, 0.5);
+  border-color: #d97706;
 }
 
 .metric-label {

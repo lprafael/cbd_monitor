@@ -164,7 +164,20 @@ const IndicesDashboard = ({ performanceData, fecha }) => {
   };
 
   const handleDownloadPDF = () => {
+    // Cambiamos el título temporalmente para que el nombre del archivo PDF sea sugerente
+    const originalTitle = document.title;
+    const nombreEmpresa = modalData?.eot_nombre || 'Reporte';
+    const tipoReporte = modalType === 'cbd' ? 'CBD' : 'IFO';
+    const fechaReporte = modalData?.fecha || '';
+    
+    document.title = `${tipoReporte}_${nombreEmpresa}_${fechaReporte}`.replace(/[\s,]+/g, '_');
+    
     window.print();
+    
+    // Restauramos el título después de un breve delay
+    setTimeout(() => {
+      document.title = originalTitle;
+    }, 500);
   };
 
   return (
@@ -310,9 +323,9 @@ const IndicesDashboard = ({ performanceData, fecha }) => {
 // Botones de acción para los modales
 const ModalActions = ({ onEmail, onPrint, onDownload }) => (
   <div className="modal-actions no-print">
-    <button className="action-btn email-btn" onClick={onEmail} title="Enviar por Correo">
+    {/* <button className="action-btn email-btn" onClick={onEmail} title="Enviar por Correo">
       ✉️ Enviar correo
-    </button>
+    </button> */}
     <button className="action-btn print-btn" onClick={onPrint} title="Imprimir">
       🖨️ Imprimir
     </button>
