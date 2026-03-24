@@ -16,7 +16,9 @@ import AuditSystem from './components/AuditSystem';
 import ChatBot from './components/ChatBot';
 import CBDObjetivoTable from './components/CBDObjetivoTable';
 import SystemChartsDashboard from './components/SystemChartsDashboard';
+import AdvancedPerformanceModal from './components/AdvancedPerformanceModal';
 import './App.css';
+import './components/IndicesDashboard.css';
 import { API_BASE_URL } from './config';
 
 function App({ onLogout, user }) {
@@ -37,6 +39,8 @@ function App({ onLogout, user }) {
   const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' | 'users' | 'audit'
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [adminTab, setAdminTab] = useState('users'); // 'users' | 'audit'
+  const [headerVisible, setHeaderVisible] = useState(true); // Control visibilidad header
+  const [showAdvancedModal, setShowAdvancedModal] = useState(false); // Modal avanzado estilo Power BI
 
   // Verificar si el usuario es admin
   const isAdmin = user && user.rol === 'admin';
@@ -250,6 +254,7 @@ function App({ onLogout, user }) {
           setTheme={setTheme}
           onLogout={onLogout}
           user={user}
+          onOpenAdvanced={() => setShowAdvancedModal(true)}
         />
         <div className="content-wrapper">
           {isAdmin && (
@@ -314,29 +319,48 @@ function App({ onLogout, user }) {
           </p>
         </footer>
         <ChatBot />
+        {/* Modal de Gráficos Avanzados */}
+        <AdvancedPerformanceModal
+          isOpen={showAdvancedModal}
+          onClose={() => setShowAdvancedModal(false)}
+          fecha={fecha}
+          theme={theme}
+        />
       </div>
     );
   }
 
   return (
     <div className="app">
-      <Header
-        eots={eots}
-        selectedEots={selectedEots}
-        setSelectedEots={setSelectedEots}
-        fecha={fecha}
-        setFecha={setFecha}
-        modoVisualizacion={modoVisualizacion}
-        setModoVisualizacion={setModoVisualizacion}
-        viewMode={viewMode}
-        setViewMode={setViewMode}
-        onObtenerCBD={handleConsulta}
-        loading={loading}
-        theme={theme}
-        setTheme={setTheme}
-        onLogout={onLogout}
-        user={user}
-      />
+      {/* Botón Hamburguesa para esconder/mostrar header */}
+      <button
+        className="hamburger-menu"
+        onClick={() => setHeaderVisible(!headerVisible)}
+        title={headerVisible ? "Esconder panel" : "Mostrar panel"}
+      >
+        {headerVisible ? "✖️" : "🍔"}
+      </button>
+
+      {headerVisible && (
+        <Header
+          eots={eots}
+          selectedEots={selectedEots}
+          setSelectedEots={setSelectedEots}
+          fecha={fecha}
+          setFecha={setFecha}
+          modoVisualizacion={modoVisualizacion}
+          setModoVisualizacion={setModoVisualizacion}
+          viewMode={viewMode}
+          setViewMode={setViewMode}
+          onObtenerCBD={handleConsulta}
+          loading={loading}
+          theme={theme}
+          setTheme={setTheme}
+          onLogout={onLogout}
+          user={user}
+          onOpenAdvanced={() => setShowAdvancedModal(true)}
+        />
+      )}
 
       <main className="main-content">
         {/* Estado inicial para usuarios no administradores */}
@@ -415,6 +439,13 @@ function App({ onLogout, user }) {
         </p>
       </footer>
       <ChatBot />
+      {/* Modal de Gráficos Avanzados */}
+      <AdvancedPerformanceModal
+        isOpen={showAdvancedModal}
+        onClose={() => setShowAdvancedModal(false)}
+        fecha={fecha}
+        theme={theme}
+      />
     </div>
   );
 }

@@ -7,7 +7,8 @@ from models.report_schemas import (
     MonthlyReportRequest, MonthlyReportResponse, 
     SystemIFOResponse, ParametersIFOResponse,
     TipoDiaReport, FranjaInfo, DiaData,
-    SystemIFOBreakdownResponse, EOTMonthlyIFO
+    SystemIFOBreakdownResponse, EOTMonthlyIFO,
+    AdvancedDailyReportResponse
 )
 from .performance import get_factores_ajuste_acumulados
 
@@ -16,7 +17,6 @@ router = APIRouter(prefix="/api/reports/res120", tags=["Reports Resolution 120/2
 def get_tipo_dia_id(fecha_obj: date, feriados_set: Optional[set] = None) -> int:
     """
     Determinar el id_tipo_dia basado en la fecha (5=LABORAL, 6=SABADO, 7=NO LABORAL).
-    Si feriados_set está definido, las fechas en ese conjunto se consideran NO LABORAL (7).
     """
     if feriados_set is not None and str(fecha_obj) in feriados_set:
         return 7
@@ -33,10 +33,6 @@ async def get_monthly_summary(
     request: MonthlyReportRequest,
     db: DatabaseConnection = Depends(get_db_connection)
 ):
-    """
-    Obtiene los datos mensuales de IFO para un EOT.
-    Migrado desde el script enviar_informe.py para centralizar la l\u00f3gica.
-    """
     cursor = db.get_cursor()
     try:
         id_eot_vmt_hex = request.id_eot_vmt_hex
@@ -49,7 +45,6 @@ async def get_monthly_summary(
             7: {'nombre': 'Domingo/Feriado', 'franjas': {}, 'dias': {}}
         }
         
-        # 1. Obtener franjas para cada tipo de d\u00eda
         for id_tipo_dia in [5, 6, 7]:
             cursor.execute("""
                 SELECT DISTINCT f.id_franja, f.denominacion, f.hora_inicio, f.hora_fin
@@ -85,14 +80,12 @@ async def get_monthly_summary(
                 )
             tipos_dia_info[id_tipo_dia]['franjas'] = franjas_info
 
-        # Feriados del mes (para clasificar como Domingo/Feriado)
         cursor.execute(
             "SELECT fecha FROM public.feriados WHERE fecha >= %s AND fecha <= %s",
             (primer_dia_mes, fecha_referencia)
         )
         feriados_set = {str(row['fecha']) for row in cursor.fetchall()}
 
-        # 2. Inicializar todas las fechas del mes
         fecha_actual = primer_dia_mes
         while fecha_actual <= fecha_referencia:
             td_id = get_tipo_dia_id(fecha_actual, feriados_set)
@@ -100,7 +93,6 @@ async def get_monthly_summary(
                 tipos_dia_info[td_id]['dias'][str(fecha_actual)] = {'franjas': {}, 'ifo_diario': None}
             fecha_actual += timedelta(days=1)
 
-        # 3. Obtener datos de IFO del mes
         cursor.execute("""
             SELECT fecha, id_franja, ifo, cbd_indice, cbd_cantidad
             FROM control_metricas.ifo_historico
@@ -123,7 +115,6 @@ async def get_monthly_summary(
                     'cbd_cantidad': int(row['cbd_cantidad']) if row['cbd_cantidad'] is not None else 0
                 }
 
-        # 4. Calcular IFO diario
         ifos_diarios_mes = []
         for td_id, td_data in tipos_dia_info.items():
             for f_str, dia_data in td_data['dias'].items():
@@ -151,16 +142,8 @@ async def get_monthly_summary(
 
 @router.get("/system-ifo-baseline/{fecha}", response_model=SystemIFOResponse)
 async def get_system_ifo_baseline(fecha: date, db: DatabaseConnection = Depends(get_db_connection)):
-    """
-    Calcula el IFO del sistema del mes anterior siguiendo la jerarquía correcta:
-    1. IFO Franja (ya está en la tabla)
-    2. IFO Día = Promedio de IFO Franja por día
-    3. IFO Mensual EOT = Promedio de IFO Día
-    4. IFO Sistema = Promedio de IFO Mensual de todas las EOTs
-    """
     cursor = db.get_cursor()
     try:
-        # Mes anterior
         if fecha.month == 1:
             mes_ant, anio_ant = 12, fecha.year - 1
         else:
@@ -170,10 +153,8 @@ async def get_system_ifo_baseline(fecha: date, db: DatabaseConnection = Depends(
         inicio_mes_ant = date(anio_ant, mes_ant, 1)
         fin_mes_ant = date(anio_ant, mes_ant, last_day)
         
-        # Query corregido siguiendo la jerarquía correcta
         query = """
         WITH ifo_diario AS (
-            -- Paso 1: Calcular IFO Diario = Promedio de IFO Franja por día y EOT
             SELECT 
                 h.id_eot_vmt_hex,
                 h.fecha,
@@ -184,7 +165,6 @@ async def get_system_ifo_baseline(fecha: date, db: DatabaseConnection = Depends(
             GROUP BY h.id_eot_vmt_hex, h.fecha
         ),
         ifo_mensual_eot AS (
-            -- Paso 2: Calcular IFO Mensual por EOT = Promedio de IFO Diario
             SELECT 
                 i.id_eot_vmt_hex,
                 AVG(i.ifo_dia_real) * 100 as ifo_mensual_real,
@@ -194,7 +174,6 @@ async def get_system_ifo_baseline(fecha: date, db: DatabaseConnection = Depends(
             WHERE e.cod_catalogo NOT IN (72)
             GROUP BY i.id_eot_vmt_hex
         )
-        -- Paso 3: Calcular IFO Sistema = Promedio de IFO Mensual de todas las EOTs
         SELECT 
             AVG(ifo_mensual_real) as ifo_sistema_real,
             AVG(ifo_mensual_topeado) as ifo_sistema_topeado
@@ -206,7 +185,6 @@ async def get_system_ifo_baseline(fecha: date, db: DatabaseConnection = Depends(
         ifo_topeado = float(res['ifo_sistema_topeado']) if res and res['ifo_sistema_topeado'] is not None else 0.0
         ifo_real = float(res['ifo_sistema_real']) if res and res['ifo_sistema_real'] is not None else 0.0
 
-        # Lógica Res 120/2025 para el IFO Objetivo (Mes n basado en n-1)
         if ifo_topeado > 95:
             ifo_objetivo = 95.0
         elif ifo_topeado < 90:
@@ -230,7 +208,6 @@ async def get_system_ifo_baseline(fecha: date, db: DatabaseConnection = Depends(
 
 @router.get("/parameters-summary/{fecha}", response_model=ParametersIFOResponse)
 async def get_parameters_summary(fecha: date, db: DatabaseConnection = Depends(get_db_connection)):
-    """Resumen de par\u00e1metros IFO vigentes."""
     cursor = db.get_cursor()
     try:
         cursor.execute("""
@@ -249,7 +226,6 @@ async def get_parameters_summary(fecha: date, db: DatabaseConnection = Depends(g
         if not parametros:
             return ParametersIFOResponse(resumen="No se encontraron par\u00e1metros vigentes.", parametros=[])
         
-        # Agrupar y construir texto (l\u00f3gica similar a la original)
         franjas_por_porcentaje = {}
         normativa = None
         for p in parametros:
@@ -272,96 +248,51 @@ async def get_system_ifo_breakdown(
     month: int, 
     db: DatabaseConnection = Depends(get_db_connection)
 ):
-    """
-    Obtiene el desglose completo del IFO Sistema para un mes específico.
-    Muestra el IFO Mensual de cada EOT y el promedio del sistema.
-    """
     cursor = db.get_cursor()
     try:
-        # Validar mes
         if not (1 <= month <= 12):
-            raise HTTPException(status_code=400, detail="Mes inválido (debe estar entre 1 y 12)")
-        
-        # Calcular rango del mes
+            raise HTTPException(status_code=400, detail="Mes inválido")
+            
         _, last_day = calendar.monthrange(year, month)
         inicio_mes = date(year, month, 1)
         fin_mes = date(year, month, last_day)
         
-        # 1. Obtener días excluidos
-        dias_excluidos = {
-            'domingos': [],
-            'feriados': [],
-            'atipicos': []
-        }
-        
-        # Domingos
+        dias_excluidos = {'domingos': [], 'feriados': [], 'atipicos': []}
         current = inicio_mes
         while current <= fin_mes:
-            if current.weekday() == 6:  # Domingo
-                dias_excluidos['domingos'].append(str(current))
+            if current.weekday() == 6: dias_excluidos['domingos'].append(str(current))
             current += timedelta(days=1)
         
-        # Feriados
-        cursor.execute("""
-            SELECT fecha FROM public.feriados 
-            WHERE fecha BETWEEN %s AND %s
-            ORDER BY fecha
-        """, (inicio_mes, fin_mes))
+        cursor.execute("SELECT fecha FROM public.feriados WHERE fecha BETWEEN %s AND %s", (inicio_mes, fin_mes))
         dias_excluidos['feriados'] = [str(row['fecha']) for row in cursor.fetchall()]
         
-        # Días atípicos
-        cursor.execute("""
-            SELECT fecha FROM control_metricas.dias_atipicos 
-            WHERE fecha BETWEEN %s AND %s
-            ORDER BY fecha
-        """, (inicio_mes, fin_mes))
+        cursor.execute("SELECT fecha FROM control_metricas.dias_atipicos WHERE fecha BETWEEN %s AND %s", (inicio_mes, fin_mes))
         dias_excluidos['atipicos'] = [str(row['fecha']) for row in cursor.fetchall()]
         
-        # 2. Calcular IFO Mensual por EOT
         query_eots = """
         WITH ifo_diario AS (
-            -- Paso 1: Calcular IFO Diario = Promedio de IFO Franja por día y EOT
-            SELECT 
-                h.id_eot_vmt_hex,
-                h.fecha,
-                AVG(h.ifo) as ifo_dia,
-                LEAST(AVG(h.ifo), 1.1) as ifo_dia_topeado
+            SELECT h.id_eot_vmt_hex, h.fecha, AVG(h.ifo) as ifo_dia, LEAST(AVG(h.ifo), 1.1) as ifo_dia_topeado
             FROM control_metricas.ifo_historico h
             WHERE h.fecha >= %s AND h.fecha <= %s
             GROUP BY h.id_eot_vmt_hex, h.fecha
         ),
         ifo_mensual_eot AS (
-            -- Paso 2: Calcular IFO Mensual por EOT = Promedio de IFO Diario
-            SELECT 
-                id_eot_vmt_hex,
-                AVG(ifo_dia) * 100 as ifo_mensual,
-                AVG(ifo_dia_topeado) * 100 as ifo_mensual_topeado,
-                COUNT(DISTINCT fecha) as dias_validos
+            SELECT id_eot_vmt_hex, AVG(ifo_dia) * 100 as ifo_mensual, AVG(ifo_dia_topeado) * 100 as ifo_mensual_topeado, COUNT(DISTINCT fecha) as dias_validos
             FROM ifo_diario
             GROUP BY id_eot_vmt_hex
         )
-        SELECT 
-            e.id_eot_vmt_hex,
-            e.eot_nombre,
-            COALESCE(i.ifo_mensual, 0) as ifo_mensual,
-            COALESCE(i.ifo_mensual_topeado, 0) as ifo_mensual_topeado,
-            COALESCE(i.dias_validos, 0) as dias_validos
+        SELECT e.id_eot_vmt_hex, e.eot_nombre, COALESCE(i.ifo_mensual, 0) as ifo_mensual, COALESCE(i.ifo_mensual_topeado, 0) as ifo_mensual_topeado, COALESCE(i.dias_validos, 0) as dias_validos
         FROM public.eots e
         LEFT JOIN ifo_mensual_eot i ON e.id_eot_vmt_hex = i.id_eot_vmt_hex
         WHERE e.cod_catalogo NOT IN (72)
         ORDER BY e.eot_nombre;
         """
-        
         cursor.execute(query_eots, (inicio_mes, fin_mes))
         eots_data = cursor.fetchall()
         
-        # 3. Construir lista de EOTs y calcular promedios
-        eots_list = []
-        ifo_values = []
-        ifo_topeado_values = []
-        
+        eots_list, ifo_values, ifo_topeado_values = [], [], []
         for row in eots_data:
-            if row['dias_validos'] > 0:  # Solo incluir EOTs con datos
+            if row['dias_validos'] > 0:
                 eot_ifo = EOTMonthlyIFO(
                     id_eot_vmt_hex=row['id_eot_vmt_hex'],
                     eot_nombre=row['eot_nombre'],
@@ -373,149 +304,117 @@ async def get_system_ifo_breakdown(
                 ifo_values.append(eot_ifo.ifo_mensual)
                 ifo_topeado_values.append(eot_ifo.ifo_mensual_topeado)
         
-        # 4. Calcular IFO Sistema
         ifo_sistema = sum(ifo_values) / len(ifo_values) if ifo_values else 0.0
         ifo_sistema_topeado = sum(ifo_topeado_values) / len(ifo_topeado_values) if ifo_topeado_values else 0.0
-        
-        # 5. Calcular Umbral Obligatorio del IFO (Mes n+1)
-        # Basado en IFO Sistema Topeado del mes actual (Mes n)
-        if ifo_sistema_topeado > 95:
-            umbral_obligatorio = 95.0
-        elif ifo_sistema_topeado < 90:
-            umbral_obligatorio = 90.0
-        else:
-            umbral_obligatorio = ifo_sistema_topeado
+        umbral_obligatorio = max(90.0, min(95.0, ifo_sistema_topeado))
             
-        # 6. Calcular promedios diarios sistema para gráficas de tendencia
-        query_daily = """
-        WITH ifo_diario_eot AS (
-            SELECT 
-                h.id_eot_vmt_hex,
-                h.fecha,
-                AVG(h.ifo) as ifo_dia_real
-            FROM control_metricas.ifo_historico h
-            WHERE h.fecha >= %s AND h.fecha <= %s
-            GROUP BY h.id_eot_vmt_hex, h.fecha
-        )
-        SELECT 
-            fecha,
-            AVG(ifo_dia_real) * 100 as promedio,
-            MIN(ifo_dia_real) * 100 as minimo,
-            MAX(ifo_dia_real) * 100 as maximo
-        FROM ifo_diario_eot
-        GROUP BY fecha
-        ORDER BY fecha;
-        """
-        cursor.execute(query_daily, (inicio_mes, fin_mes))
+        cursor.execute("""
+            WITH ifo_diario_eot AS (
+                SELECT h.id_eot_vmt_hex, h.fecha, AVG(h.ifo) as ifo_dia_real
+                FROM control_metricas.ifo_historico h
+                WHERE h.fecha >= %s AND h.fecha <= %s
+                GROUP BY h.id_eot_vmt_hex, h.fecha
+            )
+            SELECT fecha, AVG(ifo_dia_real) * 100 as promedio, MIN(ifo_dia_real) * 100 as minimo, MAX(ifo_dia_real) * 100 as maximo
+            FROM ifo_diario_eot GROUP BY fecha ORDER BY fecha;
+        """, (inicio_mes, fin_mes))
         daily_res = cursor.fetchall()
         daily_averages = [
-            {
-                "fecha": str(row['fecha']), 
-                "promedio": round(float(row['promedio']), 2) if row['promedio'] is not None else 0.0,
-                "minimo": round(float(row['minimo']), 2) if row['minimo'] is not None else 0.0,
-                "maximo": round(float(row['maximo']), 2) if row['maximo'] is not None else 0.0
-            } for row in daily_res
+            {"fecha": str(row['fecha']), "promedio": round(float(row['promedio']), 2), "minimo": round(float(row['minimo']), 2), "maximo": round(float(row['maximo']), 2)} 
+            for row in daily_res
         ]
 
         return SystemIFOBreakdownResponse(
-            year=year,
-            month=month,
-            ifo_sistema=round(ifo_sistema, 2),
-            ifo_sistema_topeado=round(ifo_sistema_topeado, 2),
-            total_eots=len(eots_list),
-            eots=eots_list,
-            umbral_obligatorio_mes_siguiente=round(umbral_obligatorio, 2),
-            dias_excluidos=dias_excluidos,
-            daily_averages=daily_averages
+            year=year, month=month, ifo_sistema=round(ifo_sistema, 2), 
+            ifo_sistema_topeado=round(ifo_sistema_topeado, 2), total_eots=len(eots_list), 
+            eots=eots_list, umbral_obligatorio_mes_siguiente=round(umbral_obligatorio, 2),
+            dias_excluidos=dias_excluidos, daily_averages=daily_averages
         )
-        
-    except HTTPException:
-        raise
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Error calculando desglose IFO sistema: {str(e)}")
+        import traceback; traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+
+@router.get("/advanced-daily-report/{fecha}", response_model=AdvancedDailyReportResponse)
+async def get_advanced_daily_report(fecha: date, db: DatabaseConnection = Depends(get_db_connection)):
+    cursor = db.get_cursor()
+    try:
+        baseline = await get_system_ifo_baseline(fecha, db)
+        query_ranking = """
+        SELECT e.id_eot_vmt_hex, e.eot_nombre, AVG(h.ifo) * 100 as ifo_dia
+        FROM public.eots e JOIN control_metricas.ifo_historico h ON e.id_eot_vmt_hex = h.id_eot_vmt_hex
+        WHERE h.fecha = %s AND e.cod_catalogo NOT IN (72)
+        GROUP BY e.id_eot_vmt_hex, e.eot_nombre ORDER BY ifo_dia DESC;
+        """
+        cursor.execute(query_ranking, (fecha,))
+        ranking_res = cursor.fetchall()
+        ranking_eots = [{"name": r["eot_nombre"], "ifo": round(float(r["ifo_dia"]), 2)} for r in ranking_res]
+        ifo_sistema = sum(r["ifo"] for r in ranking_eots) / len(ranking_eots) if ranking_eots else 0.0
+
+        query_hourly = """
+        SELECT EXTRACT(HOUR FROM hora_inicio) as hora, SUM(cbd_cantidad) as obs, SUM(cbd_minimo_franja) as base
+        FROM control_metricas.ifo_historico h
+        JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
+        WHERE h.fecha = %s GROUP BY 1 ORDER BY 1;
+        """
+        cursor.execute(query_hourly, (fecha,))
+        hourly_res = cursor.fetchall()
+        buses_by_hour = []
+        for r in hourly_res:
+            obs, base = int(r["obs"]), int(r["base"])
+            buses_by_hour.append({
+                "hour": int(r["hora"]), "real": obs, "base": base, 
+                "ifo": round((obs / base * 100) if base > 0 else 0.0, 2), "diff": obs - base
+            })
+
+        selected_ids = [r["id_eot_vmt_hex"] for r in ranking_res[:1]] + ([r["id_eot_vmt_hex"] for r in ranking_res[-1:]] if len(ranking_res) > 1 else [])
+        franjas_by_eot = []
+        for eot_id in selected_ids:
+            cursor.execute("""
+                SELECT e.eot_nombre, f.denominacion, h.ifo * 100 as ifo_franja
+                FROM control_metricas.ifo_historico h
+                JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
+                JOIN public.eots e ON h.id_eot_vmt_hex = e.id_eot_vmt_hex
+                WHERE h.fecha = %s AND h.id_eot_vmt_hex = %s ORDER BY f.hora_inicio;
+            """, (fecha, eot_id))
+            f_res = cursor.fetchall()
+            if f_res: franjas_by_eot.append({"eot": f_res[0]["eot_nombre"], "franjas": [{"denominacion": fr["denominacion"], "ifo": round(float(fr["ifo_franja"]), 2)} for fr in f_res]})
+
+        return AdvancedDailyReportResponse(
+            fecha=fecha, ifo_sistema=round(ifo_sistema, 2), ifo_objetivo=round(baseline.ifo_objetivo, 2),
+            total_buses=sum(b["real"] for b in buses_by_hour), ranking_eots=ranking_eots,
+            buses_by_hour=buses_by_hour, franjas_by_eot=franjas_by_eot
+        )
     finally:
         cursor.close()
 
 @router.get("/eot-monthly-breakdown/{eot_id}/{year}/{month}")
-async def get_eot_monthly_breakdown(
-    eot_id: str,
-    year: int,
-    month: int,
-    db: DatabaseConnection = Depends(get_db_connection)
-):
-    """
-    Obtiene el desglose diario y por franja de una EOT específica para un mes.
-    Identifica días excluidos (domingos, feriados, atípicos).
-    """
+async def get_eot_monthly_breakdown(eot_id: str, year: int, month: int, db: DatabaseConnection = Depends(get_db_connection)):
     cursor = db.get_cursor()
     try:
         _, last_day = calendar.monthrange(year, month)
-        inicio_mes = date(year, month, 1)
-        fin_mes = date(year, month, last_day)
-
-        # 1. Obtener datos de exclusión
-        cursor.execute("SELECT fecha FROM public.feriados WHERE fecha BETWEEN %s AND %s", (inicio_mes, fin_mes))
+        inicio, fin = date(year, month, 1), date(year, month, last_day)
+        cursor.execute("SELECT fecha FROM public.feriados WHERE fecha BETWEEN %s AND %s", (inicio, fin))
         feriados = {str(row['fecha']) for row in cursor.fetchall()}
-
-        cursor.execute("SELECT fecha FROM control_metricas.dias_atipicos WHERE fecha BETWEEN %s AND %s", (inicio_mes, fin_mes))
+        cursor.execute("SELECT fecha FROM control_metricas.dias_atipicos WHERE fecha BETWEEN %s AND %s", (inicio, fin))
         atipicos = {str(row['fecha']) for row in cursor.fetchall()}
-
-        # 2. Obtener IFO por franja y día
-        query = """
-        SELECT 
-            h.fecha,
-            f.id_franja,
-            f.denominacion,
-            AVG(h.ifo) * 100 as ifo_franja
-        FROM control_metricas.ifo_historico h
-        JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
-        WHERE h.id_eot_vmt_hex = %s AND h.fecha BETWEEN %s AND %s
-        GROUP BY h.fecha, f.id_franja, f.denominacion
-        ORDER BY h.fecha, f.id_franja;
-        """
-        cursor.execute(query, (eot_id, inicio_mes, fin_mes))
-        rows = cursor.fetchall()
-
-        # Agrupar por día
-        breakdown = {}
+        cursor.execute("""
+            SELECT h.fecha, f.id_franja, f.denominacion, AVG(h.ifo) * 100 as ifo_franja
+            FROM control_metricas.ifo_historico h
+            JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
+            WHERE h.id_eot_vmt_hex = %s AND h.fecha BETWEEN %s AND %s
+            GROUP BY 1, 2, 3 ORDER BY 1, 2;
+        """, (eot_id, inicio, fin))
+        rows, breakdown = cursor.fetchall(), {}
         for row in rows:
-            fecha_str = str(row['fecha'])
-            if fecha_str not in breakdown:
-                # Determinar si es excluido
-                es_domingo = row['fecha'].weekday() == 6
-                es_feriado = fecha_str in feriados
-                es_atipico = fecha_str in atipicos
-                
-                # Calcular factores de ajuste
-                _, lista_ajustes = get_factores_ajuste_acumulados(cursor, row['fecha'])
-                
-                breakdown[fecha_str] = {
-                    "fecha": fecha_str,
-                    "es_excluido": False, # Etapa 1: Todos los días se consideran para el promedio
-                    "motivo_exclusion": "Domingo" if es_domingo else "Feriado" if es_feriado else "Atípico" if es_atipico else None,
-                    "ajustes": lista_ajustes,
-                    "ifo_dia": 0,
-                    "franjas": []
-                }
-            
-            breakdown[fecha_str]["franjas"].append({
-                "id_franja": row['id_franja'],
-                "denominacion": row['denominacion'],
-                "ifo": round(float(row['ifo_franja']), 2)
-            })
-
-        # Calcular promedio diario por cada día
-        for fecha, info in breakdown.items():
-            if info["franjas"]:
-                info["ifo_dia"] = round(min(sum(f["ifo"] for f in info["franjas"]) / len(info["franjas"]), 110.0), 2)
-
+            fs = str(row['fecha'])
+            if fs not in breakdown:
+                _, adjustments = get_factores_ajuste_acumulados(cursor, row['fecha'])
+                breakdown[fs] = {"fecha": fs, "es_excluido": False, "ajustes": adjustments, "ifo_dia": 0, "franjas": [], "motivo_exclusion": "Domingo" if row['fecha'].weekday() == 6 else "Feriado" if fs in feriados else "Atípico" if fs in atipicos else None}
+            breakdown[fs]["franjas"].append({"id_franja": row['id_franja'], "denominacion": row['denominacion'], "ifo": round(float(row['ifo_franja']), 2)})
+        for info in breakdown.values():
+            if info["franjas"]: info["ifo_dia"] = round(min(sum(f["ifo"] for f in info["franjas"]) / len(info["franjas"]), 110.0), 2)
         return sorted(breakdown.values(), key=lambda x: x["fecha"])
-
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
     finally:
         cursor.close()

@@ -25,7 +25,8 @@ const Header = ({
   theme,
   setTheme,
   onLogout,
-  user
+  user,
+  onOpenAdvanced
 }) => {
   const handleEotChange = (e) => {
     const options = e.target.options;
@@ -330,6 +331,15 @@ const Header = ({
                 disabled={loading}
               >
                 {loading ? '⏳ Cargando...' : '🔍 Obtener Datos'}
+              </button>
+
+              <button
+                type="button"
+                className="btn-advanced"
+                onClick={onOpenAdvanced}
+                title="Abrir Dashboard Avanzado Power BI Style"
+              >
+                📊 Gráfico Avanzado
               </button>
             </div>
           </div>

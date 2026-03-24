@@ -57,3 +57,12 @@ class SystemIFOBreakdownResponse(BaseModel):
     umbral_obligatorio_mes_siguiente: float  # Calculado para el mes n+1
     dias_excluidos: Dict[str, List[str]]  # Días excluidos por tipo
     daily_averages: Optional[List[Dict[str, Any]]] = None
+
+class AdvancedDailyReportResponse(BaseModel):
+    fecha: date
+    ifo_sistema: float
+    ifo_objetivo: float
+    total_buses: int
+    ranking_eots: List[Dict[str, Any]]
+    buses_by_hour: List[Dict[str, Any]]  # {hour, real, base, ifo, diff}
+    franjas_by_eot: List[Dict[str, Any]] # {eot, franjas: [{denominacion, ifo}]}
