@@ -141,7 +141,7 @@ const AdvancedPerformanceModal = ({ isOpen, onClose, fecha, theme }) => {
                     onClick={() => setSelectedEot(eot)}
                   >
                     <span className="eot-name">{eot.name || eot.eot_nombre}</span>
-                    <span className={`eot-badge ${val >= (data?.ifo_objetivo || 90) ? 'good' : 'bad'}`}>
+                    <span className={`eot-badge ${val >= (activeTab === 'daily' ? (data?.ifo_objetivo || 90) : (monthlyData?.umbral_obligatorio_mes_siguiente || 90)) ? 'good' : 'bad'}`}>
                       {val.toFixed(1)}%
                     </span>
                   </div>
@@ -186,33 +186,47 @@ const AdvancedPerformanceModal = ({ isOpen, onClose, fecha, theme }) => {
                         <div className="chart-row stretch">
                           <div className="chart-card border-shadow">
                             <h4>Ranking por Empresa (IFO %)</h4>
-                            <ResponsiveContainer width="100%" height={300}>
-                              <BarChart data={data.ranking_eots} layout="vertical" margin={{left: 20}}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                <XAxis type="number" domain={[0, 110]} />
-                                <YAxis dataKey="name" type="category" width={120} fontSize={10} />
-                                <Tooltip cursor={{fill: 'rgba(0,0,0,0.05)'}} />
-                                <Bar dataKey="ifo" radius={[0, 4, 4, 0]}>
-                                  {data.ranking_eots.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={entry.ifo >= data.ifo_objetivo ? GREEN : RED} />
-                                  ))}
-                                </Bar>
-                                <ReferenceLine x={data.ifo_objetivo} stroke="#f59e0b" strokeDasharray="5 5" label={{position: 'top', value: 'META', fontSize: 10, fill: '#f59e0b'}} />
-                              </BarChart>
-                            </ResponsiveContainer>
+                            {data.ranking_eots.length === 0 ? (
+                              <div className="no-data-info">
+                                <p>No hay datos de ranking para esta fecha.</p>
+                                <span className="sub">Es posible que la fecha seleccionada aún no tenga datos procesados.</span>
+                              </div>
+                            ) : (
+                              <ResponsiveContainer width="100%" height={300}>
+                                <BarChart data={data.ranking_eots} layout="vertical" margin={{left: 20}}>
+                                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                  <XAxis type="number" domain={[0, 110]} />
+                                  <YAxis dataKey="name" type="category" width={120} fontSize={10} />
+                                  <Tooltip cursor={{fill: 'rgba(0,0,0,0.05)'}} />
+                                  <Bar dataKey="ifo" radius={[0, 4, 4, 0]}>
+                                    {data.ranking_eots.map((entry, index) => (
+                                      <Cell key={`cell-${index}`} fill={entry.ifo >= data.ifo_objetivo ? GREEN : RED} />
+                                    ))}
+                                  </Bar>
+                                  <ReferenceLine x={data.ifo_objetivo} stroke="#f59e0b" strokeDasharray="5 5" label={{position: 'top', value: 'META', fontSize: 10, fill: '#f59e0b'}} />
+                                </BarChart>
+                              </ResponsiveContainer>
+                            )}
                           </div>
                           <div className="chart-card border-shadow">
                             <h4>Buses Observados vs Base (AMA)</h4>
-                            <ResponsiveContainer width="100%" height={300}>
-                              <AreaChart data={data.buses_by_hour}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="hour" label={{value: 'Hora', position: 'bottom', fontSize: 10}} />
-                                <YAxis />
-                                <Tooltip />
-                                <Area type="monotone" dataKey="real" name="Obs. Real" stroke="#2563eb" fill="#2563eb" fillOpacity={0.1} strokeWidth={2} />
-                                <Line type="stepAfter" dataKey="base" name="Base CBD" stroke={GRAY} strokeDasharray="5 5" dot={false} />
-                              </AreaChart>
-                            </ResponsiveContainer>
+                            {data.buses_by_hour.length === 0 ? (
+                              <div className="no-data-info">
+                                <p>No hay datos de buses para esta fecha.</p>
+                                <span className="sub">Verifique si se han cargado datos maestros de operación (CBD).</span>
+                              </div>
+                            ) : (
+                              <ResponsiveContainer width="100%" height={300}>
+                                <AreaChart data={data.buses_by_hour}>
+                                  <CartesianGrid strokeDasharray="3 3" />
+                                  <XAxis dataKey="hour" label={{value: 'Hora', position: 'bottom', fontSize: 10}} />
+                                  <YAxis />
+                                  <Tooltip />
+                                  <Area type="monotone" dataKey="real" name="Obs. Real" stroke="#2563eb" fill="#2563eb" fillOpacity={0.1} strokeWidth={2} />
+                                  <Line type="stepAfter" dataKey="base" name="Base CBD" stroke={GRAY} strokeDasharray="5 5" dot={false} />
+                                </AreaChart>
+                              </ResponsiveContainer>
+                            )}
                           </div>
                         </div>
                       </>
