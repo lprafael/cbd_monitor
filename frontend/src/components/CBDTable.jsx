@@ -381,6 +381,31 @@ const CBDTable = ({ cbdData }) => {
 
         const { listOperaron, listBajoNivel, listNoOperaron } = categorizeEots();
 
+        const getBusesForEot = (eot) => {
+          if (analysisFilter === 'all') {
+            return Math.max(eot.fila_servicios.total || 0, eot.fila_cbd.total || 0);
+          } else {
+            const filterKey = analysisFilter === 'last_closed' ? lastClosedKey : analysisFilter;
+            if (!filterKey) return 0;
+            const valServ = eot.fila_servicios.datos_por_franja[filterKey]?.cantidad_buses || 0;
+            const valCbd = eot.fila_cbd.datos_por_franja[filterKey]?.cantidad_buses || 0;
+            return Math.max(valServ, valCbd);
+          }
+        };
+
+        const getGremioSummary = (list) => {
+          const summary = {};
+          list.forEach(eot => {
+            const gremio = eot.gre_nombre || 'Sin Gremio';
+            if (!summary[gremio]) {
+              summary[gremio] = { empresas: 0, buses: 0 };
+            }
+            summary[gremio].empresas += 1;
+            summary[gremio].buses += getBusesForEot(eot);
+          });
+          return Object.entries(summary).sort((a, b) => b[1].empresas - a[1].empresas);
+        };
+
         return (
           <div className="modal-overlay">
             <div className="modal-content analysis-modal">
@@ -416,16 +441,37 @@ const CBDTable = ({ cbdData }) => {
                   <h3>Operaron</h3>
                   <span className="summary-number">{listOperaron.length}</span>
                   <span className="summary-label">empresas</span>
+                  <div className="gremio-breakdown">
+                    {getGremioSummary(listOperaron).map(([gremio, data]) => (
+                      <div key={gremio} className="gremio-item">
+                        <strong>{gremio}</strong>: {data.empresas} empresas / {data.buses} buses
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 <div className="summary-card bajo-nivel">
                   <h3>Bajo nivel (&lt; Mínimo)</h3>
                   <span className="summary-number">{listBajoNivel.length}</span>
                   <span className="summary-label">empresas</span>
+                  <div className="gremio-breakdown">
+                    {getGremioSummary(listBajoNivel).map(([gremio, data]) => (
+                      <div key={gremio} className="gremio-item">
+                        <strong>{gremio}</strong>: {data.empresas} empresas / {data.buses} buses
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 <div className="summary-card no-operaron">
                   <h3>No Operaron</h3>
                   <span className="summary-number">{listNoOperaron.length}</span>
                   <span className="summary-label">empresas</span>
+                  <div className="gremio-breakdown">
+                    {getGremioSummary(listNoOperaron).map(([gremio, data]) => (
+                      <div key={gremio} className="gremio-item">
+                        <strong>{gremio}</strong>: {data.empresas} empresas / {data.buses} buses
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
               
