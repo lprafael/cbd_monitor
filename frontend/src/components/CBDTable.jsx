@@ -5,10 +5,12 @@
  * - Checks (✓) cuando se cumplen los parámetros mínimos
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import './CBDTable.css';
 
 const CBDTable = ({ cbdData }) => {
+  const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false);
+
   if (!cbdData) {
     return (
       <div className="empty-state">
@@ -289,7 +291,67 @@ const CBDTable = ({ cbdData }) => {
             </div>
           </div>
         </div>
+        <div className="analysis-actions">
+          <button className="btn-analizar-operativa" onClick={() => setIsAnalysisModalOpen(true)}>
+            📊 Analizar operativa
+          </button>
+        </div>
       </div>
+
+      {isAnalysisModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content analysis-modal">
+            <button className="modal-close" onClick={() => setIsAnalysisModalOpen(false)}>×</button>
+            <h2>Análisis de Operativa</h2>
+            
+            <div className="analysis-summary">
+              <div className="summary-card operaron">
+                <h3>Operaron</h3>
+                <span className="summary-number">
+                  {cbdData?.datos_eots?.filter(eot => eot.fila_servicios.total > 0 || eot.fila_cbd.total > 0).length || 0}
+                </span>
+                <span className="summary-label">empresas</span>
+              </div>
+              <div className="summary-card no-operaron">
+                <h3>No Operaron</h3>
+                <span className="summary-number">
+                  {cbdData?.datos_eots?.filter(eot => eot.fila_servicios.total === 0 && eot.fila_cbd.total === 0).length || 0}
+                </span>
+                <span className="summary-label">empresas</span>
+              </div>
+            </div>
+            
+            <div className="analysis-details">
+              <div className="detail-section">
+                <h4 className="success-text">Empresas que operaron</h4>
+                <div className="company-list-container">
+                  <ul className="company-list">
+                    {(cbdData?.datos_eots?.filter(eot => eot.fila_servicios.total > 0 || eot.fila_cbd.total > 0) || []).map(empresa => (
+                      <li key={empresa.eot_id}>
+                        <span className="empresa-nombre">{empresa.eot_nombre}</span>
+                        {empresa.gre_nombre && <span className="empresa-gremio">{empresa.gre_nombre}</span>}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+              <div className="detail-section">
+                <h4 className="danger-text">Empresas que NO operaron</h4>
+                <div className="company-list-container">
+                  <ul className="company-list">
+                    {(cbdData?.datos_eots?.filter(eot => eot.fila_servicios.total === 0 && eot.fila_cbd.total === 0) || []).map(empresa => (
+                      <li key={empresa.eot_id}>
+                        <span className="empresa-nombre">{empresa.eot_nombre}</span>
+                        {empresa.gre_nombre && <span className="empresa-gremio">{empresa.gre_nombre}</span>}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
