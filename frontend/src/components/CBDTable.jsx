@@ -10,6 +10,7 @@ import './CBDTable.css';
 
 const CBDTable = ({ cbdData }) => {
   const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false);
+  const [analysisFilter, setAnalysisFilter] = useState('all');
 
   if (!cbdData) {
     return (
@@ -298,60 +299,181 @@ const CBDTable = ({ cbdData }) => {
         </div>
       </div>
 
-      {isAnalysisModalOpen && (
-        <div className="modal-overlay">
-          <div className="modal-content analysis-modal">
-            <button className="modal-close" onClick={() => setIsAnalysisModalOpen(false)}>×</button>
-            <h2>Análisis de Operativa</h2>
-            
-            <div className="analysis-summary">
-              <div className="summary-card operaron">
-                <h3>Operaron</h3>
-                <span className="summary-number">
-                  {cbdData?.datos_eots?.filter(eot => eot.fila_servicios.total > 0 || eot.fila_cbd.total > 0).length || 0}
-                </span>
-                <span className="summary-label">empresas</span>
-              </div>
-              <div className="summary-card no-operaron">
-                <h3>No Operaron</h3>
-                <span className="summary-number">
-                  {cbdData?.datos_eots?.filter(eot => eot.fila_servicios.total === 0 && eot.fila_cbd.total === 0).length || 0}
-                </span>
-                <span className="summary-label">empresas</span>
-              </div>
-            </div>
-            
-            <div className="analysis-details">
-              <div className="detail-section">
-                <h4 className="success-text">Empresas que operaron</h4>
-                <div className="company-list-container">
-                  <ul className="company-list">
-                    {(cbdData?.datos_eots?.filter(eot => eot.fila_servicios.total > 0 || eot.fila_cbd.total > 0) || []).map(empresa => (
-                      <li key={empresa.eot_id}>
-                        <span className="empresa-nombre">{empresa.eot_nombre}</span>
-                        {empresa.gre_nombre && <span className="empresa-gremio">{empresa.gre_nombre}</span>}
-                      </li>
+      {isAnalysisModalOpen && (() => {
+        // Find last closed period
+        const determineLastClosedKey = () => {
+          const currentHour = new Date().getHours();
+          if (modo_visualizacion === 'hora') {
+            const targetHour = currentHour - 1;
+            const found = headers.find(h => h.key === String(targetHour));
+            return found ? found.key : null;
+          } else {
+            const now = new Date();
+            const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
+            let lastClosed = null;
+            if (franjas_operativas) {
+              for (const f of franjas_operativas) {
+                let [hFin, mFin] = f.hora_fin.split(':').map(Number);
+                if (hFin === 24) { hFin = 23; mFin = 59; }
+                const endTotalMinutes = hFin * 60 + mFin;
+                if (currentTotalMinutes > endTotalMinutes) {
+                  lastClosed = String(f.id_franja);
+                }
+              }
+            }
+            return lastClosed;
+          }
+        };
+
+        const lastClosedKey = determineLastClosedKey();
+
+        const categorizeEots = () => {
+          const listOperaron = [];
+          const listBajoNivel = [];
+          const listNoOperaron = [];
+
+          (cbdData?.datos_eots || []).forEach(eot => {
+            if (analysisFilter === 'all') {
+              const total = eot.fila_servicios.total > 0 || eot.fila_cbd.total > 0;
+              if (!total) {
+                listNoOperaron.push(eot);
+              } else {
+                let meetsAtLeastOne = false;
+                headers.forEach(h => {
+                  const serv = eot.fila_servicios.datos_por_franja[h.key];
+                  const cbd = eot.fila_cbd.datos_por_franja[h.key];
+                  if (serv?.cumple_parametro || cbd?.cumple_parametro) {
+                    meetsAtLeastOne = true;
+                  }
+                });
+                if (meetsAtLeastOne) {
+                  listOperaron.push(eot);
+                } else {
+                  listBajoNivel.push(eot);
+                }
+              }
+            } else {
+              const filterKey = analysisFilter === 'last_closed' ? lastClosedKey : analysisFilter;
+              if (!filterKey) return;
+              
+              const serv = eot.fila_servicios.datos_por_franja[filterKey];
+              const cbd = eot.fila_cbd.datos_por_franja[filterKey];
+              const valServ = serv?.cantidad_buses || 0;
+              const valCbd = cbd?.cantidad_buses || 0;
+              const cumpleServ = serv?.cumple_parametro === true;
+              const cumpleCbd = cbd?.cumple_parametro === true;
+
+              const operated = valServ > 0 || valCbd > 0;
+              const cumple = cumpleServ || cumpleCbd;
+
+              if (!operated) {
+                listNoOperaron.push(eot);
+              } else if (cumple) {
+                listOperaron.push(eot);
+              } else {
+                listBajoNivel.push(eot);
+              }
+            }
+          });
+
+          return { listOperaron, listBajoNivel, listNoOperaron };
+        };
+
+        const { listOperaron, listBajoNivel, listNoOperaron } = categorizeEots();
+
+        return (
+          <div className="modal-overlay">
+            <div className="modal-content analysis-modal">
+              <button className="modal-close" onClick={() => setIsAnalysisModalOpen(false)}>×</button>
+              <h2>Análisis de Operativa</h2>
+              
+              <div className="analysis-controls">
+                <label htmlFor="analysis-filter">Período de análisis:</label>
+                <select 
+                  id="analysis-filter" 
+                  value={analysisFilter} 
+                  onChange={(e) => setAnalysisFilter(e.target.value)}
+                  className="analysis-select"
+                >
+                  <option value="all">Todo el día</option>
+                  {lastClosedKey && (
+                    <option value="last_closed">
+                      Última {modo_visualizacion === 'hora' ? 'hora' : 'franja'} cerrada ({headers.find(h => h.key === lastClosedKey)?.label || lastClosedKey})
+                    </option>
+                  )}
+                  <optgroup label={modo_visualizacion === 'hora' ? "Por hora específica" : "Por franja específica"}>
+                    {headers.map(h => (
+                      <option key={h.key} value={h.key}>
+                        {h.label} {h.subtitle ? `(${h.subtitle})` : ''}
+                      </option>
                     ))}
-                  </ul>
+                  </optgroup>
+                </select>
+              </div>
+            
+              <div className="analysis-summary">
+                <div className="summary-card operaron">
+                  <h3>Operaron</h3>
+                  <span className="summary-number">{listOperaron.length}</span>
+                  <span className="summary-label">empresas</span>
+                </div>
+                <div className="summary-card bajo-nivel">
+                  <h3>Bajo nivel (&lt; Mínimo)</h3>
+                  <span className="summary-number">{listBajoNivel.length}</span>
+                  <span className="summary-label">empresas</span>
+                </div>
+                <div className="summary-card no-operaron">
+                  <h3>No Operaron</h3>
+                  <span className="summary-number">{listNoOperaron.length}</span>
+                  <span className="summary-label">empresas</span>
                 </div>
               </div>
-              <div className="detail-section">
-                <h4 className="danger-text">Empresas que NO operaron</h4>
-                <div className="company-list-container">
-                  <ul className="company-list">
-                    {(cbdData?.datos_eots?.filter(eot => eot.fila_servicios.total === 0 && eot.fila_cbd.total === 0) || []).map(empresa => (
-                      <li key={empresa.eot_id}>
-                        <span className="empresa-nombre">{empresa.eot_nombre}</span>
-                        {empresa.gre_nombre && <span className="empresa-gremio">{empresa.gre_nombre}</span>}
-                      </li>
-                    ))}
-                  </ul>
+              
+              <div className="analysis-details">
+                <div className="detail-section">
+                  <h4 className="success-text">Operaron (Cumplen)</h4>
+                  <div className="company-list-container">
+                    <ul className="company-list">
+                      {listOperaron.map(empresa => (
+                        <li key={empresa.eot_id}>
+                          <span className="empresa-nombre">{empresa.eot_nombre}</span>
+                          {empresa.gre_nombre && <span className="empresa-gremio">{empresa.gre_nombre}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+                <div className="detail-section">
+                  <h4 className="warning-text">Bajo nivel</h4>
+                  <div className="company-list-container">
+                    <ul className="company-list">
+                      {listBajoNivel.map(empresa => (
+                        <li key={empresa.eot_id}>
+                          <span className="empresa-nombre">{empresa.eot_nombre}</span>
+                          {empresa.gre_nombre && <span className="empresa-gremio">{empresa.gre_nombre}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+                <div className="detail-section">
+                  <h4 className="danger-text">NO operaron</h4>
+                  <div className="company-list-container">
+                    <ul className="company-list">
+                      {listNoOperaron.map(empresa => (
+                        <li key={empresa.eot_id}>
+                          <span className="empresa-nombre">{empresa.eot_nombre}</span>
+                          {empresa.gre_nombre && <span className="empresa-gremio">{empresa.gre_nombre}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };

@@ -391,19 +391,54 @@
 .analysis-modal h2 {
   color: #1e293b;
   margin-top: 0;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
   font-size: 1.5rem;
   text-align: center;
 }
 
-.analysis-summary {
+.analysis-controls {
   display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  background-color: #f1f5f9;
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+.analysis-controls label {
+  font-weight: 600;
+  color: #334155;
+  font-size: 1rem;
+}
+
+.analysis-select {
+  padding: 0.5rem 1rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background-color: white;
+  font-size: 1rem;
+  color: #0f172a;
+  outline: none;
+  cursor: pointer;
+  min-width: 250px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.analysis-select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.analysis-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem;
   margin-bottom: 2rem;
 }
 
 .summary-card {
-  flex: 1;
   background: #f8fafc;
   border-radius: 12px;
   padding: 1.5rem;
@@ -439,6 +474,15 @@
   color: #16a34a;
 }
 
+.summary-card.bajo-nivel {
+  background-color: #fffbeb;
+  border-color: #fde68a;
+}
+
+.summary-card.bajo-nivel .summary-number {
+  color: #d97706;
+}
+
 .summary-card.no-operaron {
   background-color: #fef2f2;
   border-color: #fecaca;
@@ -450,12 +494,12 @@
 
 .analysis-details {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem;
 }
 
-@media (max-width: 640px) {
-  .analysis-details {
+@media (max-width: 900px) {
+  .analysis-details, .analysis-summary {
     grid-template-columns: 1fr;
   }
 }
@@ -480,6 +524,11 @@
 .success-text {
   color: #16a34a;
   border-bottom-color: #bbf7d0 !important;
+}
+
+.warning-text {
+  color: #d97706;
+  border-bottom-color: #fde68a !important;
 }
 
 .danger-text {
