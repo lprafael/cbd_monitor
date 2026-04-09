@@ -4,7 +4,7 @@
   "description": "Monitor de Control de Buses Distintos para empresas operadoras de transporte",
   "icons": [
     {
-      "src": "logo_sicom.png",
+      "src": "imagenes/logo_sicom.png",
       "sizes": "512x512",
       "type": "image/png"
     }
