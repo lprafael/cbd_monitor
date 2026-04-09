@@ -257,6 +257,7 @@ function App({ onLogout, user }) {
           onLogout={onLogout}
           user={user}
           onOpenAdvanced={() => setShowAdvancedModal(true)}
+          onOpenGraficoBuses={() => setShowGraficoBusesModal(true)}
         />
         <div className="content-wrapper">
           {isAdmin && (
@@ -317,7 +318,7 @@ function App({ onLogout, user }) {
         </div>
         <footer className="app-footer">
           <p>
-            Monitoreo de Indicadores de Desempeño (CBD/IFO) | Resolución GVMT Nº 120/2025 | CID - VMT
+            Sistema Integral de Control y Monitoreo (CBD/IFO) | Resolución GVMT Nº 120/2025 | CID - VMT
           </p>
         </footer>
         <ChatBot />
@@ -438,7 +439,7 @@ function App({ onLogout, user }) {
 
       <footer className="app-footer">
         <p>
-          Monitoreo de Indicadores de Desempeño (CBD/IFO) | Resolución GVMT Nº 120/2025 | CID - VMT
+          Sistema Integral de Control y Monitoreo (CBD/IFO) | Resolución GVMT Nº 120/2025 | CID - VMT
         </p>
       </footer>
       <ChatBot />

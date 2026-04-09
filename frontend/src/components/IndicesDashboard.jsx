@@ -169,11 +169,11 @@ const IndicesDashboard = ({ performanceData, fecha }) => {
     const nombreEmpresa = modalData?.eot_nombre || 'Reporte';
     const tipoReporte = modalType === 'cbd' ? 'CBD' : 'IFO';
     const fechaReporte = modalData?.fecha || '';
-    
+
     document.title = `${tipoReporte}_${nombreEmpresa}_${fechaReporte}`.replace(/[\s,]+/g, '_');
-    
+
     window.print();
-    
+
     // Restauramos el título después de un breve delay
     setTimeout(() => {
       document.title = originalTitle;
@@ -337,7 +337,7 @@ const ModalActions = ({ onEmail, onPrint, onDownload }) => (
 
 const ModalFooter = () => (
   <div className="modal-footer-info">
-    <p>Reporte generado automáticamente por el Sistema de Monitoreo de Indicadores de Desempeño.</p>
+    <p>Reporte generado automáticamente por el Sistema Integral de Control y Monitoreo.</p>
     <p>VMT - CID | Resolución GVMT Nº 120/2025</p>
   </div>
 );
