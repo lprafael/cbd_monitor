@@ -131,7 +131,7 @@ const Login = ({ onLogin, googleClientId }) => {
     <div className="login-container">
       <div className="login-card">
         <div className="login-header">
-          <h2>CBD Monitor - Login</h2>
+          <h2>Sistema Integral de Control y Monitoreo</h2>
           <p>Inicia sesión para continuar</p>
         </div>
 

@@ -26,7 +26,8 @@ const Header = ({
   setTheme,
   onLogout,
   user,
-  onOpenAdvanced
+  onOpenAdvanced,
+  onOpenGraficoBuses
 }) => {
   const handleEotChange = (e) => {
     const options = e.target.options;
@@ -37,7 +38,7 @@ const Header = ({
       return;
     }
 
-    if (viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'cbd-objetivo') {
+    if (viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'cbd-objetivo' || viewMode === 'buses-per-hour') {
       setSelectedEots([parseInt(e.target.value)]);
       return;
     }
@@ -52,6 +53,15 @@ const Header = ({
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    if (viewMode === 'buses-per-hour') {
+      if (selectedEots.length !== 1) {
+        alert('Por favor seleccione una empresa para ver el gráfico de buses por hora');
+        return;
+      }
+      onOpenGraficoBuses();
+      return;
+    }
 
     // Para IFO Sistema y Gráficos no se requiere selección de EOT
     if (viewMode !== 'system-ifo' && viewMode !== 'visual-charts' && selectedEots.length === 0) {
@@ -81,7 +91,7 @@ const Header = ({
           <h1 className="header-title">
             {/* 🚌 Monitor de Control de Buses Distintos (CBD) */}
             {/* iCONO DE ESTADISTICA */}
-            🚌 Monitor de Indicadores de Desempeño (CBD/IFO) 📊
+            🚌 Sistema Integral de Control y Monitoreo (CBD/IFO) 📊
           </h1>
 
           <div className="header-top-right">
@@ -153,8 +163,8 @@ const Header = ({
               </label>
               <select
                 id="eot-select"
-                multiple={viewMode !== 'monthly' && viewMode !== 'verify290' && viewMode !== 'system-ifo' && viewMode !== 'visual-charts' && viewMode !== 'cbd-objetivo'}
-                value={(viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'cbd-objetivo') && selectedEots.length > 0 ? selectedEots[0] : selectedEots.map(String)}
+                multiple={viewMode !== 'monthly' && viewMode !== 'verify290' && viewMode !== 'system-ifo' && viewMode !== 'visual-charts' && viewMode !== 'cbd-objetivo' && viewMode !== 'buses-per-hour'}
+                value={(viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'cbd-objetivo' || viewMode === 'buses-per-hour') && selectedEots.length > 0 ? selectedEots[0] : selectedEots.map(String)}
                 onChange={handleEotChange}
                 className="form-control eot-select"
                 size="5"
@@ -170,7 +180,7 @@ const Header = ({
               <small className="form-hint">
                 {viewMode === 'system-ifo' || viewMode === 'visual-charts'
                   ? 'No se requiere selección de EOT (incluye todas)'
-                  : (viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'cbd-objetivo')
+                  : (viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'cbd-objetivo' || viewMode === 'buses-per-hour')
                     ? 'Seleccione una sola empresa para el reporte'
                     : 'Mantén presionado Ctrl (Windows) o Cmd (Mac) para seleccionar múltiples'}
               </small>
@@ -288,16 +298,16 @@ const Header = ({
                       </label>
                     </>
                   )}
-                  {/* <label className="radio-label">
-                   <input
+                  <label className="radio-label">
+                    <input
                       type="radio"
                       name="viewMode"
-                      value="verify290"
-                      checked={viewMode === 'verify290'}
+                      value="buses-per-hour"
+                      checked={viewMode === 'buses-per-hour'}
                       onChange={(e) => setViewMode(e.target.value)}
                     />
-                    <span>📋 Verificar 290</span>
-                  </label> */}
+                    <span>📊 Buses/Hora</span>
+                  </label>
                 </div>
               </div>
 

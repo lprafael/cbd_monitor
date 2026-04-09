@@ -1,8 +1,11 @@
 import React from 'react';
 import './CBDTable.css';
 
-const CBDObjetivoTable = ({ data }) => {
+const CBDObjetivoTable = ({ data, userRole }) => {
     if (!data) return null;
+
+    const isViewer = userRole === 'viewer';
+
 
     const { eot_nombre, fechas, horas_label, franjas_metadata, datos } = data;
 
@@ -20,7 +23,11 @@ const CBDObjetivoTable = ({ data }) => {
                 </div>
                 <p className="table-description">
                     Esta tabla muestra la cantidad de buses necesaria para mantener un <b>IFO del 100%</b>.
-                    Se muestran dos filas por fecha: la primera con el objetivo <b>por hora</b> y la segunda con el objetivo consolidado <b>por franja</b>.
+                    {!isViewer ? (
+                        <>Se muestran dos filas por fecha: la primera con el objetivo <b>por hora</b> y la segunda con el objetivo consolidado <b>por franja</b>. </>
+                    ) : (
+                        <>Se muestra el objetivo de buses necesarios <b>por hora</b> para cumplir con la programación.</>
+                    )}
                 </p>
             </div>
 
@@ -60,37 +67,39 @@ const CBDObjetivoTable = ({ data }) => {
                                         ))}
                                     </tr>
 
-                                    {/* Fila POR FRANJA (usando colspan para alinear) */}
-                                    <tr className="fila-cbd">
-                                        <td className="sticky-col">
-                                            <small>(Por Franja)</small>
-                                        </td>
-                                        {metadata.map((fr, idx) => {
-                                            // Calcular cuántas horas abarca esta franja dentro de nuestro rango (4-23)
-                                            const inicio = Math.max(4, fr.hora_inicio);
-                                            const fin = Math.min(23, fr.hora_fin);
-                                            const span = fin - inicio + 1;
+                                    {/* Fila POR FRANJA (usando colspan para alinear) - Oculta para visualizadores */}
+                                    {!isViewer && (
+                                        <tr className="fila-cbd">
+                                            <td className="sticky-col">
+                                                <small>(Por Franja)</small>
+                                            </td>
+                                            {metadata.map((fr, idx) => {
+                                                // Calcular cuántas horas abarca esta franja dentro de nuestro rango (4-23)
+                                                const inicio = Math.max(4, fr.hora_inicio);
+                                                const fin = Math.min(23, fr.hora_fin);
+                                                const span = fin - inicio + 1;
 
-                                            if (span <= 0) return null;
+                                                if (span <= 0) return null;
 
-                                            return (
-                                                <td
-                                                    key={fr.id_franja}
-                                                    colSpan={span}
-                                                    className="celda-datos cumple"
-                                                >
-                                                    <div className="celda-content" style={{ flexDirection: 'column', gap: '2px' }}>
-                                                        <span className="cantidad" style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>
-                                                            {diaDatos.franjas[fr.id_franja]}
-                                                        </span>
-                                                        <small style={{ fontSize: '0.7rem', opacity: 0.8, textAlign: 'center' }}>
-                                                            {fr.denominacion}
-                                                        </small>
-                                                    </div>
-                                                </td>
-                                            );
-                                        })}
-                                    </tr>
+                                                return (
+                                                    <td
+                                                        key={fr.id_franja}
+                                                        colSpan={span}
+                                                        className="celda-datos cumple"
+                                                    >
+                                                        <div className="celda-content" style={{ flexDirection: 'column', gap: '2px' }}>
+                                                            <span className="cantidad" style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>
+                                                                {diaDatos.franjas[fr.id_franja]}
+                                                            </span>
+                                                            <small style={{ fontSize: '0.7rem', opacity: 0.8, textAlign: 'center' }}>
+                                                                {fr.denominacion}
+                                                            </small>
+                                                        </div>
+                                                    </td>
+                                                );
+                                            })}
+                                        </tr>
+                                    )}
 
                                     {/* Separador visual entre fechas */}
                                     <tr className="separador-fila">
@@ -107,8 +116,10 @@ const CBDObjetivoTable = ({ data }) => {
                 <div className="legend">
                     <h3>Nota metodológica:</h3>
                     <p>
-                        • <b>Fila Superior:</b> Cantidad de buses distintos por hora.<br />
-                        • <b>Fila Inferior:</b> Cantidad de buses distintos necesarios en el conjunto de la franja.
+                        • <b>Fila Superior:</b> Cantidad de buses distintos por hora.
+                        {!isViewer && (
+                            <><br />• <b>Fila Inferior:</b> Cantidad de buses distintos necesarios en el conjunto de la franja.</>
+                        )}
                     </p>
                 </div>
             </div>

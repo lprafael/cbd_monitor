@@ -17,6 +17,7 @@ import ChatBot from './components/ChatBot';
 import CBDObjetivoTable from './components/CBDObjetivoTable';
 import SystemChartsDashboard from './components/SystemChartsDashboard';
 import AdvancedPerformanceModal from './components/AdvancedPerformanceModal';
+import GraficoBusesModal from './components/GraficoBusesModal';
 import './App.css';
 import './components/IndicesDashboard.css';
 import { API_BASE_URL } from './config';
@@ -41,6 +42,7 @@ function App({ onLogout, user }) {
   const [adminTab, setAdminTab] = useState('users'); // 'users' | 'audit'
   const [headerVisible, setHeaderVisible] = useState(true); // Control visibilidad header
   const [showAdvancedModal, setShowAdvancedModal] = useState(false); // Modal avanzado estilo Power BI
+  const [showGraficoBusesModal, setShowGraficoBusesModal] = useState(false); // Modal gráfico buses/hora
 
   // Verificar si el usuario es admin
   const isAdmin = user && user.rol === 'admin';
@@ -359,6 +361,7 @@ function App({ onLogout, user }) {
           onLogout={onLogout}
           user={user}
           onOpenAdvanced={() => setShowAdvancedModal(true)}
+          onOpenGraficoBuses={() => setShowGraficoBusesModal(true)}
         />
       )}
 
@@ -415,7 +418,7 @@ function App({ onLogout, user }) {
         )}
 
         {viewMode === 'cbd-objetivo' && !loading && !error && cbdObjetivoData && (
-          <CBDObjetivoTable data={cbdObjetivoData} />
+          <CBDObjetivoTable data={cbdObjetivoData} userRole={user?.rol} />
         )}
 
         {viewMode === 'system-ifo' && (
@@ -445,6 +448,12 @@ function App({ onLogout, user }) {
         onClose={() => setShowAdvancedModal(false)}
         fecha={fecha}
         theme={theme}
+      />
+      <GraficoBusesModal
+        isOpen={showGraficoBusesModal}
+        onClose={() => setShowGraficoBusesModal(false)}
+        fecha={fecha}
+        selectedEots={selectedEots}
       />
     </div>
   );

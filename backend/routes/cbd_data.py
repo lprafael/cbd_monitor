@@ -1,8 +1,8 @@
 """Rutas para manejar operaciones relacionadas con datos de CBD."""
 
-from fastapi import APIRouter, HTTPException, Depends
-from typing import List, Dict
-from datetime import datetime
+from fastapi import APIRouter, HTTPException, Depends, Query
+from typing import List, Dict, Optional
+from datetime import datetime, date
 from models.schemas import (
     CBDDataRequest, CBDDataResponse, DatosEOT, FilaEOT, DatoCelda, FranjaOperativa
 )
@@ -595,3 +595,46 @@ async def get_cbd_data(
             status_code=500,
             detail=f"Error al obtener datos de CBD: {str(e)}"
         )
+
+
+# ── Nuevo endpoint: CBD por hora para todas las EOTs ────────────────────────
+
+
+@router.get("/buses-por-hora/{fecha}")
+async def get_buses_por_hora(
+    fecha: date,
+    eot_ids: Optional[List[int]] = Query(None),
+    db: DatabaseConnection = Depends(get_db_connection)
+):
+    """
+    Devuelve la cantidad de buses distintos por hora para las EOTs seleccionadas 
+    en la fecha indicada. Si no se especifican eot_ids, devuelve todas.
+    """
+    cursor = db.get_cursor()
+    try:
+        where_params = [fecha]
+        where_clause = "WHERE sd.fecha = %s AND sd.hora BETWEEN 4 AND 23 AND sd.id_eot_catalogo NOT IN (72, 75)"
+        
+        if eot_ids:
+            where_clause += " AND sd.id_eot_catalogo = ANY(%s)"
+            where_params.append(eot_ids)
+
+        query = f"""
+            SELECT
+                sd.hora,
+                sd.id_eot_catalogo                      AS eot_id,
+                e.eot_nombre,
+                COUNT(DISTINCT sd.idsam)::integer        AS cantidad
+            FROM public.servicios_diarios sd
+            INNER JOIN public.eots e ON e.cod_catalogo = sd.id_eot_catalogo
+            {where_clause}
+            GROUP BY sd.hora, sd.id_eot_catalogo, e.eot_nombre
+            ORDER BY sd.hora, e.eot_nombre
+        """
+        cursor.execute(query, where_params)
+        rows = cursor.fetchall()
+        return [dict(r) for r in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()

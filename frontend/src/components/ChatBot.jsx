@@ -14,10 +14,10 @@ const ChatBot = () => {
     const style = document.createElement('style');
     style.textContent = `
       :root {
-        --sintra-primary: #0f172a;
-        --sintra-accent: #10b981;
-        --sintra-bg: #ffffff;
-        --sintra-text: #1e293b;
+        --chatbus-primary: #0f172a;
+        --chatbus-accent: #10b981;
+        --chatbus-bg: #ffffff;
+        --chatbus-text: #1e293b;
       }
       
       .n8n-chat-widget {
@@ -132,10 +132,10 @@ const ChatBot = () => {
       };
 
       // Usar el email si existe, sino un ID aleatorio persistente
-      let sessionId = localStorage.getItem('sintra_chat_session');
+      let sessionId = localStorage.getItem('chatbus_session');
       if (!sessionId) {
         sessionId = user.email || ('session_' + Math.random().toString(36).substring(2, 11));
-        localStorage.setItem('sintra_chat_session', sessionId);
+        localStorage.setItem('chatbus_session', sessionId);
       }
 
       return import('https://cdn.jsdelivr.net/npm/@n8n/chat/dist/chat.bundle.es.js')
@@ -148,14 +148,14 @@ const ChatBot = () => {
             metadata: metadata, // userName y empresa para que el chatbot salude por nombre y tenga contexto de empresa
             i18n: {
               en: {
-                title: 'SINTRA 👋',
+                title: 'CHATBUS 🤖',
                 subtitle: 'Inteligenia de Transporte MOPC',
                 inputPlaceholder: 'Escribe tu consulta aquí...',
                 getStarted: 'Comenzar ahora',
               }
             },
             initialMessages: [
-              userName ? ('👋 ¡Hola ' + userName + '! Soy **SINTRA**.') : '👋 ¡Hola! Soy **SINTRA**.',
+              userName ? ('👋 ¡Hola ' + userName + '! Soy **CHATBUS**.') : '👋 ¡Hola! Soy **CHATBUS**.',
               'Mantengo el contexto de nuestra última charla. ¿En qué más puedo ayudarte?'
             ],
             theme: {
