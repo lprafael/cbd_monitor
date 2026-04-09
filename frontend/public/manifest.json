@@ -2,7 +2,13 @@
   "short_name": "CBD Monitor",
   "name": "Sistema Integral de Control y Monitoreo (CBD/IFO)",
   "description": "Monitor de Control de Buses Distintos para empresas operadoras de transporte",
-  "icons": [],
+  "icons": [
+    {
+      "src": "logo_sicom.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
   "start_url": ".",
   "display": "standalone",
   "theme_color": "#000000",
