@@ -149,7 +149,7 @@ const ChatBot = () => {
             i18n: {
               en: {
                 title: 'CHATBUS 🤖',
-                subtitle: 'Inteligenia de Transporte MOPC',
+                subtitle: 'Inteligencia de Transporte MOPC',
                 inputPlaceholder: 'Escribe tu consulta aquí...',
                 getStarted: 'Comenzar ahora',
               }
