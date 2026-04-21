@@ -21,9 +21,13 @@ const COLORS = [
 ];
 
 // ── Tooltip personalizado ────────────────────────────────────────────────────
-const CustomTooltip = ({ active, payload, label }) => {
+const CustomTooltip = ({ active, payload, label, viewMode }) => {
   if (!active || !payload || !payload.length) return null;
   const total = payload.reduce((s, p) => s + (p.value || 0), 0);
+  
+  // Si estamos en modo sistema, el primer payload ya es el total
+  const displayTotal = viewMode === 'sistema' ? payload[0].value : total;
+
   return (
     <div style={{
       background: '#1e293b', borderRadius: 10, padding: '12px 18px',
@@ -31,14 +35,20 @@ const CustomTooltip = ({ active, payload, label }) => {
       maxHeight: 340, overflowY: 'auto', minWidth: 200
     }}>
       <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 8, color: '#60a5fa' }}>
-        🕐 {label}:00 hs — Total: <span style={{ color: '#34d399' }}>{total}</span>
+        🕐 {label}:00 hs — Total: <span style={{ color: '#34d399' }}>{displayTotal}</span>
       </div>
-      {payload.sort((a, b) => b.value - a.value).map((p, i) => (
+      {viewMode === 'empresas' && payload.sort((a, b) => b.value - a.value).map((p, i) => (
         <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 2 }}>
           <span style={{ color: p.fill }}>{p.name}</span>
           <span style={{ fontWeight: 600 }}>{p.value}</span>
         </div>
       ))}
+      {viewMode === 'sistema' && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 2 }}>
+          <span style={{ color: '#3b82f6' }}>Total Sistema</span>
+          <span style={{ fontWeight: 600 }}>{displayTotal}</span>
+        </div>
+      )}
     </div>
   );
 };
@@ -48,6 +58,7 @@ const GraficoBusesModal = ({ isOpen, onClose, fecha, selectedEots }) => {
   const [empresas, setEmpresas] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [viewMode, setViewMode] = useState('empresas'); // 'empresas' | 'sistema'
 
   useEffect(() => {
     if (!isOpen || !fecha) return;
@@ -124,12 +135,58 @@ const GraficoBusesModal = ({ isOpen, onClose, fecha, selectedEots }) => {
             <h2 style={{ margin: 0, color: '#f1f5f9', fontSize: 22, fontWeight: 700 }}>
               📊 Buses CBD por Hora — Sistema AMA
             </h2>
-            <span style={{ color: '#64748b', fontSize: 13 }}>
-              Fecha: <b style={{ color: '#94a3b8' }}>{fecha}</b>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 15, marginTop: 4 }}>
+              <span style={{ color: '#64748b', fontSize: 13 }}>
+                Fecha: <b style={{ color: '#94a3b8' }}>{fecha}</b>
+                {!loading && chartData.length > 0 && (
+                  <> · {empresas.length} empresas</>
+                )}
+              </span>
+              
+              {/* Selector de modo de vista */}
               {!loading && chartData.length > 0 && (
-                <> · {empresas.length} empresas</>
+                <div style={{ 
+                  display: 'flex', 
+                  background: '#0f172a', 
+                  borderRadius: 8, 
+                  padding: 3,
+                  border: '1px solid #334155'
+                }}>
+                  <button
+                    onClick={() => setViewMode('sistema')}
+                    style={{
+                      background: viewMode === 'sistema' ? '#1e40af' : 'transparent',
+                      color: viewMode === 'sistema' ? '#fff' : '#94a3b8',
+                      border: 'none',
+                      borderRadius: 6,
+                      padding: '4px 12px',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    Todo el sistema
+                  </button>
+                  <button
+                    onClick={() => setViewMode('empresas')}
+                    style={{
+                      background: viewMode === 'empresas' ? '#1e40af' : 'transparent',
+                      color: viewMode === 'empresas' ? '#fff' : '#94a3b8',
+                      border: 'none',
+                      borderRadius: 6,
+                      padding: '4px 12px',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    Por empresa
+                  </button>
+                </div>
               )}
-            </span>
+            </div>
           </div>
           <button
             onClick={onClose}
@@ -194,6 +251,10 @@ const GraficoBusesModal = ({ isOpen, onClose, fecha, selectedEots }) => {
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 24 }}>
                     <defs>
+                      <linearGradient id="grad-total" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.7} />
+                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.05} />
+                      </linearGradient>
                       {empresas.map((emp, i) => (
                         <linearGradient key={emp} id={`grad-${i}`} x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor={COLORS[i % COLORS.length]} stopOpacity={0.7} />
@@ -216,7 +277,7 @@ const GraficoBusesModal = ({ isOpen, onClose, fecha, selectedEots }) => {
                       tickLine={false}
                       label={{ value: 'Buses', angle: -90, position: 'insideLeft', offset: 10, fill: '#64748b', fontSize: 12 }}
                     />
-                    <Tooltip content={<CustomTooltip />} />
+                    <Tooltip content={<CustomTooltip viewMode={viewMode} />} />
                     <Legend
                       wrapperStyle={{ color: '#94a3b8', fontSize: 12, paddingTop: 8, paddingBottom: 4 }}
                       iconType="circle"
@@ -226,21 +287,35 @@ const GraficoBusesModal = ({ isOpen, onClose, fecha, selectedEots }) => {
                     <ReferenceArea x1={5} x2={9} fill="#3b82f6" fillOpacity={0.06} label={{ value: 'PICO MAÑANA', position: 'insideTopLeft', fill: '#3b82f6', fontSize: 10, fontWeight: 600, offset: 10 }} />
                     <ReferenceArea x1={16} x2={19} fill="#3b82f6" fillOpacity={0.06} label={{ value: 'PICO TARDE', position: 'insideTopLeft', fill: '#3b82f6', fontSize: 10, fontWeight: 600, offset: 10 }} />
 
-                    {empresas.map((emp, i) => (
+                    {viewMode === 'empresas' ? (
+                      empresas.map((emp, i) => (
+                        <Area
+                          key={emp}
+                          type="monotone"
+                          dataKey={emp}
+                          stackId="1"
+                          stroke={COLORS[i % COLORS.length]}
+                          fill={`url(#grad-${i})`}
+                          strokeWidth={2}
+                          dot={false}
+                          activeDot={{ r: 5 }}
+                        />
+                      ))
+                    ) : (
                       <Area
-                        key={emp}
                         type="monotone"
-                        dataKey={emp}
-                        stackId="1"
-                        stroke={COLORS[i % COLORS.length]}
-                        fill={`url(#grad-${i})`}
-                        strokeWidth={2}
+                        dataKey="_total"
+                        name="Total Sistema"
+                        stroke="#3b82f6"
+                        fill="url(#grad-total)"
+                        strokeWidth={3}
                         dot={false}
-                        activeDot={{ r: 5 }}
+                        activeDot={{ r: 6 }}
                       />
-                    ))}
+                    )}
+                    
                     <ReferenceLine
-                      x={chartData.reduce((max, d) => d._total > (chartData.find(c => c.hora === max)?.total || 0) ? d.hora : max,
+                      x={chartData.reduce((max, d) => d._total > (chartData.find(c => c.hora === max)?._total || 0) ? d.hora : max,
                         chartData[0]?.hora)}
                       stroke="#f59e0b"
                       strokeDasharray="4 4"

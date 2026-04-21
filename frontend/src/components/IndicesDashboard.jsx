@@ -46,8 +46,13 @@ const IndicesDashboard = ({ performanceData, fecha }) => {
 
   const { resultados_eots } = performanceData;
 
+  // Ordenar los resultados por EOT (orden alfabético)
+  const sortedResultadosEots = [...resultados_eots].sort((a, b) => 
+    (a.eot_nombre || '').localeCompare(b.eot_nombre || '')
+  );
+
   // Obtener todas las franjas únicas
-  const franjas = resultados_eots[0]?.resultados_franjas?.map(r => ({
+  const franjas = sortedResultadosEots[0]?.resultados_franjas?.map(r => ({
     id_franja: r.id_franja,
     denominacion: r.denominacion_franja
   })) || [];
@@ -216,7 +221,7 @@ const IndicesDashboard = ({ performanceData, fecha }) => {
             </tr>
           </thead>
           <tbody>
-            {resultados_eots.map(eot => (
+            {sortedResultadosEots.map(eot => (
               <tr key={eot.eot_id}>
                 <td className="eot-cell">
                   <div className="eot-name">{eot.eot_nombre}</div>
