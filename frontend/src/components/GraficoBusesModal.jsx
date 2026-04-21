@@ -70,7 +70,8 @@ const GraficoBusesModal = ({ isOpen, onClose, fecha, selectedEots }) => {
       setEmpresas([]);
       try {
         let url = `${API_BASE_URL}/cbd-data/buses-por-hora/${fecha}`;
-        if (selectedEots && selectedEots.length > 0) {
+        // Solo filtramos por EOTs si estamos en modo "Por empresa"
+        if (viewMode === 'empresas' && selectedEots && selectedEots.length > 0) {
           const eotQuery = selectedEots.map(id => `eot_ids=${id}`).join('&');
           url += `?${eotQuery}`;
         }
@@ -109,7 +110,7 @@ const GraficoBusesModal = ({ isOpen, onClose, fecha, selectedEots }) => {
     };
 
     fetchData();
-  }, [isOpen, fecha, selectedEots]);
+  }, [isOpen, fecha, selectedEots, viewMode]);
 
   if (!isOpen) return null;
 
