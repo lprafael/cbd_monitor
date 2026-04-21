@@ -91,9 +91,9 @@ const GraficoBusesModal = ({ isOpen, onClose, fecha, selectedEots }) => {
           byHora[hora][eot_nombre] = cantidad;
         });
 
-        // Rellenar horas faltantes (4-23) con 0 para cada empresa
+        // Rellenar horas faltantes (0-23) con 0 para cada empresa
         const data = [];
-        for (let h = 4; h <= 23; h++) {
+        for (let h = 0; h <= 23; h++) {
           const entry = byHora[h] || { hora: h };
           empresasSet.forEach(e => { if (!(e in entry)) entry[e] = 0; });
           // Total sistémico
