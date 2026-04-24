@@ -120,6 +120,8 @@ class EmailService:
                 <li><strong>Contraseña:</strong> {password}</li>
                 <li><strong>Rol:</strong> {role}</li>
             </ul>
+            <p>Puedes acceder al sistema desde el siguiente enlace:</p>
+            <p><a href="https://sistemas.mopc.gov.py/cbd_monitor">https://sistemas.mopc.gov.py/cbd_monitor</a></p>
             <p>Por seguridad, te recomendamos cambiar tu contraseña después del primer inicio de sesión.</p>
             <p>Saludos,<br>Equipo de Desarrollo</p>
         </body>
