@@ -121,7 +121,7 @@ class EmailService:
                 <li><strong>Rol:</strong> {role}</li>
             </ul>
             <p>Puedes acceder al sistema desde el siguiente enlace:</p>
-            <p><a href="https://sistemas.mopc.gov.py/cbd_monitor">https://sistemas.mopc.gov.py/cbd_monitor</a></p>
+            <p><strong><a href="https://sistemas.mopc.gov.py/cbd_monitor">https://sistemas.mopc.gov.py/cbd_monitor</a></strong></p>
             <p>Por seguridad, te recomendamos cambiar tu contraseña después del primer inicio de sesión.</p>
             <p>Saludos,<br>Equipo de Desarrollo</p>
         </body>
@@ -140,8 +140,10 @@ class EmailService:
             <h2>Restablecimiento de Contraseña</h2>
             <p>Hola <strong>{username}</strong>,</p>
             <p>Has solicitado restablecer tu contraseña. Usa el siguiente token:</p>
-            <h3>{reset_token}</h3>
+            <h3 style="background-color: #f8f9fa; padding: 10px; border-radius: 5px; display: inline-block;">{reset_token}</h3>
             <p>Este token expira en 1 hora.</p>
+            <p>Puedes acceder al sistema para usar el token en el siguiente enlace:</p>
+            <p><strong><a href="https://sistemas.mopc.gov.py/cbd_monitor">https://sistemas.mopc.gov.py/cbd_monitor</a></strong></p>
             <p>Si no solicitaste este cambio, ignora este email.</p>
             <p>Saludos,<br>Equipo de Desarrollo</p>
         </body>
