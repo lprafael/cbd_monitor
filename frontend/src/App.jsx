@@ -11,7 +11,6 @@ import IndicesDashboard from './components/IndicesDashboard';
 import MonthlyPerformanceDashboard from './components/MonthlyPerformanceDashboard';
 import Verify290Dashboard from './components/Verify290Dashboard';
 import SystemIFODashboard from './components/SystemIFODashboard';
-import UserManagement from './components/UserManagement';
 import AuditSystem from './components/AuditSystem';
 import ChatBot from './components/ChatBot';
 import CBDObjetivoTable from './components/CBDObjetivoTable';
@@ -37,9 +36,9 @@ function App({ onLogout, user }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [theme, setTheme] = useState('ejecutivo'); // 'mopc' | 'institucional' | 'ejecutivo' | 'claro' | 'nocturno'
-  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' | 'users' | 'audit'
+  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' | 'audit'
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [adminTab, setAdminTab] = useState('users'); // 'users' | 'audit'
+  const [adminTab, setAdminTab] = useState('audit'); // 'audit'
   const [headerVisible, setHeaderVisible] = useState(true); // Control visibilidad header
   const [showAdvancedModal, setShowAdvancedModal] = useState(false); // Modal avanzado estilo Power BI
   const [showGraficoBusesModal, setShowGraficoBusesModal] = useState(false); // Modal gráfico buses/hora
@@ -53,10 +52,7 @@ function App({ onLogout, user }) {
       const hash = window.location.hash.replace('#', '');
 
       // Permitimos estas rutas
-      if (hash === '/users' || hash === '/admin/users') {
-        setCurrentView('users');
-        setAdminTab('users');
-      } else if (isAdmin && (hash === '/audit' || hash === '/admin/audit')) {
+      if (isAdmin && (hash === '/audit' || hash === '/admin/audit')) {
         setCurrentView('audit');
         setAdminTab('audit');
       } else {
@@ -236,8 +232,8 @@ function App({ onLogout, user }) {
     }
   };
 
-  // Si estamos en la vista de administración (usuarios o auditoría)
-  if (currentView === 'users' || currentView === 'audit') {
+  // Si estamos en la vista de administración (auditoría)
+  if (currentView === 'audit') {
     return (
       <div className="app">
         <Header
@@ -274,18 +270,6 @@ function App({ onLogout, user }) {
               </div>
               <nav className="sidebar-nav">
                 <button
-                  className={`sidebar-item ${adminTab === 'users' ? 'active' : ''}`}
-                  onClick={() => {
-                    setAdminTab('users');
-                    setCurrentView('users');
-                    window.location.hash = '#/admin/users';
-                  }}
-                  title={sidebarCollapsed ? "Gestión de Usuarios" : ""}
-                >
-                  <span className="icon">👤</span>
-                  {!sidebarCollapsed && <span>Gestión de Usuarios</span>}
-                </button>
-                <button
                   className={`sidebar-item ${adminTab === 'audit' ? 'active' : ''}`}
                   onClick={() => {
                     setAdminTab('audit');
@@ -312,7 +296,6 @@ function App({ onLogout, user }) {
             </aside>
           )}
           <main className="main-content">
-            {currentView === 'users' && <UserManagement />}
             {currentView === 'audit' && <AuditSystem />}
           </main>
         </div>

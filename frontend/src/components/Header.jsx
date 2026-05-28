@@ -118,30 +118,7 @@ const Header = ({
             {user && (
               <div className="user-info">
                 <span className="user-name">{user.nombre_completo || user.username}</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    window.location.hash = '#/users';
-                    window.location.reload();
-                  }}
-                  className="profile-button"
-                  title="Mi Perfil"
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    color: 'white',
-                    padding: '6px 12px',
-                    borderRadius: '8px',
-                    fontSize: '0.85rem',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    marginLeft: '10px'
-                  }}
-                >
-                  👤 Mi Perfil
-                </button>
+
                 <button
                   type="button"
                   onClick={onLogout}
