@@ -10,6 +10,8 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
+from auth_models import UsuarioSistemaRol
 from sqlalchemy import and_
 from sqlalchemy.exc import IntegrityError
 
@@ -34,6 +36,17 @@ from audit_utils import log_audit_action, get_client_ip, get_user_agent
 router = APIRouter(prefix="/auth", tags=["Autenticación"])
 
 # Función para generar contraseña aleatoria
+
+def populate_cbd_rol(user):
+    if not user: return user
+    cbd_rol = "viewer"
+    for hab in getattr(user, 'habilitaciones_sistemas', []):
+        if getattr(hab, 'sistema_id', None) == 1 and getattr(hab, 'activo', True):
+            cbd_rol = getattr(getattr(hab, 'rol', None), 'nombre', "viewer")
+            break
+    user.rol = cbd_rol
+    return user
+
 def generate_random_password(length: int = 12) -> str:
     """Genera una contraseña aleatoria segura"""
     characters = string.ascii_letters + string.digits + "!@#$%^&*"
@@ -55,7 +68,9 @@ async def login(
     """Inicio de sesión de usuario"""
     # Buscar usuario
     result = await session.execute(
-        select(Usuario).where(Usuario.username == user_credentials.username)
+        select(Usuario)
+        .options(selectinload(Usuario.habilitaciones_sistemas).selectinload(UsuarioSistemaRol.rol))
+        .where(Usuario.username == user_credentials.username)
     )
     user = result.scalar_one_or_none()
     
@@ -72,7 +87,8 @@ async def login(
         )
     
     # Actualizar último acceso
-    user.ultimo_acceso = datetime.utcnow()
+    populate_cbd_rol(user)
+        user.ultimo_acceso = datetime.utcnow()
     await session.commit()
     
     # Crear token
@@ -93,7 +109,7 @@ async def login(
     return Token(
         access_token=access_token,
         token_type="bearer",
-        user=UserResponse.from_orm(user)
+        user=UserResponse.from_orm(populate_cbd_rol(user))
     )
 
 @router.post("/google-login", response_model=Token)
@@ -116,7 +132,9 @@ async def google_login(
         
         # Buscar usuario por email
         result = await session.execute(
-            select(Usuario).where(Usuario.email == email)
+            select(Usuario)
+            .options(selectinload(Usuario.habilitaciones_sistemas).selectinload(UsuarioSistemaRol.rol))
+            .where(Usuario.email == email)
         )
         user = result.scalar_one_or_none()
         
@@ -174,6 +192,7 @@ async def google_login(
             )
         
         # Actualizar último acceso
+        populate_cbd_rol(user)
         user.ultimo_acceso = datetime.utcnow()
         await session.commit()
         
@@ -195,7 +214,7 @@ async def google_login(
         return Token(
             access_token=access_token,
             token_type="bearer",
-            user=UserResponse.from_orm(user)
+            user=UserResponse.from_orm(populate_cbd_rol(user))
         )
         
     except ValueError as e:
@@ -301,7 +320,7 @@ async def create_user(
         details=f"Usuario creado: {new_user.username}"
     )
     
-    return UserResponse.from_orm(new_user)
+    return UserResponse.from_orm(populate_cbd_rol(new_user))
 
 @router.get("/users", response_model=List[UserResponse])
 async def list_users(
@@ -309,9 +328,9 @@ async def list_users(
     session: AsyncSession = Depends(get_session)
 ):
     """Listar usuarios (solo administradores)"""
-    result = await session.execute(select(Usuario))
+    result = await session.execute(select(Usuario).options(selectinload(Usuario.habilitaciones_sistemas).selectinload(UsuarioSistemaRol.rol)))
     users = result.scalars().all()
-    return [UserResponse.from_orm(user) for user in users]
+    return [UserResponse.from_orm(populate_cbd_rol(user)) for user in users]
 
 @router.get("/users/{user_id}", response_model=UserResponse)
 async def get_user(
@@ -320,11 +339,11 @@ async def get_user(
     session: AsyncSession = Depends(get_session)
 ):
     """Obtener usuario por ID"""
-    result = await session.execute(select(Usuario).where(Usuario.id == user_id))
+    result = await session.execute(select(Usuario).options(selectinload(Usuario.habilitaciones_sistemas).selectinload(UsuarioSistemaRol.rol)).where(Usuario.id == user_id))
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    return UserResponse.from_orm(user)
+    return UserResponse.from_orm(populate_cbd_rol(user))
 
 @router.put("/users/{user_id}", response_model=UserResponse)
 async def update_user(
@@ -334,7 +353,7 @@ async def update_user(
     session: AsyncSession = Depends(get_session)
 ):
     """Actualizar usuario"""
-    result = await session.execute(select(Usuario).where(Usuario.id == user_id))
+    result = await session.execute(select(Usuario).options(selectinload(Usuario.habilitaciones_sistemas).selectinload(UsuarioSistemaRol.rol)).where(Usuario.id == user_id))
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
@@ -369,7 +388,7 @@ async def update_user(
         new_data={k: v for k, v in update_data.items() if k != "hashed_password"},
         details=f"Usuario actualizado: {user.username}"
     )
-    return UserResponse.from_orm(user)
+    return UserResponse.from_orm(populate_cbd_rol(user))
 
 @router.delete("/users/{user_id}")
 async def delete_user(
@@ -378,7 +397,7 @@ async def delete_user(
     session: AsyncSession = Depends(get_session)
 ):
     """Eliminar usuario (desactivar)"""
-    result = await session.execute(select(Usuario).where(Usuario.id == user_id))
+    result = await session.execute(select(Usuario).options(selectinload(Usuario.habilitaciones_sistemas).selectinload(UsuarioSistemaRol.rol)).where(Usuario.id == user_id))
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
@@ -420,7 +439,9 @@ async def change_password(
 ):
     """Cambiar contraseña del usuario actual"""
     result = await session.execute(
-        select(Usuario).where(Usuario.id == current_user["user_id"])
+        select(Usuario)
+        .options(selectinload(Usuario.habilitaciones_sistemas).selectinload(UsuarioSistemaRol.rol))
+        .where(Usuario.id == current_user["user_id"])
     )
     user = result.scalar_one_or_none()
     
@@ -525,10 +546,12 @@ async def get_current_user_info(
 ):
     """Obtener información del usuario actual"""
     result = await session.execute(
-        select(Usuario).where(Usuario.id == current_user["user_id"])
+        select(Usuario)
+        .options(selectinload(Usuario.habilitaciones_sistemas).selectinload(UsuarioSistemaRol.rol))
+        .where(Usuario.id == current_user["user_id"])
     )
     user = result.scalar_one_or_none()
-    return UserResponse.from_orm(user)
+    return UserResponse.from_orm(populate_cbd_rol(user))
 
 @router.get("/roles", response_model=List[RoleInfo])
 async def get_roles():
