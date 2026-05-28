@@ -50,6 +50,7 @@ class Usuario(Base):
     logs_acceso = relationship("LogAcceso", back_populates="usuario")
     logs_auditoria = relationship("LogAuditoria", back_populates="usuario")
     creador = relationship("Usuario", remote_side=[id])
+    habilitaciones_sistemas = relationship("UsuarioSistemaRol", back_populates="usuario")
 
 class Rol(Base):
     __tablename__ = "roles"
@@ -65,6 +66,35 @@ class Rol(Base):
     # Relaciones
     usuarios = relationship("Usuario", secondary=usuario_rol, back_populates="roles")
     permisos = relationship("Permiso", secondary=rol_permiso, back_populates="roles")
+    habilitaciones_usuarios = relationship("UsuarioSistemaRol", back_populates="rol")
+
+class SistemaApp(Base):
+    __tablename__ = "sistemas"
+    __table_args__ = {"schema": "sistema"}
+    
+    id = Column(Integer, primary_key=True, index=True)
+    nombre = Column(String(100), unique=True, nullable=False)
+    descripcion = Column(String(200))
+    activo = Column(Boolean, default=True)
+    fecha_creacion = Column(DateTime, default=func.now())
+    
+    # Relaciones
+    habilitaciones = relationship("UsuarioSistemaRol", back_populates="sistema")
+
+class UsuarioSistemaRol(Base):
+    __tablename__ = "usuario_sistema_rol"
+    __table_args__ = {"schema": "sistema"}
+    
+    id = Column(Integer, primary_key=True, index=True)
+    usuario_id = Column(Integer, ForeignKey('sistema.usuarios.id'), nullable=False)
+    sistema_id = Column(Integer, ForeignKey('sistema.sistemas.id'), nullable=False)
+    rol_id = Column(Integer, ForeignKey('sistema.roles.id'), nullable=False)
+    activo = Column(Boolean, default=True)
+    fecha_creacion = Column(DateTime, default=func.now())
+    
+    usuario = relationship("Usuario", back_populates="habilitaciones_sistemas")
+    sistema = relationship("SistemaApp", back_populates="habilitaciones")
+    rol = relationship("Rol", back_populates="habilitaciones_usuarios")
 
 class Permiso(Base):
     __tablename__ = "permisos"

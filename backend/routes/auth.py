@@ -12,8 +12,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import and_
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import selectinload
 
-from auth_models import Usuario, PasswordReset, LogAcceso
+from auth_models import Usuario, PasswordReset, LogAcceso, UsuarioSistemaRol
 from auth_schemas import (
     UserLogin, UserCreate, UserUpdate, UserResponse, Token, 
     PasswordChange, PasswordResetRequest, PasswordResetConfirm,
@@ -76,7 +77,9 @@ async def login(
     """Inicio de sesión de usuario"""
     # Buscar usuario
     result = await session.execute(
-        select(Usuario).where(Usuario.username == user_credentials.username)
+        select(Usuario)
+        .options(selectinload(Usuario.habilitaciones_sistemas).selectinload(UsuarioSistemaRol.rol))
+        .where(Usuario.username == user_credentials.username)
     )
     user = result.scalar_one_or_none()
     
@@ -95,6 +98,16 @@ async def login(
     # Actualizar último acceso
     user.ultimo_acceso = datetime.utcnow()
     await session.commit()
+    
+    # Crear token usando el rol asociado a CBD Monitor (sistema_id = 1)
+    user_rol_cbd = "viewer"
+    for hab in getattr(user, 'habilitaciones_sistemas', []):
+        if getattr(hab, 'sistema_id', None) == 1 and getattr(hab, 'activo', True):
+            user_rol_cbd = getattr(getattr(hab, 'rol', None), 'nombre', "viewer")
+            break
+            
+    # Asignamos al objeto user
+    user.rol = user_rol_cbd
     
     # Crear token
     access_token = create_access_token(
@@ -254,220 +267,14 @@ async def logout(
     
     return {"message": "Sesión cerrada exitosamente"}
 
-@router.post("/users", response_model=UserResponse)
-async def create_user(
-    user_data: UserCreate,
-    current_user: dict = Depends(check_permission("usuarios_manage")),
-    session: AsyncSession = Depends(get_session)
-):
-    """Crear nuevo usuario (solo administradores)"""
-    # Verificar si el usuario ya existe
-    result = await session.execute(
-        select(Usuario).where(
-            (Usuario.username == user_data.username) | (Usuario.email == user_data.email)
-        )
-    )
-    if result.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="El usuario o email ya existe"
-        )
-    
-    # Generar contraseña aleatoria
-    password = generate_random_password()
-    hashed_password = get_password_hash(password)
-    
-    # Crear usuario
-    new_user = Usuario(
-        username=user_data.username,
-        email=user_data.email,
-        hashed_password=hashed_password,
-        nombre_completo=user_data.nombre_completo,
-        rol=user_data.rol,
-        creado_por=current_user["user_id"]
-    )
-    
-    session.add(new_user)
-    await session.commit()
-    await session.refresh(new_user)
-    
-    # Enviar email con credenciales
-    email_service.send_welcome_email(
-        user_data.email, 
-        user_data.username, 
-        password, 
-        user_data.rol
-    )
-    
-    # Registrar log de acceso
-    await log_access(session, LogAccesoCreate(
-        username=current_user["sub"],
-        accion="create_user",
-        detalles={"mensaje": f"Usuario creado: {user_data.username}"}
-    ), usuario_id=current_user.get("user_id"))
-    # Registrar log de auditoría
-    await log_audit_action(
-        session=session,
-        username=current_user["sub"],
-        user_id=current_user["user_id"],
-        action="create",
-        table="usuarios",
-        record_id=new_user.id,
-        new_data={
-            "username": new_user.username,
-            "email": new_user.email,
-            "rol": new_user.rol,
-            "activo": new_user.activo,
-        },
-        details=f"Usuario creado: {new_user.username}"
-    )
-    
-    return UserResponse.model_validate(new_user)
-
 @router.get("/users", response_model=List[UserResponse])
 async def list_users(
     current_user: dict = Depends(check_permission("usuarios_read")),
     session: AsyncSession = Depends(get_session)
 ):
-    """Listar usuarios (solo administradores)"""
-    result = await session.execute(select(Usuario))
-    users = result.scalars().all()
-    return [UserResponse.model_validate(user) for user in users]
+    """La gestión de usuarios se trasladó al Sistema de Catálogos"""
+    raise HTTPException(status_code=403, detail="Gestión de usuarios centralizada en Catálogos.")
 
-@router.get("/users/{user_id}", response_model=UserResponse)
-async def get_user(
-    user_id: int,
-    current_user: dict = Depends(check_permission("usuarios_read")),
-    session: AsyncSession = Depends(get_session)
-):
-    """Obtener usuario por ID"""
-    result = await session.execute(select(Usuario).where(Usuario.id == user_id))
-    user = result.scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    return UserResponse.model_validate(user)
-
-@router.put("/users/{user_id}", response_model=UserResponse)
-async def update_user(
-    user_id: int,
-    user_data: UserUpdate,
-    current_user: dict = Depends(check_permission("usuarios_write")),
-    session: AsyncSession = Depends(get_session)
-):
-    """Actualizar usuario (Solo Administradores)"""
-    result = await session.execute(select(Usuario).where(Usuario.id == user_id))
-    user = result.scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    
-    # Actualizar campos
-    update_data = user_data.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(user, field, value)
-        
-    try:
-        await session.commit()
-        await session.refresh(user)
-    except IntegrityError as e:
-        await session.rollback()
-        if 'email' in str(e.orig):
-            raise HTTPException(status_code=400, detail="El correo electrónico ya está registrado")
-        raise HTTPException(status_code=400, detail="Error de integridad de datos")
-    
-    # Registrar log de acceso
-    await log_access(session, LogAccesoCreate(
-        username=current_user["sub"],
-        accion="update_user",
-        detalles={"mensaje": f"Usuario actualizado: {user.username}"}
-    ), usuario_id=current_user.get("user_id"))
-    
-    # Registrar log de auditoría
-    await log_audit_action(
-        session=session,
-        username=current_user["sub"],
-        user_id=current_user["user_id"],
-        action="update",
-        table="usuarios",
-        record_id=user.id,
-        new_data={k: v for k, v in update_data.items() if k != "hashed_password"},
-        details=f"Usuario actualizado: {user.username}"
-    )
-    return UserResponse.model_validate(user)
-
-@router.post("/users/{user_id}/reactivate")
-async def reactivate_user(
-    user_id: int,
-    current_user: dict = Depends(check_permission("usuarios_manage")),
-    session: AsyncSession = Depends(get_session)
-):
-    """Reactiva un usuario inactivo (activo=True)"""
-    result = await session.execute(select(Usuario).where(Usuario.id == user_id))
-    user = result.scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    if user.activo:
-        raise HTTPException(status_code=400, detail="El usuario ya está activo")
-    user.activo = True
-    await session.commit()
-    # Registrar log de acceso
-    await log_access(session, LogAccesoCreate(
-        username=current_user["sub"],
-        accion="reactivate_user",
-        detalles={"mensaje": f"Usuario reactivado: {user.username}"}
-    ), usuario_id=current_user.get("user_id"))
-    # Registrar log de auditoría
-    await log_audit_action(
-        session=session,
-        username=current_user["sub"],
-        user_id=current_user["user_id"],
-        action="update",
-        table="usuarios",
-        record_id=user.id,
-        previous_data={"activo": False},
-        new_data={"activo": True},
-        details=f"Usuario reactivado: {user.username}"
-    )
-    return {"message": "Usuario reactivado exitosamente"}
-
-@router.delete("/users/{user_id}")
-async def delete_user(
-    user_id: int,
-    current_user: dict = Depends(check_permission("usuarios_delete")),
-    session: AsyncSession = Depends(get_session)
-):
-    """Eliminar usuario (desactivar)"""
-    result = await session.execute(select(Usuario).where(Usuario.id == user_id))
-    user = result.scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    # Proteger admin
-    if user.username == 'admin' and user.rol == 'admin':
-        raise HTTPException(status_code=403, detail="No se puede eliminar el usuario admin")
-    # Desactivar usuario en lugar de eliminarlo
-    user.activo = False
-    await session.commit()
-    # Registrar log de acceso
-    await log_access(session, LogAccesoCreate(
-        username=current_user["sub"],
-        accion="delete_user",
-        detalles={"mensaje": f"Usuario desactivado: {user.username}"}
-    ), usuario_id=current_user.get("user_id"))
-    # Registrar log de auditoría
-    await log_audit_action(
-        session=session,
-        username=current_user["sub"],
-        user_id=current_user["user_id"],
-        action="delete",
-        table="usuarios",
-        record_id=user.id,
-        previous_data={
-            "username": user.username,
-            "email": user.email,
-            "rol": user.rol,
-        },
-        details=f"Usuario desactivado: {user.username}"
-    )
-    return {"message": "Usuario desactivado exitosamente"}
 
 @router.post("/change-password")
 async def change_password(
@@ -581,9 +388,20 @@ async def get_current_user_info(
 ):
     """Obtener información del usuario actual"""
     result = await session.execute(
-        select(Usuario).where(Usuario.id == current_user["user_id"])
+        select(Usuario)
+        .options(selectinload(Usuario.habilitaciones_sistemas).selectinload(UsuarioSistemaRol.rol))
+        .where(Usuario.id == current_user["user_id"])
     )
     user = result.scalar_one_or_none()
+    
+    if user:
+        user_rol_cbd = "viewer"
+        for hab in getattr(user, 'habilitaciones_sistemas', []):
+            if getattr(hab, 'sistema_id', None) == 1 and getattr(hab, 'activo', True):
+                user_rol_cbd = getattr(getattr(hab, 'rol', None), 'nombre', "viewer")
+                break
+        user.rol = user_rol_cbd
+        
     return UserResponse.model_validate(user)
 
 @router.get("/roles", response_model=List[RoleInfo])

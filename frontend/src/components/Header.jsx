@@ -121,12 +121,12 @@ const Header = ({
                 <button
                   type="button"
                   onClick={() => {
-                    window.location.hash = user.rol === 'admin' ? '#/admin/users' : '#/users';
+                    window.location.hash = '#/users';
                     window.location.reload();
                   }}
-                  className={user.rol === 'admin' ? "admin-button" : "profile-button"}
-                  title={user.rol === 'admin' ? "Administración" : "Mi Perfil"}
-                  style={user.rol !== 'admin' ? {
+                  className="profile-button"
+                  title="Mi Perfil"
+                  style={{
                     background: 'rgba(255, 255, 255, 0.1)',
                     border: '1px solid rgba(255, 255, 255, 0.2)',
                     color: 'white',
@@ -138,9 +138,9 @@ const Header = ({
                     alignItems: 'center',
                     gap: '6px',
                     marginLeft: '10px'
-                  } : {}}
+                  }}
                 >
-                  {user.rol === 'admin' ? '⚙️ Administración' : '👤 Mi Perfil'}
+                  👤 Mi Perfil
                 </button>
                 <button
                   type="button"
