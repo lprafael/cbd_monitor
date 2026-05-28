@@ -180,6 +180,7 @@ class PermisoResponse(BaseModel):
 # ===== SCHEMAS DE AUDITORÍA =====
 
 class LogAccesoCreate(BaseModel):
+    usuario_id: Optional[int] = None
     username: str
     accion: str
     ip_address: Optional[str] = None
