@@ -35,6 +35,14 @@ class Usuario(Base):
     ultimo_acceso = Column(DateTime)
     creado_por = Column(Integer, ForeignKey('sistema.usuarios.id'), nullable=True)
     
+    @property
+    def rol(self):
+        return getattr(self, '_rol_dinamico', 'user')
+        
+    @rol.setter
+    def rol(self, value):
+        self._rol_dinamico = value
+        
     # Relaciones
     sesiones = relationship("SesionUsuario", back_populates="usuario")
     logs_acceso = relationship("LogAcceso", back_populates="usuario")
