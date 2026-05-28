@@ -34,6 +34,7 @@ class TipoNotificacion(str, Enum):
 class UserLogin(BaseModel):
     username: str
     password: str
+    sistema_id: Optional[int] = 1
 
 class UserCreate(BaseModel):
     username: str
@@ -49,6 +50,7 @@ class UserCreate(BaseModel):
 
 class GoogleLogin(BaseModel):
     credential: str
+    sistema_id: Optional[int] = 1
 
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
@@ -184,6 +186,7 @@ class LogAccesoCreate(BaseModel):
     user_agent: Optional[str] = None
     exitoso: bool = True
     detalles: Optional[Dict[str, Any]] = None
+    sistema_id: Optional[int] = None
 
 class LogAccesoResponse(BaseModel):
     id: int
@@ -195,6 +198,7 @@ class LogAccesoResponse(BaseModel):
     fecha: datetime
     exitoso: bool
     detalles: Optional[Dict[str, Any]] = None
+    sistema_id: Optional[int] = None
     
     class Config:
         from_attributes = True

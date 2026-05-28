@@ -34,7 +34,7 @@ const Login = ({ onLogin, googleClientId }) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(credentials),
+        body: JSON.stringify({ ...credentials, sistema_id: 1 }), // sistema_id 1 para cbd_monitor
       });
 
       const data = await response.json();
@@ -66,7 +66,7 @@ const Login = ({ onLogin, googleClientId }) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ credential: credentialResponse.credential }),
+        body: JSON.stringify({ credential: credentialResponse.credential, sistema_id: 1 }), // sistema_id 1 para cbd_monitor
       });
 
       const data = await response.json();

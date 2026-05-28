@@ -152,9 +152,11 @@ class LogAcceso(Base):
     fecha = Column(DateTime, default=func.now())
     detalles = Column(JSON)
     exitoso = Column(Boolean, default=True)
+    sistema_id = Column(Integer, ForeignKey('sistema.sistemas.id'), nullable=True)
     
     # Relaciones
     usuario = relationship("Usuario", back_populates="logs_acceso")
+    sistema = relationship("SistemaApp")
 
 class LogAuditoria(Base):
     __tablename__ = "logs_auditoria"

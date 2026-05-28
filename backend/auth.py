@@ -86,7 +86,8 @@ async def login(
         username=user.username,
         accion="login",
         ip_address=request.client.host,
-        user_agent=request.headers.get("user-agent")
+        user_agent=request.headers.get("user-agent"),
+        sistema_id=user_credentials.sistema_id
     ))
     
     return Token(
@@ -187,7 +188,8 @@ async def google_login(
             username=user.username,
             accion="login_google",
             ip_address=request.client.host,
-            user_agent=request.headers.get("user-agent")
+            user_agent=request.headers.get("user-agent"),
+            sistema_id=data.sistema_id
         ))
         
         return Token(
