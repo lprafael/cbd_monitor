@@ -18,14 +18,6 @@ rol_permiso = Table(
     schema='sistema'
 )
 
-# Tabla de asociación para usuarios y roles (many-to-many)
-usuario_rol = Table(
-    'usuario_rol',
-    Base.metadata,
-    Column('usuario_id', Integer, ForeignKey('sistema.usuarios.id'), primary_key=True),
-    Column('rol_id', Integer, ForeignKey('sistema.roles.id'), primary_key=True),
-    schema='sistema'
-)
 
 # ===== SISTEMA DE SEGURIDAD Y AUDITORÍA =====
 
@@ -38,14 +30,12 @@ class Usuario(Base):
     email = Column(String(100), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     nombre_completo = Column(String(100), nullable=False)
-    rol = Column(String(20), default='user')  # Mantener para compatibilidad
     activo = Column(Boolean, default=True)
     fecha_creacion = Column(DateTime, default=func.now())
     ultimo_acceso = Column(DateTime)
     creado_por = Column(Integer, ForeignKey('sistema.usuarios.id'), nullable=True)
     
     # Relaciones
-    roles = relationship("Rol", secondary=usuario_rol, back_populates="usuarios")
     sesiones = relationship("SesionUsuario", back_populates="usuario")
     logs_acceso = relationship("LogAcceso", back_populates="usuario")
     logs_auditoria = relationship("LogAuditoria", back_populates="usuario")
@@ -64,7 +54,6 @@ class Rol(Base):
     creado_por = Column(Integer, ForeignKey('sistema.usuarios.id'), nullable=True)
     
     # Relaciones
-    usuarios = relationship("Usuario", secondary=usuario_rol, back_populates="roles")
     permisos = relationship("Permiso", secondary=rol_permiso, back_populates="roles")
     habilitaciones_usuarios = relationship("UsuarioSistemaRol", back_populates="rol")
 

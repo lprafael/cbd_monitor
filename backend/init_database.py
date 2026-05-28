@@ -225,12 +225,6 @@ async def init_database():
             session.add(admin_user)
             await session.commit()
             
-            # Asignar rol admin al usuario admin
-            await session.execute(
-                text("INSERT INTO sistema.usuario_rol (usuario_id, rol_id) VALUES (:usuario_id, :rol_id)"),
-                {"usuario_id": admin_user.id, "rol_id": rol_admin.id}
-            )
-            
             # ===== CREAR PARÁMETROS DEL SISTEMA =====
             print("Creando parámetros del sistema...")
             
