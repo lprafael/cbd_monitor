@@ -11,7 +11,6 @@ import IndicesDashboard from './components/IndicesDashboard';
 import MonthlyPerformanceDashboard from './components/MonthlyPerformanceDashboard';
 import Verify290Dashboard from './components/Verify290Dashboard';
 import SystemIFODashboard from './components/SystemIFODashboard';
-import AuditSystem from './components/AuditSystem';
 import ChatBot from './components/ChatBot';
 import CBDObjetivoTable from './components/CBDObjetivoTable';
 import SystemChartsDashboard from './components/SystemChartsDashboard';
@@ -36,9 +35,8 @@ function App({ onLogout, user }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [theme, setTheme] = useState('ejecutivo'); // 'mopc' | 'institucional' | 'ejecutivo' | 'claro' | 'nocturno'
-  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' | 'audit'
+  const [currentView, setCurrentView] = useState('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [adminTab, setAdminTab] = useState('audit'); // 'audit'
   const [headerVisible, setHeaderVisible] = useState(true); // Control visibilidad header
   const [showAdvancedModal, setShowAdvancedModal] = useState(false); // Modal avanzado estilo Power BI
   const [showGraficoBusesModal, setShowGraficoBusesModal] = useState(false); // Modal gráfico buses/hora
@@ -46,29 +44,17 @@ function App({ onLogout, user }) {
   // Verificar si el usuario es admin
   const isAdmin = user && user.rol === 'admin';
 
-  // Detectar cambio de hash para navegación (Protegido por rol)
+  // Ya no detectamos hash para audit
   useEffect(() => {
     const handleHashChange = () => {
-      const hash = window.location.hash.replace('#', '');
-
-      // Permitimos estas rutas
-      if (isAdmin && (hash === '/audit' || hash === '/admin/audit')) {
-        setCurrentView('audit');
-        setAdminTab('audit');
-      } else {
-        // Si no es admin y es otra ruta no permitida, al dashboard
-        setCurrentView('dashboard');
-        // Si intentó entrar a admin audit sin serlo, limpiamos el hash
-        if (hash.includes('audit')) {
-          window.location.hash = '#';
-        }
-      }
+      setCurrentView('dashboard');
+      window.location.hash = '#';
     };
 
-    handleHashChange(); // Verificar hash inicial
+    handleHashChange();
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
-  }, [isAdmin]); // Dependencia importante: isAdmin
+  }, []);
 
   // Cargar EOTs al montar el componente
   useEffect(() => {
@@ -232,89 +218,7 @@ function App({ onLogout, user }) {
     }
   };
 
-  // Si estamos en la vista de administración (auditoría)
-  if (currentView === 'audit') {
-    return (
-      <div className="app">
-        <Header
-          eots={eots}
-          selectedEots={selectedEots}
-          setSelectedEots={setSelectedEots}
-          fecha={fecha}
-          setFecha={setFecha}
-          modoVisualizacion={modoVisualizacion}
-          setModoVisualizacion={setModoVisualizacion}
-          viewMode={viewMode}
-          setViewMode={setViewMode}
-          onObtenerCBD={handleConsulta}
-          loading={loading}
-          theme={theme}
-          setTheme={setTheme}
-          onLogout={onLogout}
-          user={user}
-          onOpenAdvanced={() => setShowAdvancedModal(true)}
-          onOpenGraficoBuses={() => setShowGraficoBusesModal(true)}
-        />
-        <div className="content-wrapper">
-          {isAdmin && (
-            <aside className={`admin-sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
-              <div className="sidebar-header">
-                {!sidebarCollapsed && <h2>Administración</h2>}
-                <button
-                  className="sidebar-toggle"
-                  onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                  title={sidebarCollapsed ? "Mostrar menú" : "Ocultar menú"}
-                >
-                  {sidebarCollapsed ? "➡️" : "⬅️"}
-                </button>
-              </div>
-              <nav className="sidebar-nav">
-                <button
-                  className={`sidebar-item ${adminTab === 'audit' ? 'active' : ''}`}
-                  onClick={() => {
-                    setAdminTab('audit');
-                    setCurrentView('audit');
-                    window.location.hash = '#/admin/audit';
-                  }}
-                  title={sidebarCollapsed ? "Auditoría" : ""}
-                >
-                  <span className="icon">📊</span>
-                  {!sidebarCollapsed && <span>Auditoría</span>}
-                </button>
-                <button
-                  className="sidebar-item"
-                  onClick={() => {
-                    setCurrentView('dashboard');
-                    window.location.hash = '#';
-                  }}
-                  title={sidebarCollapsed ? "Volver al Dashboard" : ""}
-                >
-                  <span className="icon">🏠</span>
-                  {!sidebarCollapsed && <span>Volver al Dashboard</span>}
-                </button>
-              </nav>
-            </aside>
-          )}
-          <main className="main-content">
-            {currentView === 'audit' && <AuditSystem />}
-          </main>
-        </div>
-        <footer className="app-footer">
-          <p>
-            Sistema Integral de Control y Monitoreo (CBD/IFO) | Resolución GVMT Nº 120/2025 | CID - VMT
-          </p>
-        </footer>
-        <ChatBot />
-        {/* Modal de Gráficos Avanzados */}
-        <AdvancedPerformanceModal
-          isOpen={showAdvancedModal}
-          onClose={() => setShowAdvancedModal(false)}
-          fecha={fecha}
-          theme={theme}
-        />
-      </div>
-    );
-  }
+  // Vista de administración eliminada, todo ocurre en el dashboard
 
   return (
     <div className="app">
