@@ -49,15 +49,32 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
     return new Intl.NumberFormat('es-PY', { style: 'currency', currency: 'PYG', maximumFractionDigits: 0 }).format(amount);
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
+  let grandTotalJornales = 0;
+  let grandTotalMonto = 0;
+
+  if (data && data.reporte) {
+    data.reporte.forEach(empresa => {
+      if (empresa.total_jornales) grandTotalJornales += empresa.total_jornales;
+      if (empresa.total_guaranies) grandTotalMonto += empresa.total_guaranies;
+    });
+  }
+
   return (
     <div className="fines-modal-overlay">
       <div className="fines-modal-container">
         <header className="fines-modal-header">
           <div className="header-info">
-            <h2>📜 Reporte de Multas (Res. 120/2025)</h2>
+            <h2>📜 Reporte de Multas (Res. 21/2026)</h2>
             <span className="current-date">Mes de Referencia: {fecha}</span>
           </div>
-          <button className="close-btn" onClick={onClose} title="Cerrar">✖</button>
+          <div>
+            <button className="print-btn" onClick={handlePrint} title="Imprimir o Guardar como PDF">🖨️ Generar PDF</button>
+            <button className="close-btn" onClick={onClose} title="Cerrar">✖</button>
+          </div>
         </header>
 
         <div className="fines-modal-body">
@@ -74,46 +91,58 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
             data.reporte.length === 0 ? (
               <p className="no-data">No se encontraron datos para este mes.</p>
             ) : (
-              data.reporte.map((empresa, idx) => (
-                <div key={idx} className="eot-fines-card">
-                  <div className="eot-fines-header">
-                    <h3>{empresa.eot_nombre}</h3>
-                    {empresa.infracciones.length > 0 && (
-                      <div className="fines-totals">
-                        <span className="total-jornales">Total Jornales: {empresa.total_jornales}</span>
-                        <span className="total-guaranies">Total Gs: {formatCurrency(empresa.total_guaranies)}</span>
-                      </div>
+              <>
+                {data.reporte.map((empresa, idx) => (
+                  <div key={idx} className="eot-fines-card">
+                    <div className="eot-fines-header">
+                      <h3>{empresa.eot_nombre}</h3>
+                      {empresa.infracciones.length > 0 && (
+                        <div className="fines-totals">
+                          <span className="total-jornales">Total Jornales: {empresa.total_jornales}</span>
+                          <span className="total-guaranies">Total Gs: {formatCurrency(empresa.total_guaranies)}</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {empresa.infracciones.length === 0 ? (
+                      <div className="no-fines">✅ Sin Infracciones detectadas este mes.</div>
+                    ) : (
+                      <table className="fines-table">
+                        <thead>
+                          <tr>
+                            <th>Fecha</th>
+                            <th>Infracción</th>
+                            <th>Descripción</th>
+                            <th className="td-right">Jornales</th>
+                            <th className="td-right">Monto (Gs)</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {empresa.infracciones.map((inf, i) => (
+                            <tr key={i}>
+                              <td>{inf.fecha}</td>
+                              <td>{inf.base}</td>
+                              <td>{inf.desc}</td>
+                              <td className="td-right">{inf.jornales}</td>
+                              <td className="td-right">{formatCurrency(inf.monto)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     )}
                   </div>
-                  
-                  {empresa.infracciones.length === 0 ? (
-                    <div className="no-fines">✅ Sin Infracciones detectadas este mes.</div>
-                  ) : (
-                    <table className="fines-table">
-                      <thead>
-                        <tr>
-                          <th>Fecha</th>
-                          <th>Infracción</th>
-                          <th>Descripción</th>
-                          <th className="td-right">Jornales</th>
-                          <th className="td-right">Monto (Gs)</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {empresa.infracciones.map((inf, i) => (
-                          <tr key={i}>
-                            <td>{inf.fecha}</td>
-                            <td>{inf.base}</td>
-                            <td>{inf.desc}</td>
-                            <td className="td-right">{inf.jornales}</td>
-                            <td className="td-right">{formatCurrency(inf.monto)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
-              ))
+                ))}
+
+                {grandTotalJornales > 0 && (
+                  <div className="grand-totals">
+                    <h3>Total General Consolidado</h3>
+                    <div className="grand-totals-values">
+                      <span className="total-jornales">Jornales: {grandTotalJornales}</span>
+                      <span className="total-guaranies">Gs: {formatCurrency(grandTotalMonto)}</span>
+                    </div>
+                  </div>
+                )}
+              </>
             )
           ) : null}
         </div>

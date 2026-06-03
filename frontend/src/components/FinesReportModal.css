@@ -156,3 +156,90 @@
   color: #64748b;
   margin-top: 40px;
 }
+
+.grand-totals {
+  background-color: #1e293b;
+  color: white;
+  padding: 20px;
+  border-radius: 8px;
+  margin-top: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.grand-totals h3 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.grand-totals-values {
+  display: flex;
+  gap: 24px;
+  font-size: 1.1rem;
+  font-weight: bold;
+}
+
+.grand-totals-values .total-jornales {
+  color: #fbbf24;
+}
+
+.grand-totals-values .total-guaranies {
+  color: #fca5a5;
+}
+
+.print-btn {
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-right: 16px;
+  transition: background-color 0.2s;
+}
+
+.print-btn:hover {
+  background-color: #2563eb;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .fines-modal-container, .fines-modal-container * {
+    visibility: visible;
+  }
+  .fines-modal-overlay {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: transparent;
+    backdrop-filter: none;
+  }
+  .fines-modal-container {
+    width: 100%;
+    max-width: none;
+    height: auto;
+    box-shadow: none;
+    position: absolute;
+    left: 0;
+    top: 0;
+  }
+  .fines-modal-body {
+    overflow-y: visible;
+    background-color: white;
+  }
+  .close-btn, .print-btn {
+    display: none !important;
+  }
+  .eot-fines-card {
+    break-inside: avoid;
+    box-shadow: none;
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid #3b82f6;
+  }
+}
