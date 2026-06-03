@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { authFetch } from '../utils/authFetch';
 import './FinesReportModal.css';
 
 const FinesReportModal = ({ isOpen, onClose, fecha }) => {
@@ -17,7 +18,7 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
     setError(null);
     try {
       const [year, month] = fecha.split('-');
-      const resp = await fetch(`/api/fines-report`, {
+      const resp = await authFetch(`api/fines-report`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
