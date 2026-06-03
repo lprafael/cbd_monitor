@@ -119,7 +119,8 @@ async def login(
         username=user.username,
         accion="login",
         ip_address=request.client.host if request.client else None,
-        user_agent=request.headers.get("user-agent")
+        user_agent=request.headers.get("user-agent"),
+        sistema_id=user_credentials.sistema_id
     ), usuario_id=user.id)
     
     return Token(
@@ -225,7 +226,8 @@ async def google_login(
             username=user.username,
             accion="login_google",
             ip_address=request.client.host if request.client else None,
-            user_agent=request.headers.get("user-agent")
+            user_agent=request.headers.get("user-agent"),
+            sistema_id=data.sistema_id
         ), usuario_id=user.id)
         
         return Token(
@@ -262,7 +264,8 @@ async def logout(
         username=current_user["sub"],
         accion="logout",
         ip_address=request.client.host if request.client else None,
-        user_agent=request.headers.get("user-agent")
+        user_agent=request.headers.get("user-agent"),
+        sistema_id=1
     ), usuario_id=current_user.get("user_id"))
     
     return {"message": "Sesión cerrada exitosamente"}
@@ -300,7 +303,8 @@ async def change_password(
     # Registrar log
     await log_access(session, LogAccesoCreate(
         username=current_user["sub"],
-        accion="change_password"
+        accion="change_password",
+        sistema_id=1
     ), usuario_id=current_user.get("user_id"))
     
     return {"message": "Contraseña cambiada exitosamente"}
