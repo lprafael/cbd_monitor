@@ -38,7 +38,7 @@ const Header = ({
       return;
     }
 
-    if (viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'cbd-objetivo' || viewMode === 'buses-per-hour') {
+    if (viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'cbd-objetivo' || viewMode === 'buses-per-hour' || viewMode === 'fines-report') {
       setSelectedEots([parseInt(e.target.value)]);
       return;
     }
@@ -60,6 +60,15 @@ const Header = ({
         return;
       }
       onOpenGraficoBuses();
+      return;
+    }
+
+    if (viewMode === 'fines-report') {
+      if (!fecha) {
+        alert('Por favor seleccione un mes');
+        return;
+      }
+      onObtenerCBD();
       return;
     }
 
@@ -140,8 +149,8 @@ const Header = ({
               </label>
               <select
                 id="eot-select"
-                multiple={viewMode !== 'monthly' && viewMode !== 'verify290' && viewMode !== 'system-ifo' && viewMode !== 'visual-charts' && viewMode !== 'cbd-objetivo' && viewMode !== 'buses-per-hour'}
-                value={(viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'cbd-objetivo' || viewMode === 'buses-per-hour') && selectedEots.length > 0 ? selectedEots[0] : selectedEots.map(String)}
+                multiple={viewMode !== 'monthly' && viewMode !== 'verify290' && viewMode !== 'system-ifo' && viewMode !== 'visual-charts' && viewMode !== 'cbd-objetivo' && viewMode !== 'buses-per-hour' && viewMode !== 'fines-report'}
+                value={(viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'cbd-objetivo' || viewMode === 'buses-per-hour' || viewMode === 'fines-report') && selectedEots.length > 0 ? selectedEots[0] : selectedEots.map(String)}
                 onChange={handleEotChange}
                 className="form-control eot-select"
                 size="5"
@@ -155,7 +164,7 @@ const Header = ({
                 ))}
               </select>
               <small className="form-hint">
-                {viewMode === 'system-ifo' || viewMode === 'visual-charts'
+                {viewMode === 'system-ifo' || viewMode === 'visual-charts' || viewMode === 'fines-report'
                   ? 'No se requiere selección de EOT (incluye todas)'
                   : (viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'cbd-objetivo' || viewMode === 'buses-per-hour')
                     ? 'Seleccione una sola empresa para el reporte'
@@ -166,14 +175,14 @@ const Header = ({
             <div className="form-controls-column">
               <div className="form-group">
                 <label htmlFor="fecha-input">
-                  {viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'system-ifo' || viewMode === 'visual-charts' ? 'Mes y Año:' : 'Fecha:'}
+                  {viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'system-ifo' || viewMode === 'visual-charts' || viewMode === 'fines-report' ? 'Mes y Año:' : 'Fecha:'}
                 </label>
                 <input
                   id="fecha-input"
-                  key={viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'system-ifo' || viewMode === 'visual-charts' ? 'month' : 'date'}
-                  type={viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'system-ifo' || viewMode === 'visual-charts' ? "month" : "date"}
+                  key={viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'system-ifo' || viewMode === 'visual-charts' || viewMode === 'fines-report' ? 'month' : 'date'}
+                  type={viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'system-ifo' || viewMode === 'visual-charts' || viewMode === 'fines-report' ? "month" : "date"}
                   value={
-                    (viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'system-ifo' || viewMode === 'visual-charts')
+                    (viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'system-ifo' || viewMode === 'visual-charts' || viewMode === 'fines-report')
                       ? (fecha && String(fecha).length >= 7
                         ? String(fecha).slice(0, 7)
                         : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`)
@@ -181,7 +190,7 @@ const Header = ({
                   }
                   onChange={(e) => {
                     const v = e.target.value;
-                    if (viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'system-ifo' || viewMode === 'visual-charts') {
+                    if (viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'system-ifo' || viewMode === 'visual-charts' || viewMode === 'fines-report') {
                       setFecha(v.length === 7 ? v + '-01' : v);
                     } else {
                       setFecha(v);
@@ -272,6 +281,16 @@ const Header = ({
                       <label className="radio-label advanced-trigger" onClick={onOpenAdvanced} style={{ cursor: 'pointer' }}>
                         <input type="radio" name="viewMode" checked={false} readOnly />
                         <span>🚀 Gráfico Avanzado (BI)</span>
+                      </label>
+                      <label className="radio-label">
+                        <input
+                          type="radio"
+                          name="viewMode"
+                          value="fines-report"
+                          checked={viewMode === 'fines-report'}
+                          onChange={(e) => setViewMode(e.target.value)}
+                        />
+                        <span>📜 Reporte de Multas</span>
                       </label>
                     </>
                   )}

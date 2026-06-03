@@ -3,7 +3,7 @@
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routes import eots, tipo_dia, franjas, cbd_data, performance, performance_detail, monthly_performance, verify_290, reports, auth, notify, cbd_objetivo
+from routes import eots, tipo_dia, franjas, cbd_data, performance, performance_detail, monthly_performance, verify_290, reports, auth, notify, cbd_objetivo, fines_report
 from config.settings import settings
 
 # Crear instancia de FastAPI
@@ -69,6 +69,7 @@ app.include_router(monthly_performance.router)
 app.include_router(verify_290.router)
 app.include_router(cbd_objetivo.router)
 app.include_router(reports.router)
+app.include_router(fines_report.router)
 
 @app.get("/")
 async def root():

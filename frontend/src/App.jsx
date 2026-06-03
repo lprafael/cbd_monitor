@@ -16,6 +16,7 @@ import CBDObjetivoTable from './components/CBDObjetivoTable';
 import SystemChartsDashboard from './components/SystemChartsDashboard';
 import AdvancedPerformanceModal from './components/AdvancedPerformanceModal';
 import GraficoBusesModal from './components/GraficoBusesModal';
+import FinesReportModal from './components/FinesReportModal';
 import './App.css';
 import './components/IndicesDashboard.css';
 import { API_BASE_URL } from './config';
@@ -40,6 +41,7 @@ function App({ onLogout, user }) {
   const [headerVisible, setHeaderVisible] = useState(true); // Control visibilidad header
   const [showAdvancedModal, setShowAdvancedModal] = useState(false); // Modal avanzado estilo Power BI
   const [showGraficoBusesModal, setShowGraficoBusesModal] = useState(false); // Modal gráfico buses/hora
+  const [showFinesModal, setShowFinesModal] = useState(false); // Modal de reporte de multas
 
   // Verificar si el usuario es admin
   const isAdmin = user && user.rol === 'admin';
@@ -133,6 +135,11 @@ function App({ onLogout, user }) {
 
     // Si es modo system-ifo o visual-charts, no hacemos nada aquí, el dashboard se renderiza directamente
     if (viewMode === 'system-ifo' || viewMode === 'visual-charts') {
+      return;
+    }
+
+    if (viewMode === 'fines-report') {
+      setShowFinesModal(true);
       return;
     }
 
@@ -342,6 +349,11 @@ function App({ onLogout, user }) {
         onClose={() => setShowGraficoBusesModal(false)}
         fecha={fecha}
         selectedEots={selectedEots}
+      />
+      <FinesReportModal
+        isOpen={showFinesModal}
+        onClose={() => setShowFinesModal(false)}
+        fecha={fecha}
       />
     </div>
   );
