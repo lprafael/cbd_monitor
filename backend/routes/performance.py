@@ -35,8 +35,8 @@ def get_cbd_for_hour(cursor, eot_id: int, eot_vmt_hex: str, fecha, hora: int, cb
         res = cursor.fetchone()
         cbd_val = res['cbd'] if res else 0
     
-    # 2. Si no cumple mínimo, consultar GPS
-    if cbd_val < cbd_min_hora and eot_vmt_hex:
+    # 2. Consultar GPS siempre (independientemente de si cumple o no)
+    if eot_vmt_hex:
         if cache_gps is not None:
             cbd_gps = cache_gps.get((eot_vmt_hex, fecha, hora), 0)
         else:
@@ -48,10 +48,9 @@ def get_cbd_for_hour(cursor, eot_id: int, eot_vmt_hex: str, fecha, hora: int, cb
             res = cursor.fetchone()
             cbd_gps = res['cbd'] if res else 0
         
-        # Solo usar GPS si tiene MÁS datos que billetaje
+        # Tomar siempre el mayor entre validaciones y GPS
         if cbd_gps > cbd_val:
             return cbd_gps
-        # Si GPS tiene menos o igual, usar billetaje (aunque no cumpla mínimo)
         return cbd_val
     
     return cbd_val
@@ -93,7 +92,8 @@ def calculate_cbd_index(cursor, eot_id: int, eot_vmt_hex: str, fecha, franja_inf
         cbd_franja_val = res['cbd'] if res else 0
     
     cbd_franja_observado = cbd_franja_val
-    if cbd_franja_val < cbd_min_franja and eot_vmt_hex:
+    origen_final = 'Validaciones'
+    if eot_vmt_hex:
         if cache_franja_gps is not None:
             cbd_franja_gps = cache_franja_gps.get((eot_vmt_hex, fecha, id_franja), 0)
         else:
@@ -104,10 +104,10 @@ def calculate_cbd_index(cursor, eot_id: int, eot_vmt_hex: str, fecha, franja_inf
             res = cursor.fetchone()
             cbd_franja_gps = res['cbd'] if res else 0
         
-        # Solo usar GPS si tiene MÁS datos que billetaje
+        # Tomar siempre el mayor entre validaciones y GPS
         if cbd_franja_gps > cbd_franja_val:
             cbd_franja_observado = cbd_franja_gps
-        # Si GPS tiene menos o igual, usar billetaje (aunque no cumpla mínimo)
+            origen_final = 'GPS'
     
     ratio_franja = min(cbd_franja_observado / cbd_min_franja, 1.0) if cbd_min_franja > 0 else 0
     indice_cbd = (promedio_ratio_hora * 0.7) + (ratio_franja * 0.3)
@@ -115,7 +115,7 @@ def calculate_cbd_index(cursor, eot_id: int, eot_vmt_hex: str, fecha, franja_inf
     return {
         'cbd_obs_franja': cbd_franja_observado,
         'cbd_indice': indice_cbd,
-        'origen': 'Calculado con batch cache' if cache_val else 'Calculado en tiempo real'
+        'origen': origen_final
     }
 
 

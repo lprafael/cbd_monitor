@@ -403,7 +403,7 @@ def procesar_fecha(fecha: date, modo_notificacion: str = None):
                         'franja_horaria': denominacion_franja,
                         'id_franja': id_franja,
                         'umbral_requerido': f"{ifo_min_pct:.0f}%",
-                        'valor_observado': f"{ifo_val:.1f}%",
+                        'valor_observado': f"{ifo_val:.1f}% ({franja_result.get('origen_cbd_final', 'Validaciones')})",
                         'valor_original': f"{ifo_val:.1f}%",
                         'tipo_infraccion': franja_result.get('ifo_estado_cumplimiento', 'IFO Insuficiente'),
                         'normativa': 'Res. 120/2025',
@@ -577,6 +577,8 @@ def main():
                        help='Envía notificación a cada empresa con incumplimientos')
     parser.add_argument('--verificacion', action='store_true',
                        help='Envía informe consolidado al director')
+    parser.add_argument('--saltar-dependencias', action='store_true',
+                       help='Omite la validación de ejecución de scripts previos')
     args = parser.parse_args()
     
     if args.fecha:
@@ -613,7 +615,7 @@ def main():
     
     
     # Verificar dependencias antes de procesar
-    if not verificar_dependencias():
+    if not args.saltar_dependencias and not verificar_dependencias():
         msg = "El script no se ejecutó debido a que los scripts necesarios no se ejecutaron previamente el día de hoy"
         # Usamos id_tipo_alerta=2 para advertencias de flujo/dependencias si se desea distinguir, 
         # pero por defecto se usa 1 (Error). El usuario no especificó ID, usaremos el default o uno genérico.

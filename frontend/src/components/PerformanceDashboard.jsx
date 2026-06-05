@@ -132,6 +132,9 @@ const PerformanceDashboard = ({ performanceData }) => {
                           <span className={`badge ${getComplianceClass(row.ifo_estado_cumplimiento)}`} style={{ fontFamily: 'Courier New, monospace' }}>
                             {row.ifo_estado_cumplimiento}
                           </span>
+                          <span style={{ fontSize: '0.8em', color: '#666', fontWeight: 'normal', fontFamily: 'Courier New, monospace' }}>
+                            ({row.origen_cbd_final || 'Validaciones'})
+                          </span>
                         </div>
                       </td>
                       <td className="source-tag">{row.ajuste_aplicado}</td>
