@@ -12,6 +12,57 @@ const CBDTable = ({ cbdData }) => {
   const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false);
   const [analysisFilter, setAnalysisFilter] = useState('all');
 
+  const handleDownload = () => {
+    if (!cbdData) return;
+    const { fecha, datos_eots } = cbdData;
+    
+    // 1. Cabeceras del CSV
+    const csvHeaders = ["EOT / Empresa", "Gremio", "Fuente de Datos", ...headers.map(h => `${h.label}${h.subtitle ? ' (' + h.subtitle + ')' : ''}`), "Total"];
+    
+    // 2. Construir filas
+    const csvRows = [];
+    
+    datos_eots.forEach((eot) => {
+      // Fila 1: Validaciones
+      const rowServicios = [
+        `"${(eot.eot_nombre || '').replace(/"/g, '""')}"`,
+        `"${(eot.gre_nombre || 'Sin Gremio').replace(/"/g, '""')}"`,
+        `"Buses s/Validaciones"`,
+        ...headers.map(h => {
+          const dato = eot.fila_servicios.datos_por_franja[h.key];
+          return dato && dato.cantidad_buses !== undefined ? dato.cantidad_buses : 0;
+        }),
+        eot.fila_servicios.total || 0
+      ];
+      
+      // Fila 2: GPS
+      const rowCbd = [
+        `"${(eot.eot_nombre || '').replace(/"/g, '""')}"`,
+        `"${(eot.gre_nombre || 'Sin Gremio').replace(/"/g, '""')}"`,
+        `"Buses s/GPS"`,
+        ...headers.map(h => {
+          const dato = eot.fila_cbd.datos_por_franja[h.key];
+          return dato && dato.cantidad_buses !== undefined ? dato.cantidad_buses : 0;
+        }),
+        eot.fila_cbd.total || 0
+      ];
+      
+      csvRows.push(rowServicios.join(','));
+      csvRows.push(rowCbd.join(','));
+    });
+    
+    const csvContent = [csvHeaders.join(','), ...csvRows].join('\n');
+    const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `CBD_Resultados_${fecha}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (!cbdData) {
     return (
       <div className="empty-state">
@@ -292,7 +343,10 @@ const CBDTable = ({ cbdData }) => {
             </div>
           </div>
         </div>
-        <div className="analysis-actions">
+        <div className="analysis-actions" style={{ gap: '1rem' }}>
+          <button className="btn-descargar-tabla" onClick={handleDownload}>
+            📥 Descargar CSV
+          </button>
           <button className="btn-analizar-operativa" onClick={() => setIsAnalysisModalOpen(true)}>
             📊 Analizar operativa
           </button>
