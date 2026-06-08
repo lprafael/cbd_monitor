@@ -144,7 +144,7 @@ async def get_cbd_objetivo_report(
                     c_val = cache_val.get((fh, hora), 0)
                     c_gps = cache_gps.get((fh, hora), 0)
                     cbd_h = c_val
-                    if cbd_h < min_h and eot_vmt_hex and c_gps > cbd_h:
+                    if eot_vmt_hex and c_gps > cbd_h:
                         cbd_h = c_gps
                     sum_hora += cbd_h
                 
@@ -168,7 +168,7 @@ async def get_cbd_objetivo_report(
                     cbd_dist_val = cursor.fetchone()['cbd'] or 0
                     
                     cbd_final = cbd_dist_val
-                    if cbd_dist_val < min_f and eot_vmt_hex:
+                    if eot_vmt_hex:
                         cursor.execute("""
                             SELECT COUNT(DISTINCT mean_id) as cbd FROM control_metricas.cbd_detalle_buses
                             WHERE id_eot_vmt_hex = %s AND fecha = %s AND hora >= %s AND hora <= %s
