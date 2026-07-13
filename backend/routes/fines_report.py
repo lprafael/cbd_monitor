@@ -53,7 +53,7 @@ async def generate_fines_report(
         db_feriados = set(row['fecha'] for row in cursor.fetchall())
         
         # 2. Obtener EOTs
-        cursor.execute("SELECT cod_catalogo, eot_nombre, id_eot_vmt_hex FROM public.eots WHERE cod_catalogo NOT IN (72)")
+        cursor.execute("SELECT cod_catalogo, eot_nombre, id_eot_vmt_hex FROM public.eots WHERE cod_catalogo NOT IN (72) AND permisionario IS TRUE")
         eots = cursor.fetchall()
         eots_by_hex = {e['id_eot_vmt_hex']: e['eot_nombre'] for e in eots}
         
