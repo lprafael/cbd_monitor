@@ -300,6 +300,7 @@ async def get_system_ifo_breakdown(
         FROM public.eots e
         LEFT JOIN ifo_mensual_eot i ON e.id_eot_vmt_hex = i.id_eot_vmt_hex
         WHERE e.cod_catalogo NOT IN (72)
+        AND e.permisionario IS TRUE
         ORDER BY e.eot_nombre;
         """
         cursor.execute(query_eots, (inicio_mes, fin_mes))
