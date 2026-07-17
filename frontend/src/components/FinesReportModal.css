@@ -269,8 +269,10 @@
   .close-btn, .print-btn, .fines-modal-header {
     display: none !important;
   }
+  @page {
+    size: portrait;
+  }
   .eot-fines-card {
-    break-inside: avoid;
     box-shadow: none;
     border: 1px solid #e2e8f0;
     border-left: 4px solid #3b82f6;
