@@ -143,12 +143,10 @@ export const generateActaPdf = async (empresa, fechaReporte) => {
   currentY = doc.lastAutoTable.finalY + 25;
 
   doc.setFont("helvetica", "normal");
-  const p3 = "Las infracciones y sanciones serán notificadas a la EOT, a los propietarios de las unidades de transporte, quienes deberán abonar en el Viceministerio de Transporte dentro de los 5 (cinco) días de la notificación de la misma";
+  const p3 = "Las infracciones y sanciones serán notificadas a la EOT, a los propietarios de las unidades de transporte, quienes deberán abonar en el Viceministerio de Transporte dentro de los 5 (cinco) días de la notificación de la misma (Resolución GVMT 07/24 - Articulo 9).";
   const splitP3 = doc.splitTextToSize(p3, 475);
   doc.text(splitP3, 60, currentY);
   currentY += (splitP3.length * 12) + 5;
-
-  doc.text("(Resolución GVMT 07/24 - Articulo 9).", doc.internal.pageSize.getWidth() / 2, currentY, { align: 'center' });
 
   currentY += 40;
 
