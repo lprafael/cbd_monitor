@@ -99,7 +99,7 @@ export const generateActaPdf = async (empresa, fechaReporte) => {
 
   autoTable(doc, {
     startY: currentY,
-    margin: { left: 60, right: 60 },
+    margin: { left: 60, right: 60, bottom: 110 },
     head: [['Fecha', 'Infracción', 'Descripción']],
     body: table1Data,
     theme: 'grid',
@@ -131,7 +131,7 @@ export const generateActaPdf = async (empresa, fechaReporte) => {
 
   autoTable(doc, {
     startY: currentY,
-    margin: { left: 60, right: 60 },
+    margin: { left: 60, right: 60, bottom: 110 },
     head: [['Infracción', 'Cantidad de infracción', 'Escala de Infracción']],
     body: table2Data,
     theme: 'grid',
@@ -145,6 +145,13 @@ export const generateActaPdf = async (empresa, fechaReporte) => {
   doc.setFont("helvetica", "normal");
   const p3 = "Las infracciones y sanciones serán notificadas a la EOT, a los propietarios de las unidades de transporte, quienes deberán abonar en el Viceministerio de Transporte dentro de los 5 (cinco) días de la notificación de la misma (Resolución GVMT 07/24 - Articulo 9).";
   const splitP3 = doc.splitTextToSize(p3, 475);
+  
+  // Evitar solapamiento con el pie de página
+  if (currentY + (splitP3.length * 12) + 100 > 730) {
+    doc.addPage();
+    currentY = 60;
+  }
+
   doc.text(splitP3, 60, currentY);
   currentY += (splitP3.length * 12) + 5;
 
@@ -159,27 +166,32 @@ export const generateActaPdf = async (empresa, fechaReporte) => {
   doc.text("VERIFICADO POR:", 60, currentY);
   doc.text("________________________________________________", 160, currentY);
 
-  // Pie de página (Misión y Visión)
-  const footerY = 750;
-  doc.setLineWidth(1);
-  doc.line(60, footerY, 535, footerY);
+  // Pie de página (Misión y Visión) en todas las páginas
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    const footerY = 750;
+    doc.setLineWidth(1);
+    doc.line(60, footerY, 535, footerY);
 
-  doc.setFontSize(9);
+    doc.setFontSize(9);
+    doc.setTextColor(0, 0, 0);
 
-  // Misión
-  doc.setFont("helvetica", "bold");
-  doc.text("Misión:", 60, footerY + 15);
-  doc.setFont("helvetica", "italic");
-  doc.text(' "Somos un organismo que elabora, propone y ejecuta políticas en materia de infraestructura pública, transporte,', 95, footerY + 15);
-  doc.text('minería y energía, para la integración y desarrollo económico de la población".', 60, footerY + 27);
+    // Misión
+    doc.setFont("helvetica", "bold");
+    doc.text("Misión:", 60, footerY + 15);
+    doc.setFont("helvetica", "italic");
+    doc.text(' "Somos un organismo que elabora, propone y ejecuta políticas en materia de infraestructura pública, transporte,', 95, footerY + 15);
+    doc.text('minería y energía, para la integración y desarrollo económico de la población".', 60, footerY + 27);
 
-  // Visión
-  doc.setFont("helvetica", "bold");
-  doc.text("Visión:", 60, footerY + 45);
-  doc.setFont("helvetica", "italic");
-  doc.text(' "Ser reconocidos por nuestra idoneidad en planificación y ejecución de políticas y proyectos, garantizando la', 95, footerY + 45);
-  doc.text('conectividad a través de infraestructuras públicas innovadoras, gestionadas de forma eficiente, transparente y enfocadas', 60, footerY + 57);
-  doc.text('al ciudadano".', 60, footerY + 69);
+    // Visión
+    doc.setFont("helvetica", "bold");
+    doc.text("Visión:", 60, footerY + 45);
+    doc.setFont("helvetica", "italic");
+    doc.text(' "Ser reconocidos por nuestra idoneidad en planificación y ejecución de políticas y proyectos, garantizando la', 95, footerY + 45);
+    doc.text('conectividad a través de infraestructuras públicas innovadoras, gestionadas de forma eficiente, transparente y enfocadas', 60, footerY + 57);
+    doc.text('al ciudadano".', 60, footerY + 69);
+  }
 
   // Guardar PDF
   doc.save(`Acta_Infraccion_${empresa.eot_nombre.replace(/\s+/g, '_')}_${fechaReporte}.pdf`);
