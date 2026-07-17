@@ -72,7 +72,7 @@ export const generateNotificacionesWord = async (reporte, fechaReporte) => {
   const dateExtraccion = new Date(parseInt(rYear), parseInt(rMonth), 1);
   const actMonthName = dateExtraccion.toLocaleDateString('es-ES', { month: 'long' });
   const actYear = dateExtraccion.getFullYear();
-  const actaDateStr = `01 de ${actMonthName} de ${actYear}`;
+  const actaDateStr = `___ de ${actMonthName} de ${actYear}`;
 
   const allChildren = [];
 
@@ -93,7 +93,7 @@ export const generateNotificacionesWord = async (reporte, fechaReporte) => {
 
     const children = [
       new Paragraph({
-        text: `Asunción, ${day} de ${monthName} de ${yearStr}.`,
+        text: `Asunción, ___ de ${monthName} de ${yearStr}.`,
         alignment: AlignmentType.RIGHT,
         spacing: { after: 200 }
       }),
@@ -139,7 +139,7 @@ export const generateNotificacionesWord = async (reporte, fechaReporte) => {
       }),
 
       new Paragraph({ children: [new TextRun({ text: "INFRACCIONES DETECTADAS", bold: true })], alignment: AlignmentType.CENTER, spacing: { after: 200 } }),
-      
+
       new Table({
         width: { size: 100, type: WidthType.PERCENTAGE },
         rows: [
@@ -184,7 +184,7 @@ export const generateNotificacionesWord = async (reporte, fechaReporte) => {
           }))
         ]
       }),
-      
+
       new Paragraph({ text: "", spacing: { after: 400 } }),
       new Paragraph({
         children: [new TextRun({ text: "Que, en la fecha registrada se ha constatado la infracción descrita, de conformidad con la Resolución GVMT N° 120/2025 y su modificatoria N° 21/2026. De acuerdo al Artículo 9° de la Resolución GVMT N° 07/2024, la empresa operadora de transporte deberá abonar al Viceministerio de Transporte dentro de los cinco (5) días hábiles, a partir de la presente notificación." })],
@@ -194,8 +194,8 @@ export const generateNotificacionesWord = async (reporte, fechaReporte) => {
       new Paragraph({ children: [new TextRun({ text: "Queda usted debidamente notificado." })], spacing: { after: 1500 } }),
 
       new Paragraph({ text: "____________________________________", alignment: AlignmentType.CENTER }),
-      new Paragraph({ children: [new TextRun({ text: "ING. ROLANDO GONZÁLEZ", bold: true })], alignment: AlignmentType.CENTER }),
-      new Paragraph({ children: [new TextRun({ text: "DIRECTOR METROPOLITANO DE TRANSPORTE", bold: true })], alignment: AlignmentType.CENTER }),
+      new Paragraph({ children: [new TextRun({ text: "ING. ROLANDO GONZÁLEZ, DIRECTOR", bold: true })], alignment: AlignmentType.CENTER }),
+      new Paragraph({ children: [new TextRun({ text: "DIRECCIÓN METROPOLITANA DE TRANSPORTE", bold: true })], alignment: AlignmentType.CENTER }),
       new Paragraph({ children: [new TextRun({ text: "VICEMINISTERIO DE TRANSPORTE - MOPC", bold: true })], alignment: AlignmentType.CENTER })
     ];
 
@@ -211,6 +211,16 @@ export const generateNotificacionesWord = async (reporte, fechaReporte) => {
   }
 
   const doc = new Document({
+    styles: {
+      default: {
+        document: {
+          run: {
+            font: "Tahoma",
+            size: 22,
+          },
+        },
+      },
+    },
     sections: [{
       properties: {
         page: {
