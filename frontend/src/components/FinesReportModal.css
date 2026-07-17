@@ -116,6 +116,31 @@
   color: #ef4444;
 }
 
+.eot-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.generate-acta-btn {
+  background-color: #10b981;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.generate-acta-btn:hover {
+  background-color: #059669;
+}
+
 .fines-table {
   width: 100%;
   border-collapse: collapse;

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config';
+import { generateActaPdf } from '../utils/generateActaPdf';
 import './FinesReportModal.css';
 
 const FinesReportModal = ({ isOpen, onClose, fecha }) => {
@@ -96,12 +97,21 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
                   <div key={idx} className="eot-fines-card">
                     <div className="eot-fines-header">
                       <h3>{empresa.eot_nombre}</h3>
-                      {empresa.infracciones.length > 0 && (
-                        <div className="fines-totals">
-                          <span className="total-jornales">Total Jornales: {empresa.total_jornales}</span>
-                          <span className="total-guaranies">Total Gs: {formatCurrency(empresa.total_guaranies)}</span>
-                        </div>
-                      )}
+                      <div className="eot-header-actions">
+                        {empresa.infracciones.length > 0 && (
+                          <div className="fines-totals">
+                            <span className="total-jornales">Total Jornales: {empresa.total_jornales}</span>
+                            <span className="total-guaranies">Total Gs: {formatCurrency(empresa.total_guaranies)}</span>
+                          </div>
+                        )}
+                        <button 
+                          className="generate-acta-btn" 
+                          onClick={() => generateActaPdf(empresa, fecha)}
+                          title="Generar Acta de Infracción"
+                        >
+                          📄 Generar Acta
+                        </button>
+                      </div>
                     </div>
                     
                     {empresa.infracciones.length === 0 ? (
