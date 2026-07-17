@@ -23,16 +23,16 @@ export const generateActaPdf = async (empresa, fechaReporte) => {
 
   if (logoBase64) {
     // Dimensiones aproximadas de la imagen del MOPC
-    doc.addImage(logoBase64, 'PNG', 40, 30, 480, 50);
+    doc.addImage(logoBase64, 'PNG', 60, 30, 475, 50);
   } else {
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
-    doc.text("GOBIERNO DEL PARAGUAY | MOPC | VMT", 40, 60);
+    doc.text("GOBIERNO DEL PARAGUAY | MOPC | VMT", 60, 60);
   }
 
   // Línea separadora
   doc.setLineWidth(1);
-  doc.line(40, 95, 550, 95);
+  doc.line(60, 95, 535, 95);
 
   // Título
   doc.setFontSize(11);
@@ -63,8 +63,8 @@ export const generateActaPdf = async (empresa, fechaReporte) => {
 
   const p1 = `En la ciudad de Asunción, a los ${day} día/s del mes de ${monthName} del ${yearStr}, se procede a labrar la presente acta, en atención a los datos extraídos y analizados del Centro de Control y Monitoreo del SNBE, en fecha 01 de ${actMonthName} del año ${actYear}, correspondientes al periodo operativo de ${reporteMonthName}, conforme a las siguientes normativas:`;
 
-  const splitP1 = doc.splitTextToSize(p1, 510);
-  doc.text(splitP1, 40, 190);
+  const splitP1 = doc.splitTextToSize(p1, 475);
+  doc.text(splitP1, 60, 190);
 
   let currentY = 190 + (splitP1.length * 12) + 5;
   
@@ -79,14 +79,14 @@ export const generateActaPdf = async (empresa, fechaReporte) => {
   ];
 
   normativas.forEach(n => {
-    doc.text(n, 70, currentY);
+    doc.text(n, 90, currentY);
     currentY += 12;
   });
 
   currentY += 5;
   const p2 = `se comprueba que la Empresa Operadora de Transporte ${empresa.eot_nombre}, ha incurrido en la siguiente infracción:`;
-  const splitP2 = doc.splitTextToSize(p2, 510);
-  doc.text(splitP2, 40, currentY);
+  const splitP2 = doc.splitTextToSize(p2, 475);
+  doc.text(splitP2, 60, currentY);
   
   currentY += (splitP2.length * 12) + 10;
 
@@ -99,6 +99,7 @@ export const generateActaPdf = async (empresa, fechaReporte) => {
   
   autoTable(doc, {
     startY: currentY,
+    margin: { left: 60, right: 60 },
     head: [['Fecha', 'Infracción', 'Descripción']],
     body: table1Data,
     theme: 'grid',
@@ -130,6 +131,7 @@ export const generateActaPdf = async (empresa, fechaReporte) => {
 
   autoTable(doc, {
     startY: currentY,
+    margin: { left: 60, right: 60 },
     head: [['Infracción', 'Cantidad de infracción', 'Escala de Infracción']],
     body: table2Data,
     theme: 'grid',
@@ -142,8 +144,8 @@ export const generateActaPdf = async (empresa, fechaReporte) => {
 
   doc.setFont("helvetica", "normal");
   const p3 = "Las infracciones y sanciones serán notificadas a la EOT, a los propietarios de las unidades de transporte, quienes deberán abonar en el Viceministerio de Transporte dentro de los 5 (cinco) días de la notificación de la misma";
-  const splitP3 = doc.splitTextToSize(p3, 510);
-  doc.text(splitP3, 40, currentY);
+  const splitP3 = doc.splitTextToSize(p3, 475);
+  doc.text(splitP3, 60, currentY);
   currentY += (splitP3.length * 12) + 5;
   
   doc.text("(Resolución GVMT 07/24 - Articulo 9).", doc.internal.pageSize.getWidth() / 2, currentY, { align: 'center' });
