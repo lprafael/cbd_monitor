@@ -21,18 +21,7 @@ export const generateActaPdf = async (empresa, fechaReporte) => {
     console.warn("Could not load logo image", e);
   }
 
-  if (logoBase64) {
-    // Dimensiones aproximadas de la imagen del MOPC
-    doc.addImage(logoBase64, 'PNG', 60, 30, 475, 50);
-  } else {
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.text("GOBIERNO DEL PARAGUAY | MOPC | VMT", 60, 60);
-  }
-
-  // Línea separadora
-  doc.setLineWidth(1);
-  doc.line(60, 95, 535, 95);
+  // El encabezado (logo y línea) se dibujará al final en el bucle de páginas para que aparezca en todas.
 
   // Título
   doc.setFontSize(11);
@@ -99,7 +88,7 @@ export const generateActaPdf = async (empresa, fechaReporte) => {
 
   autoTable(doc, {
     startY: currentY,
-    margin: { left: 60, right: 60, bottom: 110 },
+    margin: { left: 60, right: 60, bottom: 110, top: 120 },
     head: [['Fecha', 'Infracción', 'Descripción']],
     body: table1Data,
     theme: 'grid',
@@ -131,7 +120,7 @@ export const generateActaPdf = async (empresa, fechaReporte) => {
 
   autoTable(doc, {
     startY: currentY,
-    margin: { left: 60, right: 60, bottom: 110 },
+    margin: { left: 60, right: 60, bottom: 110, top: 120 },
     head: [['Infracción', 'Cantidad de infracción', 'Escala de Infracción']],
     body: table2Data,
     theme: 'grid',
@@ -149,7 +138,7 @@ export const generateActaPdf = async (empresa, fechaReporte) => {
   // Evitar solapamiento con el pie de página
   if (currentY + (splitP3.length * 12) + 100 > 730) {
     doc.addPage();
-    currentY = 60;
+    currentY = 120; // Empezar debajo del encabezado
   }
 
   doc.text(splitP3, 60, currentY);
@@ -166,10 +155,21 @@ export const generateActaPdf = async (empresa, fechaReporte) => {
   doc.text("VERIFICADO POR:", 60, currentY);
   doc.text("________________________________________________", 160, currentY);
 
-  // Pie de página (Misión y Visión) en todas las páginas
+  // Encabezado y Pie de página en todas las páginas
   const pageCount = doc.internal.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
+    
+    // Encabezado
+    if (logoBase64) {
+      doc.addImage(logoBase64, 'PNG', 60, 30, 475, 50);
+    } else {
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("GOBIERNO DEL PARAGUAY | MOPC | VMT", 60, 60);
+    }
+    doc.setLineWidth(1);
+    doc.line(60, 95, 535, 95);
     const footerY = 750;
     doc.setLineWidth(1);
     doc.line(60, footerY, 535, footerY);
