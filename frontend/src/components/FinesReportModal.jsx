@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config';
 import { generateActaPdf } from '../utils/generateActaPdf';
+import { generateNotificacionesWord } from '../utils/generateNotificacionesWord';
 import './FinesReportModal.css';
 
 const FinesReportModal = ({ isOpen, onClose, fecha }) => {
@@ -52,6 +53,9 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
 
   const handlePrint = () => {
     window.print();
+    if (data && data.reporte) {
+      generateNotificacionesWord(data.reporte, fecha);
+    }
   };
 
   let grandTotalJornales = 0;
@@ -73,7 +77,7 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
             <span className="current-date">Mes de Referencia: {fecha}</span>
           </div>
           <div>
-            <button className="print-btn" onClick={handlePrint} title="Imprimir o Guardar como PDF">🖨️ Generar PDF</button>
+            <button className="print-btn" onClick={handlePrint} title="Imprimir PDF y Descargar Notificaciones (Word)">🖨️ Generar PDF y Notificaciones</button>
             <button className="close-btn" onClick={onClose} title="Cerrar">✖</button>
           </div>
         </header>
