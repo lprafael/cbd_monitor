@@ -195,16 +195,12 @@ async def generate_fines_report(
                 if fail_15_5:
                     historial_faltas.append({'fecha': fecha_eval, 'base': 'Art. 15.5', 'desc': 'Nivel C en Franja Pos Pico', 'jornales': 20})
                         
-            # ACUMULACIÓN NIVEL B PICO (15.2 / 16.2) - Reincidencia Única Mensual y Sustitutiva
-            if acum_b['PICO'] >= 10:
-                historial_faltas.append({'fecha': end_date, 'base': 'Art. 16.2', 'desc': 'Reincidencia Nivel B Pico (Única Mensual)', 'jornales': 20})
-            elif acum_b['PICO'] >= 5:
+            # ACUMULACIÓN NIVEL B PICO (15.2)
+            if acum_b['PICO'] >= 5:
                 historial_faltas.append({'fecha': end_date, 'base': 'Art. 15.2', 'desc': 'Acumulación 5 Franjas Pico Nivel B', 'jornales': 10})
                 
-            # ACUMULACIÓN NIVEL B POS PICO (15.4 / 16.3) - Reincidencia Única Mensual y Sustitutiva
-            if acum_b['POS_PICO'] >= 10:
-                historial_faltas.append({'fecha': end_date, 'base': 'Art. 16.3', 'desc': 'Reincidencia Nivel B Pos Pico (Única Mensual)', 'jornales': 20})
-            elif acum_b['POS_PICO'] >= 5:
+            # ACUMULACIÓN NIVEL B POS PICO (15.4)
+            if acum_b['POS_PICO'] >= 5:
                 historial_faltas.append({'fecha': end_date, 'base': 'Art. 15.4', 'desc': 'Acumulación 5 Franjas Pos Pico Nivel B', 'jornales': 10})
                         
             if historial_faltas:
