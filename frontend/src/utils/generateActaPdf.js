@@ -91,7 +91,7 @@ export const generateActaPdf = async (empresa, fechaReporte) => {
   currentY += (splitP2.length * 12) + 10;
 
   doc.setFont("helvetica", "bold");
-  doc.text("INFRACCION DEL ARTICULO 15.6, Resolución GVMT N° 21/2026", doc.internal.pageSize.getWidth() / 2, currentY, { align: 'center' });
+  doc.text("INFRACCION DEL ARTICULO 15, Resolución GVMT N° 21/2026", doc.internal.pageSize.getWidth() / 2, currentY, { align: 'center' });
   currentY += 15;
 
   // Tabla 1: Detalle Infracciones
