@@ -79,7 +79,22 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
         </header>
 
         <div className="fines-modal-body">
-          {loading ? (
+          <table className="print-layout-table">
+            <thead className="print-only">
+              <tr>
+                <td>
+                  <div className="print-header-content">
+                    <img src={process.env.PUBLIC_URL + '/imagenes/Logo MOPC VMT.png'} alt="MOPC VMT" />
+                    <hr />
+                    <h2 style={{ fontSize: '18px', margin: '10px 0', textAlign: 'center' }}>Reporte de Multas (Res. 21/2026) - Mes de Referencia: {fecha}</h2>
+                  </div>
+                </td>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  {loading ? (
             <div className="loader-container">
               <div className="spinner" style={{ borderTopColor: '#ef4444', borderLeftColor: '#ef4444' }}></div>
               <p>Generando reporte, por favor espere...</p>
@@ -155,6 +170,21 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
               </>
             )
           ) : null}
+                </td>
+              </tr>
+            </tbody>
+            <tfoot className="print-only">
+              <tr>
+                <td>
+                  <div className="print-footer-content">
+                    <hr />
+                    <p><strong>Misión:</strong> "Somos un organismo que elabora, propone y ejecuta políticas en materia de infraestructura pública, transporte, minería y energía, para la integración y desarrollo económico de la población".</p>
+                    <p><strong>Visión:</strong> "Ser reconocidos por nuestra idoneidad en planificación y ejecución de políticas y proyectos, garantizando la conectividad a través de infraestructuras públicas innovadoras, gestionadas de forma eficiente, transparente y enfocadas al ciudadano".</p>
+                  </div>
+                </td>
+              </tr>
+            </tfoot>
+          </table>
         </div>
       </div>
     </div>

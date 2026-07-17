@@ -230,6 +230,14 @@
   background-color: #2563eb;
 }
 
+.print-only {
+  display: none;
+}
+.print-layout-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
 @media print {
   body * {
     visibility: hidden;
@@ -258,7 +266,7 @@
     overflow-y: visible;
     background-color: white;
   }
-  .close-btn, .print-btn {
+  .close-btn, .print-btn, .fines-modal-header {
     display: none !important;
   }
   .eot-fines-card {
@@ -266,5 +274,32 @@
     box-shadow: none;
     border: 1px solid #e2e8f0;
     border-left: 4px solid #3b82f6;
+  }
+  .print-only {
+    display: table-header-group;
+  }
+  tfoot.print-only {
+    display: table-footer-group;
+  }
+  .print-header-content {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .print-header-content img {
+    max-width: 450px;
+  }
+  .print-footer-content {
+    margin-top: 15px;
+    font-size: 11px;
+    text-align: left;
+    color: black;
+  }
+  .print-footer-content p {
+    margin: 4px 0;
+  }
+  .print-footer-content hr, .print-header-content hr {
+    border: none;
+    border-top: 1px solid black;
+    margin: 10px 0;
   }
 }
