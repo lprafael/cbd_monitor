@@ -150,6 +150,38 @@ export const generateActaPdf = async (empresa, fechaReporte) => {
   
   doc.text("(Resolución GVMT 07/24 - Articulo 9).", doc.internal.pageSize.getWidth() / 2, currentY, { align: 'center' });
 
+  currentY += 40;
+
+  // Firmas
+  doc.setFontSize(10);
+  doc.text("ELABORADO POR:", 60, currentY);
+  doc.text("________________________________________________", 160, currentY);
+  
+  currentY += 40;
+  doc.text("VERIFICADO POR:", 60, currentY);
+  doc.text("________________________________________________", 160, currentY);
+
+  // Pie de página (Misión y Visión)
+  const footerY = 750;
+  doc.setLineWidth(1);
+  doc.line(60, footerY, 535, footerY);
+
+  doc.setFontSize(9);
+  
+  // Misión
+  doc.setFont("helvetica", "bold");
+  doc.text("Misión:", 60, footerY + 15);
+  doc.setFont("helvetica", "italic");
+  doc.text(' "Somos un organismo que elabora, propone y ejecuta políticas en materia de infraestructura pública, transporte, minería,', 95, footerY + 15);
+  doc.text('energía, para la integración y desarrollo económico de la población".', 60, footerY + 27);
+
+  // Visión
+  doc.setFont("helvetica", "bold");
+  doc.text("Visión:", 60, footerY + 45);
+  doc.setFont("helvetica", "italic");
+  doc.text(' "Ser reconocidos por nuestra idoneidad en planificación y ejecución de políticas y proyectos, garantizando la conectividad a', 95, footerY + 45);
+  doc.text('través de infraestructuras públicas innovadoras, gestionadas de forma eficiente, transparente y enfocadas al ciudadano".', 60, footerY + 57);
+
   // Guardar PDF
   doc.save(`Acta_Infraccion_${empresa.eot_nombre.replace(/\s+/g, '_')}_${fechaReporte}.pdf`);
 };
