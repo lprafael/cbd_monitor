@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 export const generateActaPdf = async (empresa, fechaReporte) => {
   const doc = new jsPDF('p', 'pt', 'a4');
@@ -92,7 +92,7 @@ export const generateActaPdf = async (empresa, fechaReporte) => {
   // Tabla 1: Detalle Infracciones
   const table1Data = empresa.infracciones.map(inf => [inf.fecha, inf.base || 'Art. 15.6', inf.desc]);
   
-  doc.autoTable({
+  autoTable(doc, {
     startY: currentY,
     head: [['Fecha', 'Infracción', 'Descripción']],
     body: table1Data,
@@ -123,7 +123,7 @@ export const generateActaPdf = async (empresa, fechaReporte) => {
     'Intermedia'
   ]);
 
-  doc.autoTable({
+  autoTable(doc, {
     startY: currentY,
     head: [['Infracción', 'Cantidad de infracción', 'Escala de Infracción']],
     body: table2Data,
