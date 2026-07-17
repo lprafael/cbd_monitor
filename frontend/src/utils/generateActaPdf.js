@@ -37,11 +37,11 @@ export const generateActaPdf = async (empresa, fechaReporte) => {
   // Título
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.text("ACTA DE COMPROBACIÓN CID N° 04/2026", doc.internal.pageSize.getWidth() / 2, 130, { align: 'center' });
+  doc.text("ACTA DE COMPROBACIÓN CID N° ___/2026", doc.internal.pageSize.getWidth() / 2, 130, { align: 'center' });
 
   // Subtítulo
-  doc.text("COMPROBACION DE INFRACCIONES A TRAVES DEL CENTRO DE CONTROL Y MONITOREO DEL SISTEMA NACIONAL DE", doc.internal.pageSize.getWidth() / 2, 150, { align: 'center' });
-  doc.text("BILLETAJE ELECTRONICO", doc.internal.pageSize.getWidth() / 2, 165, { align: 'center' });
+  doc.text("COMPROBACION DE INFRACCIONES A TRAVES DEL CENTRO DE CONTROL Y MONITOREO", doc.internal.pageSize.getWidth() / 2, 150, { align: 'center' });
+  doc.text("DEL SISTEMA NACIONAL DE BILLETAJE ELECTRÓNICO", doc.internal.pageSize.getWidth() / 2, 165, { align: 'center' });
 
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
