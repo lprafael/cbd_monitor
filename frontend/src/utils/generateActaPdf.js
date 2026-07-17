@@ -5,7 +5,7 @@ export const generateActaPdf = async (empresa, fechaReporte) => {
   const doc = new jsPDF('p', 'pt', 'a4');
 
   // Intentar cargar el logo del MOPC / VMT
-  const logoUrl = '/imagenes/Logo MOPC VMT.png';
+  const logoUrl = process.env.PUBLIC_URL + '/imagenes/Logo MOPC VMT.png';
   let logoBase64 = null;
   try {
     const response = await fetch(logoUrl);
@@ -56,7 +56,12 @@ export const generateActaPdf = async (empresa, fechaReporte) => {
   const dateReporte = new Date(rYear, parseInt(rMonth) - 1, 1);
   const reporteMonthName = dateReporte.toLocaleDateString('es-ES', { month: 'long' });
 
-  const p1 = `En la ciudad de Asunción, a los ${day} días del mes de ${monthName} del ${yearStr}, se procede a labrar la presente acta, en atención a los datos extraídos y analizados del Centro de Control y Monitoreo del SNBE, en fecha 09 de junio del corriente año, correspondientes al periodo operativo de ${reporteMonthName}, conforme a las siguientes normativas:`;
+  // Fecha de extracción de datos (1er día del mes siguiente al analizado)
+  const dateExtraccion = new Date(parseInt(rYear), parseInt(rMonth), 1);
+  const actMonthName = dateExtraccion.toLocaleDateString('es-ES', { month: 'long' });
+  const actYear = dateExtraccion.getFullYear();
+
+  const p1 = `En la ciudad de Asunción, a los ${day} día/s del mes de ${monthName} del ${yearStr}, se procede a labrar la presente acta, en atención a los datos extraídos y analizados del Centro de Control y Monitoreo del SNBE, en fecha 01 de ${actMonthName} del año ${actYear}, correspondientes al periodo operativo de ${reporteMonthName}, conforme a las siguientes normativas:`;
 
   const splitP1 = doc.splitTextToSize(p1, 510);
   doc.text(splitP1, 40, 190);
