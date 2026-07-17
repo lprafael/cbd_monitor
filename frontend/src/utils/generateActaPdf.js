@@ -67,7 +67,7 @@ export const generateActaPdf = async (empresa, fechaReporte) => {
   doc.text(splitP1, 60, 190);
 
   let currentY = 190 + (splitP1.length * 12) + 5;
-  
+
   const normativas = [
     "* artículos 5° y 7° de la Ley 5230/2014;",
     "* el Decreto Reglamentario N° 6912/2017;",
@@ -87,7 +87,7 @@ export const generateActaPdf = async (empresa, fechaReporte) => {
   const p2 = `se comprueba que la Empresa Operadora de Transporte ${empresa.eot_nombre}, ha incurrido en la siguiente infracción:`;
   const splitP2 = doc.splitTextToSize(p2, 475);
   doc.text(splitP2, 60, currentY);
-  
+
   currentY += (splitP2.length * 12) + 10;
 
   doc.setFont("helvetica", "bold");
@@ -96,7 +96,7 @@ export const generateActaPdf = async (empresa, fechaReporte) => {
 
   // Tabla 1: Detalle Infracciones
   const table1Data = empresa.infracciones.map(inf => [inf.fecha, inf.base || 'Art. 15.6', inf.desc]);
-  
+
   autoTable(doc, {
     startY: currentY,
     margin: { left: 60, right: 60 },
@@ -124,8 +124,8 @@ export const generateActaPdf = async (empresa, fechaReporte) => {
   });
 
   const table2Data = Object.keys(summaryMap).map(key => [
-    key, 
-    summaryMap[key], 
+    key,
+    summaryMap[key],
     'Intermedia'
   ]);
 
@@ -147,7 +147,7 @@ export const generateActaPdf = async (empresa, fechaReporte) => {
   const splitP3 = doc.splitTextToSize(p3, 475);
   doc.text(splitP3, 60, currentY);
   currentY += (splitP3.length * 12) + 5;
-  
+
   doc.text("(Resolución GVMT 07/24 - Articulo 9).", doc.internal.pageSize.getWidth() / 2, currentY, { align: 'center' });
 
   currentY += 40;
@@ -156,7 +156,7 @@ export const generateActaPdf = async (empresa, fechaReporte) => {
   doc.setFontSize(10);
   doc.text("ELABORADO POR:", 60, currentY);
   doc.text("________________________________________________", 160, currentY);
-  
+
   currentY += 40;
   doc.text("VERIFICADO POR:", 60, currentY);
   doc.text("________________________________________________", 160, currentY);
@@ -167,20 +167,21 @@ export const generateActaPdf = async (empresa, fechaReporte) => {
   doc.line(60, footerY, 535, footerY);
 
   doc.setFontSize(9);
-  
+
   // Misión
   doc.setFont("helvetica", "bold");
   doc.text("Misión:", 60, footerY + 15);
   doc.setFont("helvetica", "italic");
-  doc.text(' "Somos un organismo que elabora, propone y ejecuta políticas en materia de infraestructura pública, transporte, minería,', 95, footerY + 15);
-  doc.text('energía, para la integración y desarrollo económico de la población".', 60, footerY + 27);
+  doc.text(' "Somos un organismo que elabora, propone y ejecuta políticas en materia de infraestructura pública, transporte,', 95, footerY + 15);
+  doc.text('minería y energía, para la integración y desarrollo económico de la población".', 60, footerY + 27);
 
   // Visión
   doc.setFont("helvetica", "bold");
   doc.text("Visión:", 60, footerY + 45);
   doc.setFont("helvetica", "italic");
-  doc.text(' "Ser reconocidos por nuestra idoneidad en planificación y ejecución de políticas y proyectos, garantizando la conectividad a', 95, footerY + 45);
-  doc.text('través de infraestructuras públicas innovadoras, gestionadas de forma eficiente, transparente y enfocadas al ciudadano".', 60, footerY + 57);
+  doc.text(' "Ser reconocidos por nuestra idoneidad en planificación y ejecución de políticas y proyectos, garantizando la', 95, footerY + 45);
+  doc.text('conectividad a través de infraestructuras públicas innovadoras, gestionadas de forma eficiente, transparente y enfocadas', 60, footerY + 57);
+  doc.text('al ciudadano".', 60, footerY + 69);
 
   // Guardar PDF
   doc.save(`Acta_Infraccion_${empresa.eot_nombre.replace(/\s+/g, '_')}_${fechaReporte}.pdf`);
