@@ -256,7 +256,7 @@ const Header = ({
                     />
                     <span>📊 CBD Objetivo</span>
                   </label>
-                  {user && user.rol !== 'viewer' && (
+                  {user && user.rol === 'admin' && (
                     <>
                       <label className="radio-label">
                         <input
