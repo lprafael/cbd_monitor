@@ -17,6 +17,7 @@ import SystemChartsDashboard from './components/SystemChartsDashboard';
 import AdvancedPerformanceModal from './components/AdvancedPerformanceModal';
 import GraficoBusesModal from './components/GraficoBusesModal';
 import FinesReportModal from './components/FinesReportModal';
+import SubsidyCalculationModal from './components/SubsidyCalculationModal';
 import './App.css';
 import './components/IndicesDashboard.css';
 import { API_BASE_URL } from './config';
@@ -42,6 +43,7 @@ function App({ onLogout, user }) {
   const [showAdvancedModal, setShowAdvancedModal] = useState(false); // Modal avanzado estilo Power BI
   const [showGraficoBusesModal, setShowGraficoBusesModal] = useState(false); // Modal gráfico buses/hora
   const [showFinesModal, setShowFinesModal] = useState(false); // Modal de reporte de multas
+  const [showSubsidyModal, setShowSubsidyModal] = useState(false); // Modal de cálculo para subsidio
 
   // Verificar si el usuario es admin
   const isAdmin = user && user.rol === 'admin';
@@ -257,6 +259,7 @@ function App({ onLogout, user }) {
           user={user}
           onOpenAdvanced={() => setShowAdvancedModal(true)}
           onOpenGraficoBuses={() => setShowGraficoBusesModal(true)}
+          onOpenSubsidy={() => setShowSubsidyModal(true)}
         />
       )}
 
@@ -353,6 +356,11 @@ function App({ onLogout, user }) {
       <FinesReportModal
         isOpen={showFinesModal}
         onClose={() => setShowFinesModal(false)}
+        fecha={fecha}
+      />
+      <SubsidyCalculationModal
+        isOpen={showSubsidyModal}
+        onClose={() => setShowSubsidyModal(false)}
         fecha={fecha}
       />
     </div>

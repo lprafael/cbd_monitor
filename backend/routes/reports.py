@@ -450,3 +450,158 @@ async def get_eot_monthly_breakdown(eot_id: str, year: int, month: int, db: Data
         return sorted(breakdown.values(), key=lambda x: x["fecha"])
     finally:
         cursor.close()
+
+@router.get("/subsidy-breakdown/{year}/{month}")
+async def get_subsidy_breakdown(
+    year: int, 
+    month: int, 
+    db: DatabaseConnection = Depends(get_db_connection)
+):
+    cursor = db.get_cursor()
+    try:
+        if not (1 <= month <= 12):
+            raise HTTPException(status_code=400, detail="Mes inválido")
+            
+        _, last_day = calendar.monthrange(year, month)
+        inicio_mes = date(year, month, 1)
+        fin_mes = date(year, month, last_day)
+
+        query_eots = """
+        WITH iccbdm_franja AS (
+            SELECT 
+                h.id_eot_vmt_hex, 
+                h.fecha, 
+                h.id_franja,
+                LEAST(AVG(COALESCE(h.cbd_indice, LEAST(h.ifo, 1.0))), 1.0) as iccbdm_franja_val
+            FROM control_metricas.ifo_historico h
+            WHERE h.fecha >= %s AND h.fecha <= %s
+            GROUP BY h.id_eot_vmt_hex, h.fecha, h.id_franja
+        ),
+        iccbdm_diario AS (
+            SELECT 
+                id_eot_vmt_hex, 
+                fecha, 
+                LEAST(AVG(iccbdm_franja_val), 1.0) as iccbdm_dia
+            FROM iccbdm_franja
+            GROUP BY id_eot_vmt_hex, fecha
+        ),
+        iccbdm_mensual_eot AS (
+            SELECT 
+                id_eot_vmt_hex, 
+                LEAST(AVG(iccbdm_dia), 1.0) * 100 as iccbdm_mensual,
+                COUNT(DISTINCT fecha) as dias_validos
+            FROM iccbdm_diario
+            GROUP BY id_eot_vmt_hex
+        )
+        SELECT 
+            e.id_eot_vmt_hex, 
+            e.eot_nombre, 
+            COALESCE(i.iccbdm_mensual, 0) as iccbdm_mensual, 
+            COALESCE(i.dias_validos, 0) as dias_validos
+        FROM public.eots e
+        LEFT JOIN iccbdm_mensual_eot i ON e.id_eot_vmt_hex = i.id_eot_vmt_hex
+        WHERE e.cod_catalogo NOT IN (72)
+        AND e.permisionario IS TRUE
+        ORDER BY e.eot_nombre;
+        """
+        cursor.execute(query_eots, (inicio_mes, fin_mes))
+        eots_data = cursor.fetchall()
+        
+        eots_list = []
+        eots_cumplen_100 = 0
+        eots_cumplen_95 = 0
+        eots_bajo_95 = 0
+        sum_iccbdm = 0.0
+
+        for row in eots_data:
+            if row['dias_validos'] > 0:
+                val = round(float(row['iccbdm_mensual']), 2)
+                val = min(val, 100.0)
+                
+                if val >= 100.0:
+                    estado_color = 'green'
+                    eots_cumplen_100 += 1
+                elif val >= 95.0:
+                    estado_color = 'yellow'
+                    eots_cumplen_95 += 1
+                else:
+                    estado_color = 'red'
+                    eots_bajo_95 += 1
+                
+                sum_iccbdm += val
+                eots_list.append({
+                    "id_eot_vmt_hex": row['id_eot_vmt_hex'],
+                    "eot_nombre": row['eot_nombre'],
+                    "iccbdm_mensual": val,
+                    "cumple_subsidio": val >= 95.0,
+                    "estado_color": estado_color,
+                    "dias_validos": int(row['dias_validos'])
+                })
+        
+        promedio_sistema = round(sum_iccbdm / len(eots_list), 2) if eots_list else 0.0
+
+        return {
+            "year": year,
+            "month": month,
+            "total_eots": len(eots_list),
+            "promedio_sistema": promedio_sistema,
+            "eots_cumplen_100": eots_cumplen_100,
+            "eots_cumplen_95": eots_cumplen_95,
+            "eots_bajo_95": eots_bajo_95,
+            "eots": eots_list
+        }
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+
+@router.get("/eot-subsidy-breakdown/{eot_id}/{year}/{month}")
+async def get_eot_subsidy_breakdown(eot_id: str, year: int, month: int, db: DatabaseConnection = Depends(get_db_connection)):
+    cursor = db.get_cursor()
+    try:
+        _, last_day = calendar.monthrange(year, month)
+        inicio, fin = date(year, month, 1), date(year, month, last_day)
+        cursor.execute("SELECT fecha FROM public.feriados WHERE fecha BETWEEN %s AND %s", (inicio, fin))
+        feriados = {str(row['fecha']) for row in cursor.fetchall()}
+        cursor.execute("SELECT fecha FROM control_metricas.dias_atipicos WHERE fecha BETWEEN %s AND %s", (inicio, fin))
+        atipicos = {str(row['fecha']) for row in cursor.fetchall()}
+        
+        cursor.execute("""
+            SELECT 
+                h.fecha, 
+                f.id_franja, 
+                f.denominacion, 
+                LEAST(AVG(COALESCE(h.cbd_indice, LEAST(h.ifo, 1.0))), 1.0) * 100 as iccbdm_franja
+            FROM control_metricas.ifo_historico h
+            JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
+            WHERE h.id_eot_vmt_hex = %s AND h.fecha BETWEEN %s AND %s
+            GROUP BY 1, 2, 3 ORDER BY 1, 2;
+        """, (eot_id, inicio, fin))
+        rows = cursor.fetchall()
+        breakdown = {}
+        for row in rows:
+            fs = str(row['fecha'])
+            if fs not in breakdown:
+                _, adjustments = get_factores_ajuste_acumulados(cursor, row['fecha'])
+                breakdown[fs] = {
+                    "fecha": fs, 
+                    "es_excluido": False, 
+                    "ajustes": adjustments, 
+                    "iccbdm_dia": 0, 
+                    "franjas": [], 
+                    "motivo_exclusion": "Domingo" if row['fecha'].weekday() == 6 else "Feriado" if fs in feriados else "Atípico" if fs in atipicos else None
+                }
+            val_franja = min(round(float(row['iccbdm_franja']), 2), 100.0)
+            breakdown[fs]["franjas"].append({
+                "id_franja": row['id_franja'], 
+                "denominacion": row['denominacion'], 
+                "iccbdm": val_franja
+            })
+        for info in breakdown.values():
+            if info["franjas"]:
+                avg_dia = sum(f["iccbdm"] for f in info["franjas"]) / len(info["franjas"])
+                info["iccbdm_dia"] = min(round(avg_dia, 2), 100.0)
+        return sorted(breakdown.values(), key=lambda x: x["fecha"])
+    finally:
+        cursor.close()

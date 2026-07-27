@@ -27,7 +27,8 @@ const Header = ({
   onLogout,
   user,
   onOpenAdvanced,
-  onOpenGraficoBuses
+  onOpenGraficoBuses,
+  onOpenSubsidy
 }) => {
   const handleEotChange = (e) => {
     const options = e.target.options;
@@ -281,6 +282,10 @@ const Header = ({
                       <label className="radio-label advanced-trigger" onClick={onOpenAdvanced} style={{ cursor: 'pointer' }}>
                         <input type="radio" name="viewMode" checked={false} readOnly />
                         <span>🚀 Gráfico Avanzado (BI)</span>
+                      </label>
+                      <label className="radio-label advanced-trigger" onClick={onOpenSubsidy} style={{ cursor: 'pointer' }}>
+                        <input type="radio" name="viewMode" checked={false} readOnly />
+                        <span>💰 Cálc. p/ subs</span>
                       </label>
                       <label className="radio-label">
                         <input
