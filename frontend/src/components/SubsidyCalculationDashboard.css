@@ -169,3 +169,126 @@
 .franja-val.cell-green { color: #059669; font-weight: 700; }
 .franja-val.cell-yellow { color: #d97706; font-weight: 700; }
 .franja-val.cell-red { color: #dc2626; font-weight: 700; }
+
+/* Print styles for PDF report generation */
+@media print {
+    @page {
+        margin: 1cm;
+        size: portrait;
+    }
+
+    body * {
+        visibility: hidden;
+    }
+
+    .subsidy-dashboard,
+    .subsidy-dashboard * {
+        visibility: visible !important;
+    }
+
+    .subsidy-dashboard {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+    }
+
+    .hamburger-menu,
+    .app-footer,
+    .chatbot,
+    .general-report-button,
+    .cro-button,
+    .actions-col,
+    .expand-cell,
+    .no-print {
+        display: none !important;
+    }
+
+    .main-title {
+        color: #0f172a !important;
+        font-size: 1.4rem !important;
+    }
+
+    .period-badge {
+        background: #0284c7 !important;
+        color: #ffffff !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    .summary-cards {
+        grid-template-columns: repeat(4, 1fr) !important;
+        gap: 0.5rem !important;
+        margin-bottom: 1rem !important;
+    }
+
+    .summary-card {
+        border: 1px solid #cbd5e1 !important;
+        box-shadow: none !important;
+        background: #f8fafc !important;
+        padding: 0.6rem !important;
+        page-break-inside: avoid;
+    }
+
+    .summary-card .card-value {
+        color: #0f172a !important;
+        font-size: 1.4rem !important;
+    }
+
+    .subsidy-legend-bar {
+        background: #f1f5f9 !important;
+        border: 1px solid #cbd5e1 !important;
+        color: #0f172a !important;
+        padding: 0.4rem 0.8rem !important;
+        margin-bottom: 1rem !important;
+    }
+
+    .eots-table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        font-size: 0.85rem !important;
+    }
+
+    .eots-table th {
+        background: #1e293b !important;
+        color: #ffffff !important;
+        border: 1px solid #94a3b8 !important;
+        padding: 0.5rem !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    .eots-table td {
+        color: #0f172a !important;
+        border: 1px solid #cbd5e1 !important;
+        padding: 0.5rem !important;
+    }
+
+    .iccbdm-badge.green, .subsidy-status-tag.tag-green {
+        background-color: #d1fae5 !important;
+        color: #065f46 !important;
+        border: 1px solid #10b981 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    .iccbdm-badge.yellow, .subsidy-status-tag.tag-yellow {
+        background-color: #fef3c7 !important;
+        color: #92400e !important;
+        border: 1px solid #f59e0b !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    .iccbdm-badge.red, .subsidy-status-tag.tag-red {
+        background-color: #fee2e2 !important;
+        color: #991b1b !important;
+        border: 1px solid #ef4444 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+}
