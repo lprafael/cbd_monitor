@@ -287,17 +287,6 @@ const SubsidyCalculationDashboard = ({ year, month }) => {
                                 </React.Fragment>
                             ))}
                         </tbody>
-                        <tfoot>
-                            <tr className="total-row">
-                                <td colSpan="3"><strong>PROMEDIO SISTEMA (ICCBDM)</strong></td>
-                                <td className="iccbdm-col">
-                                    <div className="iccbdm-badge green">
-                                        <strong>{data.promedio_sistema.toFixed(2)}%</strong>
-                                    </div>
-                                </td>
-                                <td colSpan="3">-</td>
-                            </tr>
-                        </tfoot>
                     </table>
                 </div>
             </div>
