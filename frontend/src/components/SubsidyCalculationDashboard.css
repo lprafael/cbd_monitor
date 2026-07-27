@@ -1,0 +1,171 @@
+/* Subsidy Calculation Dashboard */
+.subsidy-dashboard {
+    padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Header action button */
+.general-report-button {
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    color: white;
+    border: none;
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+    box-shadow: 0 4px 8px rgba(2, 132, 199, 0.25);
+    margin-left: auto;
+}
+
+.general-report-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(2, 132, 199, 0.35);
+    background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+}
+
+/* Summary Card Color Variants */
+.summary-card.card-green {
+    border-left-color: #10b981;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.02) 100%);
+}
+
+.summary-card.card-yellow {
+    border-left-color: #f59e0b;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(245, 158, 11, 0.02) 100%);
+}
+
+.summary-card.card-red {
+    border-left-color: #ef4444;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(239, 68, 68, 0.02) 100%);
+}
+
+.summary-card.card-info {
+    border-left-color: #3b82f6;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.02) 100%);
+}
+
+/* Legend bar */
+.subsidy-legend-bar {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    background: var(--card-background, #ffffff);
+    padding: 0.8rem 1.2rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    box-shadow: var(--card-shadow, 0 2px 4px rgba(0,0,0,0.05));
+    border: 1px solid var(--border-color, #e2e8f0);
+}
+
+.subsidy-legend-bar .legend-green { color: #059669; }
+.subsidy-legend-bar .legend-yellow { color: #d97706; }
+.subsidy-legend-bar .legend-red { color: #dc2626; }
+
+/* Table Columns & Badges */
+.iccbdm-col {
+    text-align: center;
+}
+
+.iccbdm-badge {
+    display: inline-block;
+    padding: 0.35rem 0.75rem;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.95rem;
+}
+
+.iccbdm-badge.green {
+    color: #059669;
+    background-color: rgba(5, 150, 105, 0.12);
+    border: 1px solid rgba(5, 150, 105, 0.25);
+}
+
+.iccbdm-badge.yellow {
+    color: #d97706;
+    background-color: rgba(217, 119, 6, 0.12);
+    border: 1px solid rgba(217, 119, 6, 0.25);
+}
+
+.iccbdm-badge.red {
+    color: #dc2626;
+    background-color: rgba(220, 38, 38, 0.12);
+    border: 1px solid rgba(220, 38, 38, 0.25);
+}
+
+.status-col {
+    text-align: center;
+}
+
+.subsidy-status-tag {
+    display: inline-block;
+    padding: 0.3rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.subsidy-status-tag.tag-green {
+    background-color: rgba(16, 185, 129, 0.15);
+    color: #059669;
+}
+
+.subsidy-status-tag.tag-yellow {
+    background-color: rgba(245, 158, 11, 0.15);
+    color: #d97706;
+}
+
+.subsidy-status-tag.tag-red {
+    background-color: rgba(239, 68, 68, 0.15);
+    color: #dc2626;
+}
+
+/* Action button for CRO */
+.actions-col {
+    text-align: center;
+}
+
+.cro-button {
+    background: rgba(3, 105, 161, 0.1);
+    color: #0369a1;
+    border: 1px solid rgba(3, 105, 161, 0.3);
+    padding: 0.35rem 0.8rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.cro-button:hover {
+    background: #0369a1;
+    color: #ffffff;
+    border-color: #0369a1;
+    box-shadow: 0 2px 6px rgba(3, 105, 161, 0.3);
+}
+
+/* Detail Table Franja Cell Colors */
+.day-pill {
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+.day-pill.pill-green { color: #059669; background: rgba(5, 150, 105, 0.1); }
+.day-pill.pill-yellow { color: #d97706; background: rgba(217, 119, 6, 0.1); }
+.day-pill.pill-red { color: #dc2626; background: rgba(220, 38, 38, 0.1); }
+
+.franja-val.cell-green { color: #059669; font-weight: 700; }
+.franja-val.cell-yellow { color: #d97706; font-weight: 700; }
+.franja-val.cell-red { color: #dc2626; font-weight: 700; }

@@ -176,14 +176,14 @@ const Header = ({
             <div className="form-controls-column">
               <div className="form-group">
                 <label htmlFor="fecha-input">
-                  {viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'system-ifo' || viewMode === 'visual-charts' || viewMode === 'fines-report' ? 'Mes y Año:' : 'Fecha:'}
+                  {viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'system-ifo' || viewMode === 'visual-charts' || viewMode === 'fines-report' || viewMode === 'subsidy-calc' ? 'Mes y Año:' : 'Fecha:'}
                 </label>
                 <input
                   id="fecha-input"
-                  key={viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'system-ifo' || viewMode === 'visual-charts' || viewMode === 'fines-report' ? 'month' : 'date'}
-                  type={viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'system-ifo' || viewMode === 'visual-charts' || viewMode === 'fines-report' ? "month" : "date"}
+                  key={viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'system-ifo' || viewMode === 'visual-charts' || viewMode === 'fines-report' || viewMode === 'subsidy-calc' ? 'month' : 'date'}
+                  type={viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'system-ifo' || viewMode === 'visual-charts' || viewMode === 'fines-report' || viewMode === 'subsidy-calc' ? "month" : "date"}
                   value={
-                    (viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'system-ifo' || viewMode === 'visual-charts' || viewMode === 'fines-report')
+                    (viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'system-ifo' || viewMode === 'visual-charts' || viewMode === 'fines-report' || viewMode === 'subsidy-calc')
                       ? (fecha && String(fecha).length >= 7
                         ? String(fecha).slice(0, 7)
                         : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`)
@@ -191,7 +191,7 @@ const Header = ({
                   }
                   onChange={(e) => {
                     const v = e.target.value;
-                    if (viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'system-ifo' || viewMode === 'visual-charts' || viewMode === 'fines-report') {
+                    if (viewMode === 'monthly' || viewMode === 'verify290' || viewMode === 'system-ifo' || viewMode === 'visual-charts' || viewMode === 'fines-report' || viewMode === 'subsidy-calc') {
                       setFecha(v.length === 7 ? v + '-01' : v);
                     } else {
                       setFecha(v);
@@ -283,8 +283,14 @@ const Header = ({
                         <input type="radio" name="viewMode" checked={false} readOnly />
                         <span>🚀 Gráfico Avanzado (BI)</span>
                       </label>
-                      <label className="radio-label advanced-trigger" onClick={onOpenSubsidy} style={{ cursor: 'pointer' }}>
-                        <input type="radio" name="viewMode" checked={false} readOnly />
+                      <label className="radio-label">
+                        <input
+                          type="radio"
+                          name="viewMode"
+                          value="subsidy-calc"
+                          checked={viewMode === 'subsidy-calc'}
+                          onChange={(e) => setViewMode(e.target.value)}
+                        />
                         <span>💰 Cálc. p/ subs</span>
                       </label>
                       <label className="radio-label">

@@ -17,7 +17,7 @@ import SystemChartsDashboard from './components/SystemChartsDashboard';
 import AdvancedPerformanceModal from './components/AdvancedPerformanceModal';
 import GraficoBusesModal from './components/GraficoBusesModal';
 import FinesReportModal from './components/FinesReportModal';
-import SubsidyCalculationModal from './components/SubsidyCalculationModal';
+import SubsidyCalculationDashboard from './components/SubsidyCalculationDashboard';
 import './App.css';
 import './components/IndicesDashboard.css';
 import { API_BASE_URL } from './config';
@@ -135,8 +135,8 @@ function App({ onLogout, user }) {
       window.location.hash = '#';
     }
 
-    // Si es modo system-ifo o visual-charts, no hacemos nada aquí, el dashboard se renderiza directamente
-    if (viewMode === 'system-ifo' || viewMode === 'visual-charts') {
+    // Si es modo system-ifo, visual-charts o subsidy-calc, no hacemos nada aquí, el dashboard se renderiza directamente
+    if (viewMode === 'system-ifo' || viewMode === 'visual-charts' || viewMode === 'subsidy-calc') {
       return;
     }
 
@@ -332,6 +332,13 @@ function App({ onLogout, user }) {
             month={fecha ? parseInt(fecha.split('-')[1]) : new Date().getMonth() + 1}
           />
         )}
+
+        {viewMode === 'subsidy-calc' && (
+          <SubsidyCalculationDashboard
+            year={fecha ? parseInt(fecha.split('-')[0]) : new Date().getFullYear()}
+            month={fecha ? parseInt(fecha.split('-')[1]) : new Date().getMonth() + 1}
+          />
+        )}
       </main>
 
       <footer className="app-footer">
@@ -356,11 +363,6 @@ function App({ onLogout, user }) {
       <FinesReportModal
         isOpen={showFinesModal}
         onClose={() => setShowFinesModal(false)}
-        fecha={fecha}
-      />
-      <SubsidyCalculationModal
-        isOpen={showSubsidyModal}
-        onClose={() => setShowSubsidyModal(false)}
         fecha={fecha}
       />
     </div>
