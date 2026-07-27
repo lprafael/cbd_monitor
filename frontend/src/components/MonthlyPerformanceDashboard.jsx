@@ -76,21 +76,37 @@ const MonthlyPerformanceDashboard = ({ data, user }) => {
                     <span className="metric-desc">Promedio mensual topeado</span>
                 </div>
 
-
+                <div className="metric-card iccbdm">
+                    <span className="metric-label">ICCBDM Mensual</span>
+                    <span className="metric-value">{ifo_mensual_eot.toFixed(2)}%</span>
+                    <div className={`subsidio-badge ${ifo_mensual_eot >= 95 ? 'subsidio-ok' : 'subsidio-alert'}`}>
+                        {ifo_mensual_eot >= 95 ? '✓ Subsidio Habilitado (≥ 95%)' : '⚠️ Subsidio en Riesgo (< 95%)'}
+                    </div>
+                    <span className="metric-desc" title="Se obtiene del promedio de los índices diarios registrados durante un mes calendario completo, considerando únicamente los días con datos válidos.">
+                        Promedio diario real
+                    </span>
+                </div>
 
             </div>
 
             {ifo_diarios && ifo_diarios.length > 0 && (
                 <div className="daily-detail-section">
-                    <h4>Desglose Diario</h4>
+                    <div className="section-header-with-info">
+                        <h4>Desglose Diario</h4>
+                        <span className="vigencia-tag" title="Vigencia plena desde 01/07/2026: 6 franjas hábiles y 3 franjas sábados (incluye madrugada y nocturno)">
+                            ℹ️ Vigencia Plena (Etapa 3)
+                        </span>
+                    </div>
                     <div className="table-responsive">
                         <table className="daily-table">
                             <thead>
                                 <tr>
                                     <th>Fecha</th>
                                     <th>Día</th>
-                                    <th>IFO Diario</th>
-                                    <th>IFO Diario(Topeado)</th>
+                                    <th title="Promedio de los índices obtenidos en todas las franjas operativas del día (ICCBDM diario = 1/n ∑ ICCBDM franja)">
+                                        ICCBDM Diario ℹ️
+                                    </th>
+                                    <th>IFO Diario (Topeado)</th>
                                     <th>Ajustes</th>
                                     <th>Estado</th>
                                 </tr>
@@ -100,7 +116,7 @@ const MonthlyPerformanceDashboard = ({ data, user }) => {
                                     <tr key={idx}>
                                         <td>{d.fecha}</td>
                                         <td>{new Intl.DateTimeFormat('es-PY', { weekday: 'long' }).format(new Date(d.fecha + 'T00:00:00'))}</td>
-                                        <td>{d.ifo.toFixed(2)}%</td>
+                                        <td className="iccbdm-cell">{d.ifo.toFixed(2)}%</td>
                                         <td>{d.ifo_topeado.toFixed(2)}%</td>
                                         <td className="adjustments-cell">
                                             {d.ajustes && d.ajustes.length > 0 ? (
