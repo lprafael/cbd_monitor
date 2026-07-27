@@ -83,6 +83,15 @@ const SubsidyCalculationModal = ({ isOpen, onClose, fecha }) => {
         return months[m - 1] || '';
     };
 
+    const handleGenerateGeneralReport = () => {
+        window.print();
+    };
+
+    const handleGenerateCRO = (eot, e) => {
+        e.stopPropagation();
+        alert(`📜 Generando Constancia de Rendimiento Operativo (CRO)\n\nEmpresa: ${eot.eot_nombre}\nPeríodo: ${getMonthName(month)} ${year}\nICCBDM Mensual: ${eot.iccbdm_mensual.toFixed(2)}%\nEstado: ${eot.cumple_subsidio ? 'HABILITADO PARA SUBSIDIO' : 'NO HABILITADO'}`);
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -96,6 +105,13 @@ const SubsidyCalculationModal = ({ isOpen, onClose, fecha }) => {
                     </div>
 
                     <div className="header-controls">
+                        <button 
+                            className="general-report-btn" 
+                            onClick={handleGenerateGeneralReport}
+                            title="Generar cuadro e imprimir reporte general de todas las empresas"
+                        >
+                            📄 Generar Reporte General
+                        </button>
                         <div className="period-selectors">
                             <select
                                 value={month}
@@ -180,6 +196,7 @@ const SubsidyCalculationModal = ({ isOpen, onClose, fecha }) => {
                                             <th>ICCBDM Mensual</th>
                                             <th>Estado Subsidio</th>
                                             <th>Días Válidos</th>
+                                            <th>Acciones</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -207,6 +224,15 @@ const SubsidyCalculationModal = ({ isOpen, onClose, fecha }) => {
                                                         </span>
                                                     </td>
                                                     <td className="dias-count">{eot.dias_validos}</td>
+                                                    <td className="actions-cell">
+                                                        <button 
+                                                            className="cro-btn"
+                                                            onClick={(e) => handleGenerateCRO(eot, e)}
+                                                            title={`Generar Constancia de Rendimiento Operativo (CRO) para ${eot.eot_nombre}`}
+                                                        >
+                                                            📜 Generar CRO
+                                                        </button>
+                                                    </td>
                                                 </tr>
 
                                                 {/* Expanded row for daily and franja breakdown */}
