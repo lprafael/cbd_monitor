@@ -10,6 +10,7 @@ const MonthlyPerformanceDashboard = ({ data, user }) => {
         eot_nombre,
         ifo_mensual_eot,
         ifo_mensual_eot_topeado,
+        iccbdm_mensual_eot,
         ifo_sistema_anterior,
         ifo_sistema_anterior_topeado,
         umbral_objetivo,
@@ -23,9 +24,13 @@ const MonthlyPerformanceDashboard = ({ data, user }) => {
         return date.toLocaleString('es-ES', { month: 'long' }).toUpperCase();
     };
 
-    // Use 110 as top for daily display
+    // ICCBDM está por definición estrictamente topeado a 100% (1.0 max por franja/día)
+    const iccbdm_mensual_val = Math.min(iccbdm_mensual_eot !== undefined ? iccbdm_mensual_eot : ifo_mensual_eot, 100);
+
+    // Use 110 as top for daily IFO, use 100 for daily ICCBDM
     const capped_ifo_diarios = ifo_diarios ? ifo_diarios.map(d => ({
         ...d,
+        iccbdm_val: Math.min(d.iccbdm !== undefined ? d.iccbdm : d.ifo, 100),
         ifo_topeado: Math.min(d.ifo, 110)
     })) : [];
 
@@ -78,12 +83,12 @@ const MonthlyPerformanceDashboard = ({ data, user }) => {
 
                 <div className="metric-card iccbdm">
                     <span className="metric-label">ICCBDM Mensual</span>
-                    <span className="metric-value">{ifo_mensual_eot.toFixed(2)}%</span>
-                    <div className={`subsidio-badge ${ifo_mensual_eot >= 95 ? 'subsidio-ok' : 'subsidio-alert'}`}>
-                        {ifo_mensual_eot >= 95 ? '✓ Subsidio Habilitado (≥ 95%)' : '⚠️ Subsidio en Riesgo (< 95%)'}
+                    <span className="metric-value">{iccbdm_mensual_val.toFixed(2)}%</span>
+                    <div className={`subsidio-badge ${iccbdm_mensual_val >= 95 ? 'subsidio-ok' : 'subsidio-alert'}`}>
+                        {iccbdm_mensual_val >= 95 ? '✓ Subsidio Habilitado (≥ 95%)' : '⚠️ Subsidio en Riesgo (< 95%)'}
                     </div>
-                    <span className="metric-desc" title="Se obtiene del promedio de los índices diarios registrados durante un mes calendario completo, considerando únicamente los días con datos válidos.">
-                        Promedio diario real
+                    <span className="metric-desc" title="Promedio de los índices diarios registrados en el mes. Por definición del indicador CBD, el ICCBDM por franja y día está topeado a 100%.">
+                        Promedio diario (Máx. 100%)
                     </span>
                 </div>
 
@@ -103,7 +108,7 @@ const MonthlyPerformanceDashboard = ({ data, user }) => {
                                 <tr>
                                     <th>Fecha</th>
                                     <th>Día</th>
-                                    <th title="Promedio de los índices obtenidos en todas las franjas operativas del día (ICCBDM diario = 1/n ∑ ICCBDM franja)">
+                                    <th title="Promedio de los índices obtenidos en todas las franjas operativas del día (ICCBDM diario = 1/n ∑ ICCBDM franja, topeado a 100%)">
                                         ICCBDM Diario ℹ️
                                     </th>
                                     <th>IFO Diario (Topeado)</th>
@@ -116,7 +121,7 @@ const MonthlyPerformanceDashboard = ({ data, user }) => {
                                     <tr key={idx}>
                                         <td>{d.fecha}</td>
                                         <td>{new Intl.DateTimeFormat('es-PY', { weekday: 'long' }).format(new Date(d.fecha + 'T00:00:00'))}</td>
-                                        <td className="iccbdm-cell">{d.ifo.toFixed(2)}%</td>
+                                        <td className="iccbdm-cell">{d.iccbdm_val.toFixed(2)}%</td>
                                         <td>{d.ifo_topeado.toFixed(2)}%</td>
                                         <td className="adjustments-cell">
                                             {d.ajustes && d.ajustes.length > 0 ? (

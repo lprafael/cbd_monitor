@@ -64,17 +64,20 @@ async def get_monthly_performance(
         query_ifo_mensual = """
             SELECT 
                 AVG(daily_ifo) as monthly_ifo,
-                AVG(daily_ifo_topeado) as monthly_ifo_topeado
+                AVG(daily_ifo_topeado) as monthly_ifo_topeado,
+                AVG(daily_iccbdm) as monthly_iccbdm
             FROM (
                     SELECT 
                     fecha, 
                     AVG(franja_avg) as daily_ifo,
-                    LEAST(AVG(franja_avg), 1.1) as daily_ifo_topeado
+                    LEAST(AVG(franja_avg), 1.1) as daily_ifo_topeado,
+                    LEAST(AVG(iccbdm_franja_avg), 1.0) as daily_iccbdm
                 FROM (
                     SELECT 
                         fecha, 
                         h.id_franja,
-                        AVG(ifo) as franja_avg
+                        AVG(ifo) as franja_avg,
+                        AVG(COALESCE(cbd_indice, LEAST(ifo, 1.0))) as iccbdm_franja_avg
                     FROM control_metricas.ifo_historico h
                     JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
                     WHERE h.id_eot_vmt_hex = %s
@@ -92,16 +95,21 @@ async def get_monthly_performance(
         ifo_mensual_topeado_val = res_eot['monthly_ifo_topeado'] if res_eot and res_eot['monthly_ifo_topeado'] is not None else 0.0
         ifo_mensual_topeado_pct = float(ifo_mensual_topeado_val * 100)
         
-        # Get details for chart (daily IFOs)
+        iccbdm_mensual_val = res_eot['monthly_iccbdm'] if res_eot and res_eot['monthly_iccbdm'] is not None else 0.0
+        iccbdm_mensual_pct = min(float(iccbdm_mensual_val * 100), 100.0)
+        
+        # Get details for chart (daily IFOs and ICCBDMs)
         query_daily = """
             SELECT 
                 fecha, 
-                AVG(franja_avg) as daily_ifo
+                AVG(franja_avg) as daily_ifo,
+                LEAST(AVG(iccbdm_franja_avg), 1.0) as daily_iccbdm
             FROM (
                 SELECT 
                     fecha, 
                     h.id_franja,
-                    AVG(ifo) as franja_avg
+                    AVG(ifo) as franja_avg,
+                    AVG(COALESCE(cbd_indice, LEAST(ifo, 1.0))) as iccbdm_franja_avg
                 FROM control_metricas.ifo_historico h
                 JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
                 WHERE h.id_eot_vmt_hex = %s
@@ -117,9 +125,11 @@ async def get_monthly_performance(
         ifo_diarios = []
         for r in daily_rows:
             _, lista_ajustes = get_factores_ajuste_acumulados(cursor, r['fecha'])
+            daily_iccbdm_val = float((r['daily_iccbdm'] if r['daily_iccbdm'] is not None else 0.0) * 100)
             ifo_diarios.append({
                 'fecha': str(r['fecha']),
                 'ifo': float(r['daily_ifo'] * 100),
+                'iccbdm': min(daily_iccbdm_val, 100.0),
                 'ajustes': lista_ajustes
             })
         
@@ -191,6 +201,7 @@ async def get_monthly_performance(
             eot_nombre=eot_nombre,
             ifo_mensual_eot=round(ifo_mensual_pct, 4),
             ifo_mensual_eot_topeado=round(ifo_mensual_topeado_pct, 4),
+            iccbdm_mensual_eot=round(iccbdm_mensual_pct, 4),
             ifo_sistema_anterior=round(system_ifo_pct, 4),
             ifo_sistema_anterior_topeado=round(system_ifo_topeado_pct, 4),
             umbral_objetivo=round(umbral_objetivo, 4),

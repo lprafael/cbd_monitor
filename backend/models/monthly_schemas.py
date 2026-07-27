@@ -14,6 +14,7 @@ class MonthlyPerformanceResult(BaseModel):
     # Calculation Metrics
     ifo_mensual_eot: float  # The calculated IFO for the EOT (not topped)
     ifo_mensual_eot_topeado: float  # The capped IFO for the EOT (max 110)
+    iccbdm_mensual_eot: Optional[float] = None  # ICCBDM Mensual for EOT (max 100)
     ifo_sistema_anterior: float  # Average IFO of all EOTs in month n-1
     ifo_sistema_anterior_topeado: float  # Average of capped IFOs (max 110)
     umbral_objetivo: float  # The target IFO for this month based on new rules
