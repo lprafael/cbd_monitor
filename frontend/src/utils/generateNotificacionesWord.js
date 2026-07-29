@@ -175,13 +175,18 @@ export const generateNotificacionesWord = async (reporte, fechaReporte) => {
             ],
             tableHeader: true
           }),
-          ...Object.keys(summaryMap).map(key => new TableRow({
-            children: [
-              new TableCell({ children: [new Paragraph({ text: key })] }),
-              new TableCell({ children: [new Paragraph({ text: summaryMap[key].toString() })] }),
-              new TableCell({ children: [new Paragraph({ text: "Intermedia" })] }),
-            ]
-          }))
+          ...Object.keys(summaryMap).map(key => {
+            let escala = "Intermedia";
+            if (key.includes('15.2') || key.includes('15.4')) escala = "Leve";
+            else if (key.includes('15.1')) escala = "Gravísima";
+            return new TableRow({
+              children: [
+                new TableCell({ children: [new Paragraph({ text: key })] }),
+                new TableCell({ children: [new Paragraph({ text: summaryMap[key].toString() })] }),
+                new TableCell({ children: [new Paragraph({ text: escala })] }),
+              ]
+            });
+          })
         ]
       }),
 

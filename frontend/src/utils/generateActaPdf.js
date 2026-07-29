@@ -112,10 +112,16 @@ export const generateActaPdf = async (empresa, fechaReporte) => {
     summaryMap[base]++;
   });
 
+  const getEscala = (key) => {
+    if (key.includes('15.2') || key.includes('15.4')) return 'Leve';
+    if (key.includes('15.1')) return 'Gravísima';
+    return 'Intermedia';
+  };
+
   const table2Data = Object.keys(summaryMap).map(key => [
     key,
     summaryMap[key],
-    'Intermedia'
+    getEscala(key)
   ]);
 
   autoTable(doc, {
