@@ -323,6 +323,11 @@ def analizar_infracciones_res_120(eot_nombre, datos_mensuales, fecha_referencia,
             cat = categorizar(franjas_metadata.get(fid, {}).get('denominacion', ''))
             if cat == "OTRO" or f_res.get('ifo') is None: continue
             
+            # Etapa 2: Excluir Pos Pico de Sábado del cálculo de multas
+            td_id = get_tipo_dia_id(fecha)
+            if td_id == 6 and cat == 'POS_PICO':
+                continue
+            
             ifo = f_res.get('ifo')
             cbd = f_res.get('cbd')
             

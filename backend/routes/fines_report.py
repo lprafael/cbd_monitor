@@ -171,6 +171,10 @@ async def generate_fines_report(
                     cat = categorizar(meta.get('denominacion', ''))
                     if cat == "OTRO" or f_res['ifo'] is None: continue
                     
+                    # Etapa 2: Excluir Pos Pico de Sábado del cálculo de multas
+                    if id_tipo_dia == 6 and cat == 'POS_PICO':
+                        continue
+                    
                     ifo_val = float(f_res['ifo']) * 100
                     cbd_idx = float(f_res['cbd_indice']) if f_res['cbd_indice'] is not None else 0.0
                     
