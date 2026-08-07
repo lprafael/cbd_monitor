@@ -98,8 +98,8 @@ const MonthlyPerformanceDashboard = ({ data, user }) => {
                 <div className="daily-detail-section">
                     <div className="section-header-with-info">
                         <h4>Desglose Diario</h4>
-                        <span className="vigencia-tag" title="Vigencia plena desde 01/07/2026: 6 franjas hábiles y 3 franjas sábados (incluye madrugada y nocturno)">
-                            ℹ️ Vigencia Plena (Etapa 3)
+                        <span className="vigencia-tag" title="Vigencia parcial: solo franjas picos y pospicos de lunes a viernes, y franja pico de sábados">
+                            ℹ️ Vigencia Parcial (Etapa 2)
                         </span>
                     </div>
                     <div className="table-responsive">
