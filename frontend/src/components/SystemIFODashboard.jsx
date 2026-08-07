@@ -116,8 +116,8 @@ const SystemIFODashboard = ({ year, month }) => {
                 body: tableRows,
                 startY: 40,
                 theme: 'grid',
-                headStyles: { fillColor: [41, 128, 185] },
-                styles: { fontSize: 9 },
+                headStyles: { fillColor: [41, 128, 185], textColor: [255, 255, 255], lineColor: [0, 0, 0], lineWidth: 0.1 },
+                styles: { fontSize: 9, textColor: [0, 0, 0], lineColor: [0, 0, 0], lineWidth: 0.1 },
             });
 
             if (includeDesglose) {
@@ -195,8 +195,8 @@ const SystemIFODashboard = ({ year, month }) => {
                             body: detailRows,
                             startY: 28,
                             theme: 'grid',
-                            headStyles: { fillColor: [44, 62, 80] },
-                            styles: { fontSize: includeIccbdm ? 7 : 8, cellPadding: 1 },
+                            headStyles: { fillColor: [44, 62, 80], textColor: [255, 255, 255], lineColor: [0, 0, 0], lineWidth: 0.1 },
+                            styles: { fontSize: includeIccbdm ? 7 : 8, cellPadding: 1, textColor: [0, 0, 0], lineColor: [0, 0, 0], lineWidth: 0.1 },
                         });
                     }
                 });
