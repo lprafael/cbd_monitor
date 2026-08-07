@@ -139,7 +139,8 @@ const SystemIFODashboard = ({ year, month }) => {
 
                 breakdowns.forEach(({ eot, data: eotData }) => {
                     if (eotData && eotData.length > 0) {
-                        doc.addPage();
+                        const orientation = includeIccbdm ? 'landscape' : 'portrait';
+                        doc.addPage('a4', orientation);
                         doc.setFontSize(14);
                         doc.text(`Desglose Diario: ${eot.eot_nombre}`, 14, 20);
                         
@@ -147,23 +148,44 @@ const SystemIFODashboard = ({ year, month }) => {
                         const sampleDay = eotData.find(d => d.franjas && d.franjas.length > 0);
                         const franjasHeaders = sampleDay ? sampleDay.franjas.map(f => f.denominacion) : [];
                         
-                        const detailColumns = ["Fecha", "Día", "IFO Día", "Ajustes", ...franjasHeaders];
+                        const detailColumns = ["Fecha", "Día", "IFO Día"];
+                        if (includeIccbdm) detailColumns.push("ICCBDM Día");
+                        detailColumns.push("Ajustes");
+                        
+                        if (includeIccbdm) {
+                            franjasHeaders.forEach(h => {
+                                detailColumns.push(`IFO\n${h}`, `ICCBDM\n${h}`);
+                            });
+                        } else {
+                            franjasHeaders.forEach(h => detailColumns.push(h));
+                        }
                         
                         const detailRows = eotData.map(dia => {
                             const dayName = new Intl.DateTimeFormat('es-PY', { weekday: 'long' }).format(new Date(dia.fecha + 'T00:00:00'));
                             let row = [
                                 dia.fecha,
                                 dayName,
-                                `${dia.ifo_dia.toFixed(2)}%`,
-                                dia.ajustes && dia.ajustes.length > 0 ? dia.ajustes.map(a => a.split(' ')[0]).join(', ') : '-'
+                                `${dia.ifo_dia.toFixed(2)}%`
                             ];
+                            
+                            if (includeIccbdm) {
+                                row.push(dia.iccbdm_dia !== undefined ? `${dia.iccbdm_dia.toFixed(2)}%` : '-');
+                            }
+                            
+                            row.push(dia.ajustes && dia.ajustes.length > 0 ? dia.ajustes.map(a => a.split(' ')[0]).join(', ') : '-');
                             
                             if (dia.franjas && dia.franjas.length > 0) {
                                 dia.franjas.forEach(f => {
                                     row.push(`${f.ifo.toFixed(2)}%`);
+                                    if (includeIccbdm) {
+                                        row.push(f.iccbdm !== undefined ? `${f.iccbdm.toFixed(2)}%` : '-');
+                                    }
                                 });
                             } else {
-                                franjasHeaders.forEach(() => row.push('-'));
+                                const colsPerFranja = includeIccbdm ? 2 : 1;
+                                for (let i = 0; i < franjasHeaders.length * colsPerFranja; i++) {
+                                    row.push('-');
+                                }
                             }
                             return row;
                         });
@@ -174,7 +196,7 @@ const SystemIFODashboard = ({ year, month }) => {
                             startY: 28,
                             theme: 'grid',
                             headStyles: { fillColor: [44, 62, 80] },
-                            styles: { fontSize: 8 },
+                            styles: { fontSize: includeIccbdm ? 7 : 8, cellPadding: 1 },
                         });
                     }
                 });
@@ -391,14 +413,27 @@ const SystemIFODashboard = ({ year, month }) => {
                                                             <table className="detail-table">
                                                                 <thead>
                                                                     <tr>
-                                                                        <th>Fecha</th>
-                                                                        <th>Día</th>
-                                                                        <th>IFO Día</th>
-                                                                        <th>Ajustes</th>
+                                                                        <th rowSpan="2">Fecha</th>
+                                                                        <th rowSpan="2">Día</th>
+                                                                        <th rowSpan="2">IFO Día</th>
+                                                                        {includeIccbdm && <th rowSpan="2">ICCBDM Día</th>}
+                                                                        <th rowSpan="2">Ajustes</th>
                                                                         {expandedEots[eot.id_eot_vmt_hex].data[0]?.franjas.map(f => (
-                                                                            <th key={f.id_franja}>{f.denominacion}</th>
+                                                                            <th key={f.id_franja} colSpan={includeIccbdm ? 2 : 1} style={{ textAlign: 'center' }}>
+                                                                                {f.denominacion}
+                                                                            </th>
                                                                         ))}
                                                                     </tr>
+                                                                    {includeIccbdm && (
+                                                                        <tr>
+                                                                            {expandedEots[eot.id_eot_vmt_hex].data[0]?.franjas.map(f => (
+                                                                                <React.Fragment key={`${f.id_franja}-subs`}>
+                                                                                    <th style={{ fontSize: '0.8rem', backgroundColor: '#34495e', color: 'white' }}>IFO</th>
+                                                                                    <th style={{ fontSize: '0.8rem', backgroundColor: '#34495e', color: 'white' }}>ICCBDM</th>
+                                                                                </React.Fragment>
+                                                                            ))}
+                                                                        </tr>
+                                                                    )}
                                                                 </thead>
                                                                 <tbody>
                                                                     {expandedEots[eot.id_eot_vmt_hex].data.map(dia => (
@@ -409,6 +444,7 @@ const SystemIFODashboard = ({ year, month }) => {
                                                                             </td>
                                                                             <td>{new Intl.DateTimeFormat('es-PY', { weekday: 'long' }).format(new Date(dia.fecha + 'T00:00:00'))}</td>
                                                                             <td className="ifo-day-val">{dia.ifo_dia.toFixed(2)}%</td>
+                                                                            {includeIccbdm && <td className="ifo-day-val">{dia.iccbdm_dia !== undefined ? dia.iccbdm_dia.toFixed(2) + '%' : '-'}</td>}
                                                                             <td className="adjustments-cell-compact">
                                                                                 {dia.ajustes && dia.ajustes.length > 0 ? (
                                                                                     <div className="adjustments-tags">
@@ -421,7 +457,10 @@ const SystemIFODashboard = ({ year, month }) => {
                                                                                 ) : '-'}
                                                                             </td>
                                                                             {dia.franjas.map(f => (
-                                                                                <td key={f.id_franja} className="franja-val">{f.ifo.toFixed(2)}%</td>
+                                                                                <React.Fragment key={f.id_franja}>
+                                                                                    <td className="franja-val">{f.ifo.toFixed(2)}%</td>
+                                                                                    {includeIccbdm && <td className="franja-val">{f.iccbdm !== undefined ? f.iccbdm.toFixed(2) + '%' : '-'}</td>}
+                                                                                </React.Fragment>
                                                                             ))}
                                                                         </tr>
                                                                     ))}

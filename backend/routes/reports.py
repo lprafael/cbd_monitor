@@ -465,7 +465,9 @@ async def get_eot_monthly_breakdown(eot_id: str, year: int, month: int, db: Data
         cursor.execute("SELECT fecha FROM control_metricas.dias_atipicos WHERE fecha BETWEEN %s AND %s", (inicio, fin))
         atipicos = {str(row['fecha']) for row in cursor.fetchall()}
         cursor.execute("""
-            SELECT h.fecha, f.id_franja, f.denominacion, AVG(h.ifo) * 100 as ifo_franja
+            SELECT h.fecha, f.id_franja, f.denominacion, 
+                   AVG(h.ifo) * 100 as ifo_franja,
+                   LEAST(AVG(COALESCE(h.cbd_indice, LEAST(h.ifo, 1.0))), 1.0) * 100 as iccbdm_franja
             FROM control_metricas.ifo_historico h
             JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
             WHERE h.id_eot_vmt_hex = %s AND h.fecha BETWEEN %s AND %s
@@ -476,12 +478,19 @@ async def get_eot_monthly_breakdown(eot_id: str, year: int, month: int, db: Data
             fs = str(row['fecha'])
             if fs not in breakdown:
                 _, adjustments = get_factores_ajuste_acumulados(cursor, row['fecha'])
-                breakdown[fs] = {"fecha": fs, "es_excluido": False, "ajustes": adjustments, "ifo_dia": 0, "franjas": [], "motivo_exclusion": "Domingo" if row['fecha'].weekday() == 6 else "Feriado" if fs in feriados else "Atípico" if fs in atipicos else None}
-            breakdown[fs]["franjas"].append({"id_franja": row['id_franja'], "denominacion": row['denominacion'], "ifo": round(float(row['ifo_franja']), 2)})
+                breakdown[fs] = {"fecha": fs, "es_excluido": False, "ajustes": adjustments, "ifo_dia": 0, "iccbdm_dia": 0, "franjas": [], "motivo_exclusion": "Domingo" if row['fecha'].weekday() == 6 else "Feriado" if fs in feriados else "Atípico" if fs in atipicos else None}
+            breakdown[fs]["franjas"].append({
+                "id_franja": row['id_franja'], 
+                "denominacion": row['denominacion'], 
+                "ifo": round(float(row['ifo_franja']), 2),
+                "iccbdm": round(float(row['iccbdm_franja']), 2)
+            })
         for info in breakdown.values():
             if info["franjas"]:
                 # Topear cada día al 110% según Res. 120
                 info["ifo_dia"] = round(min(sum(f["ifo"] for f in info["franjas"]) / len(info["franjas"]), 110.0), 2)
+                avg_iccbdm = sum(f["iccbdm"] for f in info["franjas"]) / len(info["franjas"])
+                info["iccbdm_dia"] = min(round(avg_iccbdm, 2), 100.0)
         return sorted(breakdown.values(), key=lambda x: x["fecha"])
     finally:
         cursor.close()
