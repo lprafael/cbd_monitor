@@ -12,6 +12,8 @@ const SystemIFODashboard = ({ year, month }) => {
     const [isMethodologyModalOpen, setIsMethodologyModalOpen] = useState(false);
     const [expandedEots, setExpandedEots] = useState({}); // { eot_id: { loading, data, error } }
     const [includeIccbdm, setIncludeIccbdm] = useState(false);
+    const [includeDesglose, setIncludeDesglose] = useState(false);
+    const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
     const fetchSystemIFO = useCallback(async () => {
         setLoading(true);
@@ -73,50 +75,118 @@ const SystemIFODashboard = ({ year, month }) => {
         return months[m - 1];
     };
 
-    const downloadPDF = () => {
-        const doc = new jsPDF();
-        
-        doc.setFontSize(16);
-        doc.text(`Desglose del IFO Sistema - ${getMonthName(data.month)} ${data.year}`, 14, 20);
-        
-        doc.setFontSize(11);
-        doc.text(`Promedio Sistema: ${data.ifo_sistema.toFixed(2)}%`, 14, 28);
-        if (data.umbral_obligatorio_mes_siguiente) {
-            doc.text(`Umbral Obligatorio (Mes Siguiente): ${data.umbral_obligatorio_mes_siguiente.toFixed(2)}%`, 14, 34);
-        }
-
-        const tableColumn = ["#", "Empresa", "IFO Mensual", "IFO Días Hábiles", "IFO Sábados", "IFO Domingos"];
-        if (includeIccbdm) {
-            tableColumn.push("ICCBDM");
-        }
-        
-        const tableRows = [];
-        
-        data.eots.forEach((eot, idx) => {
-            const eotData = [
-                idx + 1,
-                eot.eot_nombre,
-                `${eot.ifo_mensual.toFixed(2)}%`,
-                eot.ifo_promedio_habiles ? `${eot.ifo_promedio_habiles.toFixed(2)}%` : '-',
-                eot.ifo_promedio_sabados ? `${eot.ifo_promedio_sabados.toFixed(2)}%` : '-',
-                eot.ifo_promedio_domingos ? `${eot.ifo_promedio_domingos.toFixed(2)}%` : '-'
-            ];
-            if (includeIccbdm) {
-                eotData.push(eot.iccbdm_mensual ? `${eot.iccbdm_mensual.toFixed(2)}%` : '-');
+    const downloadPDF = async () => {
+        setIsGeneratingPDF(true);
+        try {
+            const doc = new jsPDF();
+            
+            doc.setFontSize(16);
+            doc.text(`Desglose del IFO Sistema - ${getMonthName(data.month)} ${data.year}`, 14, 20);
+            
+            doc.setFontSize(11);
+            doc.text(`Promedio Sistema: ${data.ifo_sistema.toFixed(2)}%`, 14, 28);
+            if (data.umbral_obligatorio_mes_siguiente) {
+                doc.text(`Umbral Obligatorio (Mes Siguiente): ${data.umbral_obligatorio_mes_siguiente.toFixed(2)}%`, 14, 34);
             }
-            tableRows.push(eotData);
-        });
 
-        autoTable(doc, {
-            head: [tableColumn],
-            body: tableRows,
-            startY: 40,
-            theme: 'grid',
-            headStyles: { fillColor: [41, 128, 185] },
-            styles: { fontSize: 9 },
-        });
+            const tableColumn = ["#", "Empresa", "IFO Mensual", "IFO Días Hábiles", "IFO Sábados", "IFO Domingos"];
+            if (includeIccbdm) {
+                tableColumn.push("ICCBDM");
+            }
+            
+            const tableRows = [];
+            
+            data.eots.forEach((eot, idx) => {
+                const eotData = [
+                    idx + 1,
+                    eot.eot_nombre,
+                    `${eot.ifo_mensual.toFixed(2)}%`,
+                    eot.ifo_promedio_habiles ? `${eot.ifo_promedio_habiles.toFixed(2)}%` : '-',
+                    eot.ifo_promedio_sabados ? `${eot.ifo_promedio_sabados.toFixed(2)}%` : '-',
+                    eot.ifo_promedio_domingos ? `${eot.ifo_promedio_domingos.toFixed(2)}%` : '-'
+                ];
+                if (includeIccbdm) {
+                    eotData.push(eot.iccbdm_mensual ? `${eot.iccbdm_mensual.toFixed(2)}%` : '-');
+                }
+                tableRows.push(eotData);
+            });
 
-        doc.save(`Detalle_Empresas_${getMonthName(data.month)}_${data.year}.pdf`);
+            autoTable(doc, {
+                head: [tableColumn],
+                body: tableRows,
+                startY: 40,
+                theme: 'grid',
+                headStyles: { fillColor: [41, 128, 185] },
+                styles: { fontSize: 9 },
+            });
+
+            if (includeDesglose) {
+                // Fetch daily breakdowns for all EOTs sequentially to avoid connection pooling issues
+                const breakdowns = [];
+                for (const eot of data.eots) {
+                    try {
+                        const res = await fetch(`${API_BASE_URL}/reports/res120/eot-monthly-breakdown/${eot.id_eot_vmt_hex}/${data.year}/${data.month}`);
+                        if (res.ok) {
+                            const detailData = await res.json();
+                            breakdowns.push({ eot, data: detailData });
+                        } else {
+                            console.warn(`Failed to fetch breakdown for ${eot.eot_nombre}`);
+                        }
+                    } catch (e) {
+                        console.error(`Error fetching breakdown for ${eot.eot_nombre}`, e);
+                    }
+                }
+
+                breakdowns.forEach(({ eot, data: eotData }) => {
+                    if (eotData && eotData.length > 0) {
+                        doc.addPage();
+                        doc.setFontSize(14);
+                        doc.text(`Desglose Diario: ${eot.eot_nombre}`, 14, 20);
+                        
+                        // Extract franjas dynamically from the first day that has them
+                        const sampleDay = eotData.find(d => d.franjas && d.franjas.length > 0);
+                        const franjasHeaders = sampleDay ? sampleDay.franjas.map(f => f.denominacion) : [];
+                        
+                        const detailColumns = ["Fecha", "Día", "IFO Día", "Ajustes", ...franjasHeaders];
+                        
+                        const detailRows = eotData.map(dia => {
+                            const dayName = new Intl.DateTimeFormat('es-PY', { weekday: 'long' }).format(new Date(dia.fecha + 'T00:00:00'));
+                            let row = [
+                                dia.fecha,
+                                dayName,
+                                `${dia.ifo_dia.toFixed(2)}%`,
+                                dia.ajustes && dia.ajustes.length > 0 ? dia.ajustes.map(a => a.split(' ')[0]).join(', ') : '-'
+                            ];
+                            
+                            if (dia.franjas && dia.franjas.length > 0) {
+                                dia.franjas.forEach(f => {
+                                    row.push(`${f.ifo.toFixed(2)}%`);
+                                });
+                            } else {
+                                franjasHeaders.forEach(() => row.push('-'));
+                            }
+                            return row;
+                        });
+
+                        autoTable(doc, {
+                            head: [detailColumns],
+                            body: detailRows,
+                            startY: 28,
+                            theme: 'grid',
+                            headStyles: { fillColor: [44, 62, 80] },
+                            styles: { fontSize: 8 },
+                        });
+                    }
+                });
+            }
+
+            doc.save(`Detalle_Empresas_${getMonthName(data.month)}_${data.year}.pdf`);
+        } catch (err) {
+            console.error("Error generating PDF:", err);
+            alert("Hubo un error al generar el PDF.");
+        } finally {
+            setIsGeneratingPDF(false);
+        }
     };
 
     if (!data && !loading && !error) {
@@ -240,6 +310,14 @@ const SystemIFODashboard = ({ year, month }) => {
                         <label className="iccbdm-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.9rem', cursor: 'pointer' }}>
                             <input 
                                 type="checkbox" 
+                                checked={includeDesglose} 
+                                onChange={(e) => setIncludeDesglose(e.target.checked)} 
+                            />
+                            Con Desglose
+                        </label>
+                        <label className="iccbdm-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.9rem', cursor: 'pointer' }}>
+                            <input 
+                                type="checkbox" 
                                 checked={includeIccbdm} 
                                 onChange={(e) => setIncludeIccbdm(e.target.checked)} 
                             />
@@ -248,10 +326,23 @@ const SystemIFODashboard = ({ year, month }) => {
                         <button 
                             className="download-pdf-btn methodology-button" 
                             onClick={downloadPDF} 
+                            disabled={isGeneratingPDF}
                             title="Descargar reporte en PDF"
-                            style={{ backgroundColor: '#27ae60', color: 'white', padding: '6px 12px', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.9rem', fontWeight: 'bold' }}
+                            style={{ 
+                                backgroundColor: isGeneratingPDF ? '#95a5a6' : '#27ae60', 
+                                color: 'white', 
+                                padding: '6px 12px', 
+                                border: 'none', 
+                                borderRadius: '4px', 
+                                cursor: isGeneratingPDF ? 'not-allowed' : 'pointer', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '5px', 
+                                fontSize: '0.9rem', 
+                                fontWeight: 'bold' 
+                            }}
                         >
-                            📄 Descargar PDF
+                            {isGeneratingPDF ? '⏳ Generando...' : '📄 Descargar PDF'}
                         </button>
                     </div>
                 </div>
