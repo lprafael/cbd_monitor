@@ -3,7 +3,7 @@ import './SystemIFODashboard.css';
 import CalculationMethodologyModal from './CalculationMethodologyModal';
 import { API_BASE_URL } from '../config';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 const SystemIFODashboard = ({ year, month }) => {
     const [data, setData] = useState(null);
@@ -107,7 +107,7 @@ const SystemIFODashboard = ({ year, month }) => {
             tableRows.push(eotData);
         });
 
-        doc.autoTable({
+        autoTable(doc, {
             head: [tableColumn],
             body: tableRows,
             startY: 40,
