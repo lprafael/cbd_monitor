@@ -61,8 +61,10 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
   let grandTotalJornales = 0;
   let grandTotalMonto = 0;
 
+  let filteredReporte = [];
   if (data && data.reporte) {
-    data.reporte.forEach(empresa => {
+    filteredReporte = data.reporte.filter(empresa => !empresa.eot_nombre.toUpperCase().includes('ARAPOTI'));
+    filteredReporte.forEach(empresa => {
       if (empresa.total_jornales) grandTotalJornales += empresa.total_jornales;
       if (empresa.total_guaranies) grandTotalMonto += empresa.total_guaranies;
     });
@@ -108,11 +110,11 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
               <p>⚠️ {error}</p>
             </div>
           ) : data && data.reporte ? (
-            data.reporte.length === 0 ? (
+            filteredReporte.length === 0 ? (
               <p className="no-data">No se encontraron datos para este mes.</p>
             ) : (
               <>
-                {data.reporte.map((empresa, idx) => (
+                {filteredReporte.map((empresa, idx) => (
                   <div key={idx} className="eot-fines-card">
                     <div className="eot-fines-header">
                       <h3>{empresa.eot_nombre}</h3>

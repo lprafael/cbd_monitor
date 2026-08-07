@@ -45,6 +45,10 @@ class EOTMonthlyIFO(BaseModel):
     ifo_mensual: float  # Porcentaje (0-100+)
     ifo_mensual_topeado: float  # Porcentaje topeado a 110% (Res 120/2025)
     dias_validos: int  # Cantidad de días con datos válidos
+    ifo_promedio_habiles: Optional[float] = None
+    ifo_promedio_sabados: Optional[float] = None
+    ifo_promedio_domingos: Optional[float] = None
+    iccbdm_mensual: Optional[float] = None
 
 class SystemIFOBreakdownResponse(BaseModel):
     """Desglose completo del IFO Sistema para un mes"""

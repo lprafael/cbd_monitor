@@ -158,7 +158,7 @@ const Header = ({
                 disabled={viewMode === 'system-ifo' || viewMode === 'visual-charts'}
                 style={viewMode === 'system-ifo' || viewMode === 'visual-charts' ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
               >
-                {eots.map((eot) => (
+                {eots.filter(eot => !eot.eot_nombre.toUpperCase().includes('ARAPOTI')).map((eot) => (
                   <option key={eot.cod_catalogo} value={eot.cod_catalogo}>
                     {eot.eot_nombre} {eot.gre_nombre ? `(${eot.gre_nombre})` : ''}
                   </option>

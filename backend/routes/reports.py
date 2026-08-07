@@ -286,24 +286,55 @@ async def get_system_ifo_breakdown(
         
         query_eots = """
         WITH ifo_diario AS (
-            SELECT h.id_eot_vmt_hex, h.fecha, AVG(h.ifo) as ifo_dia, LEAST(AVG(h.ifo), 1.1) as ifo_dia_topeado
+            SELECT h.id_eot_vmt_hex, h.fecha, AVG(h.ifo) as ifo_dia, LEAST(AVG(h.ifo), 1.1) as ifo_dia_topeado, EXTRACT(ISODOW FROM h.fecha) as dia_semana
             FROM control_metricas.ifo_historico h
             WHERE h.fecha >= %s AND h.fecha <= %s
             GROUP BY h.id_eot_vmt_hex, h.fecha
         ),
         ifo_mensual_eot AS (
-            SELECT id_eot_vmt_hex, AVG(ifo_dia) * 100 as ifo_mensual, AVG(ifo_dia_topeado) * 100 as ifo_mensual_topeado, COUNT(DISTINCT fecha) as dias_validos
+            SELECT id_eot_vmt_hex, 
+                   AVG(ifo_dia) * 100 as ifo_mensual, 
+                   AVG(ifo_dia_topeado) * 100 as ifo_mensual_topeado, 
+                   COUNT(DISTINCT fecha) as dias_validos,
+                   AVG(CASE WHEN dia_semana IN (1, 2, 3, 4, 5) THEN ifo_dia ELSE NULL END) * 100 as ifo_promedio_habiles,
+                   AVG(CASE WHEN dia_semana = 6 THEN ifo_dia ELSE NULL END) * 100 as ifo_promedio_sabados,
+                   AVG(CASE WHEN dia_semana = 7 THEN ifo_dia ELSE NULL END) * 100 as ifo_promedio_domingos
             FROM ifo_diario
             GROUP BY id_eot_vmt_hex
+        ),
+        iccbdm_franja AS (
+            SELECT h.id_eot_vmt_hex, h.fecha, h.id_franja,
+                LEAST(AVG(COALESCE(h.cbd_indice, LEAST(h.ifo, 1.0))), 1.0) as iccbdm_franja_val
+            FROM control_metricas.ifo_historico h
+            WHERE h.fecha >= %s AND h.fecha <= %s
+            GROUP BY h.id_eot_vmt_hex, h.fecha, h.id_franja
+        ),
+        iccbdm_diario AS (
+            SELECT id_eot_vmt_hex, fecha, LEAST(AVG(iccbdm_franja_val), 1.0) as iccbdm_dia
+            FROM iccbdm_franja
+            GROUP BY id_eot_vmt_hex, fecha
+        ),
+        iccbdm_mensual_cte AS (
+            SELECT id_eot_vmt_hex, LEAST(AVG(iccbdm_dia), 1.0) * 100 as iccbdm_mensual
+            FROM iccbdm_diario
+            GROUP BY id_eot_vmt_hex
         )
-        SELECT e.id_eot_vmt_hex, e.eot_nombre, COALESCE(i.ifo_mensual, 0) as ifo_mensual, COALESCE(i.ifo_mensual_topeado, 0) as ifo_mensual_topeado, COALESCE(i.dias_validos, 0) as dias_validos
+        SELECT e.id_eot_vmt_hex, e.eot_nombre, 
+               COALESCE(i.ifo_mensual, 0) as ifo_mensual, 
+               COALESCE(i.ifo_mensual_topeado, 0) as ifo_mensual_topeado, 
+               COALESCE(i.dias_validos, 0) as dias_validos,
+               i.ifo_promedio_habiles,
+               i.ifo_promedio_sabados,
+               i.ifo_promedio_domingos,
+               c.iccbdm_mensual
         FROM public.eots e
         LEFT JOIN ifo_mensual_eot i ON e.id_eot_vmt_hex = i.id_eot_vmt_hex
+        LEFT JOIN iccbdm_mensual_cte c ON e.id_eot_vmt_hex = c.id_eot_vmt_hex
         WHERE e.cod_catalogo NOT IN (72)
         AND e.permisionario IS TRUE
         ORDER BY e.eot_nombre;
         """
-        cursor.execute(query_eots, (inicio_mes, fin_mes))
+        cursor.execute(query_eots, (inicio_mes, fin_mes, inicio_mes, fin_mes))
         eots_data = cursor.fetchall()
         
         eots_list, ifo_values, ifo_topeado_values = [], [], []
@@ -314,7 +345,11 @@ async def get_system_ifo_breakdown(
                     eot_nombre=row['eot_nombre'],
                     ifo_mensual=round(float(row['ifo_mensual']), 2),
                     ifo_mensual_topeado=round(float(row['ifo_mensual_topeado']), 2),
-                    dias_validos=int(row['dias_validos'])
+                    dias_validos=int(row['dias_validos']),
+                    ifo_promedio_habiles=round(float(row['ifo_promedio_habiles']), 2) if row['ifo_promedio_habiles'] is not None else None,
+                    ifo_promedio_sabados=round(float(row['ifo_promedio_sabados']), 2) if row['ifo_promedio_sabados'] is not None else None,
+                    ifo_promedio_domingos=round(float(row['ifo_promedio_domingos']), 2) if row['ifo_promedio_domingos'] is not None else None,
+                    iccbdm_mensual=round(float(row['iccbdm_mensual']), 2) if row['iccbdm_mensual'] is not None else None
                 )
                 eots_list.append(eot_ifo)
                 ifo_values.append(eot_ifo.ifo_mensual)

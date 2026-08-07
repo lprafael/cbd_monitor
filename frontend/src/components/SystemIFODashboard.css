@@ -43,6 +43,7 @@
 
 .section-title-row {
     display: flex;
+    justify-content: space-between;
     align-items: center;
     gap: 0.8rem;
     margin-bottom: 1.5rem;

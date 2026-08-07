@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import './SystemIFODashboard.css';
 import CalculationMethodologyModal from './CalculationMethodologyModal';
 import { API_BASE_URL } from '../config';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 const SystemIFODashboard = ({ year, month }) => {
     const [data, setData] = useState(null);
@@ -9,6 +11,7 @@ const SystemIFODashboard = ({ year, month }) => {
     const [error, setError] = useState(null);
     const [isMethodologyModalOpen, setIsMethodologyModalOpen] = useState(false);
     const [expandedEots, setExpandedEots] = useState({}); // { eot_id: { loading, data, error } }
+    const [includeIccbdm, setIncludeIccbdm] = useState(false);
 
     const fetchSystemIFO = useCallback(async () => {
         setLoading(true);
@@ -68,6 +71,52 @@ const SystemIFODashboard = ({ year, month }) => {
         const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
             'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
         return months[m - 1];
+    };
+
+    const downloadPDF = () => {
+        const doc = new jsPDF();
+        
+        doc.setFontSize(16);
+        doc.text(`Desglose del IFO Sistema - ${getMonthName(data.month)} ${data.year}`, 14, 20);
+        
+        doc.setFontSize(11);
+        doc.text(`Promedio Sistema: ${data.ifo_sistema.toFixed(2)}%`, 14, 28);
+        if (data.umbral_obligatorio_mes_siguiente) {
+            doc.text(`Umbral Obligatorio (Mes Siguiente): ${data.umbral_obligatorio_mes_siguiente.toFixed(2)}%`, 14, 34);
+        }
+
+        const tableColumn = ["#", "Empresa", "IFO Mensual", "IFO Días Hábiles", "IFO Sábados", "IFO Domingos"];
+        if (includeIccbdm) {
+            tableColumn.push("ICCBDM");
+        }
+        
+        const tableRows = [];
+        
+        data.eots.forEach((eot, idx) => {
+            const eotData = [
+                idx + 1,
+                eot.eot_nombre,
+                `${eot.ifo_mensual.toFixed(2)}%`,
+                eot.ifo_promedio_habiles ? `${eot.ifo_promedio_habiles.toFixed(2)}%` : '-',
+                eot.ifo_promedio_sabados ? `${eot.ifo_promedio_sabados.toFixed(2)}%` : '-',
+                eot.ifo_promedio_domingos ? `${eot.ifo_promedio_domingos.toFixed(2)}%` : '-'
+            ];
+            if (includeIccbdm) {
+                eotData.push(eot.iccbdm_mensual ? `${eot.iccbdm_mensual.toFixed(2)}%` : '-');
+            }
+            tableRows.push(eotData);
+        });
+
+        doc.autoTable({
+            head: [tableColumn],
+            body: tableRows,
+            startY: 40,
+            theme: 'grid',
+            headStyles: { fillColor: [41, 128, 185] },
+            styles: { fontSize: 9 },
+        });
+
+        doc.save(`Detalle_Empresas_${getMonthName(data.month)}_${data.year}.pdf`);
     };
 
     if (!data && !loading && !error) {
@@ -183,8 +232,28 @@ const SystemIFODashboard = ({ year, month }) => {
 
             <div className="eots-section">
                 <div className="section-title-row">
-                    <span className="icon">🏢</span>
-                    <h3>Desglose por Empresa Operadora (EOT)</h3>
+                    <div className="title-left" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span className="icon">🏢</span>
+                        <h3>Desglose por Empresa Operadora (EOT)</h3>
+                    </div>
+                    <div className="title-actions" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                        <label className="iccbdm-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.9rem', cursor: 'pointer' }}>
+                            <input 
+                                type="checkbox" 
+                                checked={includeIccbdm} 
+                                onChange={(e) => setIncludeIccbdm(e.target.checked)} 
+                            />
+                            Incluir ICCBDM
+                        </label>
+                        <button 
+                            className="download-pdf-btn methodology-button" 
+                            onClick={downloadPDF} 
+                            title="Descargar reporte en PDF"
+                            style={{ backgroundColor: '#27ae60', color: 'white', padding: '6px 12px', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.9rem', fontWeight: 'bold' }}
+                        >
+                            📄 Descargar PDF
+                        </button>
+                    </div>
                 </div>
                 <div className="table-responsive">
                     <table className="eots-table">
