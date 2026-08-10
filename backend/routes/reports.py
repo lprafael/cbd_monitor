@@ -289,6 +289,10 @@ async def get_system_ifo_breakdown(
             SELECT h.id_eot_vmt_hex, h.fecha, AVG(h.ifo) as ifo_dia, LEAST(AVG(h.ifo), 1.1) as ifo_dia_topeado, EXTRACT(ISODOW FROM h.fecha) as dia_semana
             FROM control_metricas.ifo_historico h
             WHERE h.fecha >= %s AND h.fecha <= %s
+              AND (
+                  (EXTRACT(ISODOW FROM h.fecha) IN (1, 2, 3, 4, 5) AND h.id_franja IN (30, 31, 32, 33)) OR
+                  (EXTRACT(ISODOW FROM h.fecha) = 6 AND h.id_franja = 35)
+              )
             GROUP BY h.id_eot_vmt_hex, h.fecha
         ),
         ifo_mensual_eot AS (
@@ -307,6 +311,10 @@ async def get_system_ifo_breakdown(
                 LEAST(AVG(COALESCE(h.cbd_indice, LEAST(h.ifo, 1.0))), 1.0) as iccbdm_franja_val
             FROM control_metricas.ifo_historico h
             WHERE h.fecha >= %s AND h.fecha <= %s
+              AND (
+                  (EXTRACT(ISODOW FROM h.fecha) IN (1, 2, 3, 4, 5) AND h.id_franja IN (30, 31, 32, 33)) OR
+                  (EXTRACT(ISODOW FROM h.fecha) = 6 AND h.id_franja = 35)
+              )
             GROUP BY h.id_eot_vmt_hex, h.fecha, h.id_franja
         ),
         iccbdm_diario AS (
@@ -364,6 +372,10 @@ async def get_system_ifo_breakdown(
                 SELECT h.id_eot_vmt_hex, h.fecha, AVG(h.ifo) as ifo_dia_real
                 FROM control_metricas.ifo_historico h
                 WHERE h.fecha >= %s AND h.fecha <= %s
+                  AND (
+                      (EXTRACT(ISODOW FROM h.fecha) IN (1, 2, 3, 4, 5) AND h.id_franja IN (30, 31, 32, 33)) OR
+                      (EXTRACT(ISODOW FROM h.fecha) = 6 AND h.id_franja = 35)
+                  )
                 GROUP BY h.id_eot_vmt_hex, h.fecha
             )
             SELECT fecha, AVG(ifo_dia_real) * 100 as promedio, MIN(ifo_dia_real) * 100 as minimo, MAX(ifo_dia_real) * 100 as maximo
@@ -471,20 +483,39 @@ async def get_eot_monthly_breakdown(eot_id: str, year: int, month: int, db: Data
             FROM control_metricas.ifo_historico h
             JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
             WHERE h.id_eot_vmt_hex = %s AND h.fecha BETWEEN %s AND %s
+              AND (
+                  (EXTRACT(ISODOW FROM h.fecha) IN (1, 2, 3, 4, 5) AND h.id_franja IN (30, 31, 32, 33)) OR
+                  (EXTRACT(ISODOW FROM h.fecha) = 6 AND h.id_franja = 35)
+              )
             GROUP BY 1, 2, 3 ORDER BY 1, 2;
         """, (eot_id, inicio, fin))
-        rows, breakdown = cursor.fetchall(), {}
+        rows = cursor.fetchall()
+        
+        breakdown = {}
+        curr = inicio
+        while curr <= fin:
+            fs = str(curr)
+            _, adjustments = get_factores_ajuste_acumulados(cursor, curr)
+            breakdown[fs] = {
+                "fecha": fs, 
+                "es_excluido": curr.weekday() == 6 or fs in feriados or fs in atipicos,
+                "ajustes": adjustments, 
+                "ifo_dia": 0.0, 
+                "iccbdm_dia": 0.0, 
+                "franjas": [], 
+                "motivo_exclusion": "Domingo" if curr.weekday() == 6 else "Feriado" if fs in feriados else "Atípico" if fs in atipicos else None
+            }
+            curr += timedelta(days=1)
+            
         for row in rows:
             fs = str(row['fecha'])
-            if fs not in breakdown:
-                _, adjustments = get_factores_ajuste_acumulados(cursor, row['fecha'])
-                breakdown[fs] = {"fecha": fs, "es_excluido": False, "ajustes": adjustments, "ifo_dia": 0, "iccbdm_dia": 0, "franjas": [], "motivo_exclusion": "Domingo" if row['fecha'].weekday() == 6 else "Feriado" if fs in feriados else "Atípico" if fs in atipicos else None}
-            breakdown[fs]["franjas"].append({
-                "id_franja": row['id_franja'], 
-                "denominacion": row['denominacion'], 
-                "ifo": round(float(row['ifo_franja']), 2),
-                "iccbdm": round(float(row['iccbdm_franja']), 2)
-            })
+            if fs in breakdown:
+                breakdown[fs]["franjas"].append({
+                    "id_franja": row['id_franja'], 
+                    "denominacion": row['denominacion'], 
+                    "ifo": round(float(row['ifo_franja']), 2),
+                    "iccbdm": round(float(row['iccbdm_franja']), 2)
+                })
         for info in breakdown.values():
             if info["franjas"]:
                 # Topear cada día al 110% según Res. 120
@@ -519,6 +550,10 @@ async def get_subsidy_breakdown(
                 LEAST(AVG(COALESCE(h.cbd_indice, LEAST(h.ifo, 1.0))), 1.0) as iccbdm_franja_val
             FROM control_metricas.ifo_historico h
             WHERE h.fecha >= %s AND h.fecha <= %s
+              AND (
+                  (EXTRACT(ISODOW FROM h.fecha) IN (1, 2, 3, 4, 5) AND h.id_franja IN (30, 31, 32, 33)) OR
+                  (EXTRACT(ISODOW FROM h.fecha) = 6 AND h.id_franja = 35)
+              )
             GROUP BY h.id_eot_vmt_hex, h.fecha, h.id_franja
         ),
         iccbdm_diario AS (
@@ -620,22 +655,32 @@ async def get_eot_subsidy_breakdown(eot_id: str, year: int, month: int, db: Data
             FROM control_metricas.ifo_historico h
             JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
             WHERE h.id_eot_vmt_hex = %s AND h.fecha BETWEEN %s AND %s
+              AND (
+                  (EXTRACT(ISODOW FROM h.fecha) IN (1, 2, 3, 4, 5) AND h.id_franja IN (30, 31, 32, 33)) OR
+                  (EXTRACT(ISODOW FROM h.fecha) = 6 AND h.id_franja = 35)
+              )
             GROUP BY 1, 2, 3 ORDER BY 1, 2;
         """, (eot_id, inicio, fin))
         rows = cursor.fetchall()
+        
         breakdown = {}
+        curr = inicio
+        while curr <= fin:
+            fs = str(curr)
+            _, adjustments = get_factores_ajuste_acumulados(cursor, curr)
+            breakdown[fs] = {
+                "fecha": fs, 
+                "es_excluido": curr.weekday() == 6 or fs in feriados or fs in atipicos, 
+                "ajustes": adjustments, 
+                "iccbdm_dia": 0.0, 
+                "franjas": [], 
+                "motivo_exclusion": "Domingo" if curr.weekday() == 6 else "Feriado" if fs in feriados else "Atípico" if fs in atipicos else None
+            }
+            curr += timedelta(days=1)
+            
         for row in rows:
             fs = str(row['fecha'])
-            if fs not in breakdown:
-                _, adjustments = get_factores_ajuste_acumulados(cursor, row['fecha'])
-                breakdown[fs] = {
-                    "fecha": fs, 
-                    "es_excluido": False, 
-                    "ajustes": adjustments, 
-                    "iccbdm_dia": 0, 
-                    "franjas": [], 
-                    "motivo_exclusion": "Domingo" if row['fecha'].weekday() == 6 else "Feriado" if fs in feriados else "Atípico" if fs in atipicos else None
-                }
+            if fs in breakdown:
             val_franja = min(round(float(row['iccbdm_franja']), 2), 100.0)
             breakdown[fs]["franjas"].append({
                 "id_franja": row['id_franja'], 
