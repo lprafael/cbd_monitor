@@ -681,12 +681,12 @@ async def get_eot_subsidy_breakdown(eot_id: str, year: int, month: int, db: Data
         for row in rows:
             fs = str(row['fecha'])
             if fs in breakdown:
-            val_franja = min(round(float(row['iccbdm_franja']), 2), 100.0)
-            breakdown[fs]["franjas"].append({
-                "id_franja": row['id_franja'], 
-                "denominacion": row['denominacion'], 
-                "iccbdm": val_franja
-            })
+                val_franja = min(round(float(row['iccbdm_franja']), 2), 100.0)
+                breakdown[fs]["franjas"].append({
+                    "id_franja": row['id_franja'], 
+                    "denominacion": row['denominacion'], 
+                    "iccbdm": val_franja
+                })
         for info in breakdown.values():
             if info["franjas"]:
                 avg_dia = sum(f["iccbdm"] for f in info["franjas"]) / len(info["franjas"])
