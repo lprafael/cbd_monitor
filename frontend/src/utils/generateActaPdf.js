@@ -114,7 +114,7 @@ export const generateActaPdf = async (empresa, fechaReporte) => {
 
   const getEscala = (key) => {
     if (key.includes('15.2') || key.includes('15.4')) return 'Leve';
-    if (key.includes('15.1')) return 'Gravísima';
+    if (key.includes('15.1') || key.includes('16.1')) return 'Gravísima';
     return 'Intermedia';
   };
 
