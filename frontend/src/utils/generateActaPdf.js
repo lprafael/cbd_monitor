@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-export const generateActaPdf = async (empresa, fechaReporte) => {
+export const generateActaPdf = async (empresa, fechaReporte, numeroActa, fechaEmision, isFechaBlanco) => {
   const doc = new jsPDF('p', 'pt', 'a4');
 
   // Intentar cargar el logo del MOPC / VMT
@@ -26,7 +26,8 @@ export const generateActaPdf = async (empresa, fechaReporte) => {
   // Título
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.text("ACTA DE COMPROBACIÓN CID N° ___/2026", doc.internal.pageSize.getWidth() / 2, 130, { align: 'center' });
+  const actaStr = numeroActa ? numeroActa : "___/2026";
+  doc.text(`ACTA DE COMPROBACIÓN CID N° ${actaStr}`, doc.internal.pageSize.getWidth() / 2, 130, { align: 'center' });
 
   // Subtítulo
   doc.text("COMPROBACION DE INFRACCIONES A TRAVES DEL CENTRO DE CONTROL Y MONITOREO", doc.internal.pageSize.getWidth() / 2, 150, { align: 'center' });
@@ -35,10 +36,24 @@ export const generateActaPdf = async (empresa, fechaReporte) => {
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
 
-  const today = new Date();
-  const day = today.getDate();
-  const monthName = today.toLocaleDateString('es-ES', { month: 'long' });
-  const yearStr = today.getFullYear();
+  let emissionDate;
+  if (isFechaBlanco) {
+    emissionDate = null;
+  } else if (fechaEmision) {
+    const parts = fechaEmision.split('-');
+    emissionDate = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+  } else {
+    emissionDate = new Date();
+  }
+
+  let dayStr = "___";
+  let monthNameStr = "___________";
+  let yearStrStr = "_____";
+  if (emissionDate) {
+    dayStr = emissionDate.getDate().toString();
+    monthNameStr = emissionDate.toLocaleDateString('es-ES', { month: 'long' });
+    yearStrStr = emissionDate.getFullYear().toString();
+  }
 
   // Fecha del reporte (ej: "2026-05")
   const [rYear, rMonth] = fechaReporte.split('-');
@@ -50,7 +65,7 @@ export const generateActaPdf = async (empresa, fechaReporte) => {
   const actMonthName = dateExtraccion.toLocaleDateString('es-ES', { month: 'long' });
   const actYear = dateExtraccion.getFullYear();
 
-  const p1 = `En la ciudad de Asunción, a los ${day} día/s del mes de ${monthName} del ${yearStr}, se procede a labrar la presente acta, en atención a los datos extraídos y analizados del Centro de Control y Monitoreo del SNBE, en fecha 01 de ${actMonthName} del año ${actYear}, correspondientes al periodo operativo de ${reporteMonthName}, conforme a las siguientes normativas:`;
+  const p1 = `En la ciudad de Asunción, a los ${dayStr} día/s del mes de ${monthNameStr} del ${yearStrStr}, se procede a labrar la presente acta, en atención a los datos extraídos y analizados del Centro de Control y Monitoreo del SNBE, en fecha 01 de ${actMonthName} del año ${actYear}, correspondientes al periodo operativo de ${reporteMonthName}, conforme a las siguientes normativas:`;
 
   const splitP1 = doc.splitTextToSize(p1, 475);
   doc.text(splitP1, 60, 190);

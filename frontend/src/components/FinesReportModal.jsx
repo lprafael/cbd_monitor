@@ -9,6 +9,26 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [reincidencias, setReincidencias] = useState({});
+  const [actaModalOpen, setActaModalOpen] = useState(false);
+  const [selectedEmpresa, setSelectedEmpresa] = useState(null);
+  const [numeroActa, setNumeroActa] = useState("");
+  const [fechaEmision, setFechaEmision] = useState("");
+  const [isFechaBlanco, setIsFechaBlanco] = useState(false);
+
+  const handleOpenActaModal = (empresa) => {
+    setSelectedEmpresa(empresa);
+    setNumeroActa("");
+    setFechaEmision("");
+    setIsFechaBlanco(false);
+    setActaModalOpen(true);
+  };
+
+  const handleConfirmActa = () => {
+    if (selectedEmpresa) {
+      generateActaPdf(selectedEmpresa, fecha, numeroActa, fechaEmision, isFechaBlanco);
+    }
+    setActaModalOpen(false);
+  };
 
   const handleReincidenciaChange = (eot_hex, checked) => {
     setReincidencias(prev => ({ ...prev, [eot_hex]: checked }));
@@ -193,7 +213,7 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
                         </label>
                         <button 
                           className="generate-acta-btn" 
-                          onClick={() => generateActaPdf(empresa, fecha)}
+                          onClick={() => handleOpenActaModal(empresa)}
                           title="Generar Acta de Infracción"
                         >
                           📄 Generar Acta
@@ -259,6 +279,52 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
           </table>
         </div>
       </div>
+
+      {actaModalOpen && (
+        <div className="acta-modal-overlay">
+          <div className="acta-modal-content">
+            <h3>Datos del Acta - {selectedEmpresa?.eot_nombre}</h3>
+            
+            <div className="form-group">
+              <label>Número de Acta:</label>
+              <input 
+                type="text" 
+                placeholder="Ej: 123/2026" 
+                value={numeroActa} 
+                onChange={(e) => setNumeroActa(e.target.value)} 
+              />
+              <small>Si se deja en blanco se imprimirá "___/2026"</small>
+            </div>
+
+            <div className="form-group">
+              <label>Fecha de Emisión:</label>
+              <input 
+                type="date" 
+                value={fechaEmision} 
+                onChange={(e) => setFechaEmision(e.target.value)} 
+                disabled={isFechaBlanco}
+              />
+              <small>Si no ingresa, usará la fecha actual.</small>
+            </div>
+
+            <div className="form-group-checkbox">
+              <label>
+                <input 
+                  type="checkbox" 
+                  checked={isFechaBlanco} 
+                  onChange={(e) => setIsFechaBlanco(e.target.checked)} 
+                />
+                Dejar fecha en blanco
+              </label>
+            </div>
+
+            <div className="acta-modal-actions">
+              <button className="btn-cancel" onClick={() => setActaModalOpen(false)}>Cancelar</button>
+              <button className="btn-confirm" onClick={handleConfirmActa}>Generar PDF</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
