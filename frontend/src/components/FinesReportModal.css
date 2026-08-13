@@ -266,7 +266,7 @@
     overflow-y: visible;
     background-color: white;
   }
-  .close-btn, .print-btn, .fines-modal-header {
+  .close-btn, .print-btn, .fines-modal-header, .select-all-container {
     display: none !important;
   }
   @page {

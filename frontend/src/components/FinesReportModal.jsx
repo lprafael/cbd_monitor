@@ -214,6 +214,16 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
               <p className="no-data">No se encontraron datos para este mes.</p>
             ) : (
               <>
+                <div className="select-all-container print-header-content" style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+                  <label className="reincidencia-label-all" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13.5px', cursor: 'pointer', fontWeight: 'bold', color: '#dc2626', background: '#fee2e2', padding: '8px 16px', borderRadius: '8px', border: '1px solid #fca5a5', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={allReincidentes}
+                      onChange={(e) => handleToggleAllReincidencias(e.target.checked)}
+                    />
+                    Marcar todos c/reincidencia
+                  </label>
+                </div>
                 {processedReporte.map((empresa, idx) => (
                   <div key={idx} className="eot-fines-card">
                     <div className="eot-fines-header">
