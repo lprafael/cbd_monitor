@@ -34,6 +34,16 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
     setReincidencias(prev => ({ ...prev, [eot_hex]: checked }));
   };
 
+  const handleToggleAllReincidencias = (checked) => {
+    if (!data || !data.reporte) return;
+    const filtered = data.reporte.filter(empresa => !empresa.eot_nombre.toUpperCase().includes('ARAPOTI'));
+    const nextState = { ...reincidencias };
+    filtered.forEach(empresa => {
+      nextState[empresa.eot_hex] = checked;
+    });
+    setReincidencias(nextState);
+  };
+
   useEffect(() => {
     if (isOpen && fecha) {
       fetchFinesData();
@@ -141,6 +151,8 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
     });
   }
 
+  const allReincidentes = processedReporte.length > 0 && processedReporte.every(empresa => !!reincidencias[empresa.eot_hex]);
+
   const handlePrint = () => {
     window.print();
     if (processedReporte && processedReporte.length > 0) {
@@ -156,7 +168,17 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
             <h2>📜 Reporte de Multas (Res. 21/2026)</h2>
             <span className="current-date">Mes de Referencia: {fecha}</span>
           </div>
-          <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            {processedReporte.length > 0 && (
+              <label className="reincidencia-label-all" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer', fontWeight: 'bold', color: '#dc2626', background: '#fee2e2', padding: '6px 12px', borderRadius: '6px', border: '1px solid #fca5a5' }}>
+                <input 
+                  type="checkbox" 
+                  checked={allReincidentes}
+                  onChange={(e) => handleToggleAllReincidencias(e.target.checked)}
+                />
+                Marcar todos c/reincidencia
+              </label>
+            )}
             <button className="print-btn" onClick={handlePrint} title="Imprimir PDF y Descargar Notificaciones (Word)">🖨️ Generar PDF y Notificaciones</button>
             <button className="close-btn" onClick={onClose} title="Cerrar">✖</button>
           </div>

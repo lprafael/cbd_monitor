@@ -863,7 +863,7 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
                 <img src="cid:vmt_logo" alt="Logo MOPC VMT" style="width: 100%; max-width: 800px; height: auto; display: block; margin: 0 auto;">
             </div>
 
-            <p style="text-align: left; font-size: 12px;"><strong>ASUNTO:</strong> Reporte Oficial de Desempeño Operativo – Etapa 1 (Adaptación)</p>
+            <p style="text-align: left; font-size: 12px;"><strong>ASUNTO:</strong> Reporte Oficial de Desempeño Operativo – Etapa 2 (Implementación Parcial)</p>
             <p style="font-size: 12px;"><strong>FECHA DE OPERACIÓN:</strong> {fecha_formato}</p>
             <p style="font-size: 12px;"><strong>FECHA DE EMISIÓN:</strong> {fecha_envio}</p>
 
@@ -874,24 +874,24 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
                 
                 <p>La <strong>Dirección Metropolitana de Transporte (DMT),</strong> en cumplimiento de lo establecido en el <strong>Artículo 14 de la Resolución GVMT N° 120/2025</strong>, remite el presente reporte de desempeño acumulado del mes, hasta la operativa del día <strong>{fecha_formato}</strong>.</p>
                 
-                <p>Se deja constancia de que, con fecha <strong>1 de febrero de 2026</strong>, se ha dado inicio oficial a la <strong>Etapa 1: Adaptación Operativa</strong>, la cual tendrá una duración de dos meses. Esta fase es fundamental para la consolidación del Sistema Integral de Control y Monitoreo basado en los datos de GPS y Billetaje Electrónico.</p>
+                <p>Se deja constancia de que, habiéndose cumplido el periodo de adaptación (<strong>Etapa 1</strong>) el pasado <strong>18 de mayo de 2026</strong>, el sistema se encuentra actualmente en la <strong>Etapa 2: Implementación Parcial</strong>, conforme a lo dispuesto en la <strong>Resolución GVMT N° 26/2026</strong>. Esta fase contempla la aplicación efectiva de sanciones pecuniarias en las franjas horarias de mayor demanda.</p>
 
                 <div style="background-color: #f0f7ff; border-left: 5px solid #004a99; padding: 15px; margin: 20px 0;">
-                    <h4 style="margin-top: 0; color: #004a99;">Pautas de la Etapa Actual (Febrero - Marzo 2026):</h4>
+                    <h4 style="margin-top: 0; color: #004a99;">Pautas de la Etapa Actual (Mayo - Agosto 2026):</h4>
                     <ul style="margin: 10px 0; padding-left: 20px;">
-                        <li><strong>Sin Sanciones Pecuniarias:</strong> Durante estos dos meses, de acuerdo con el <strong>Artículo 21.1</strong>, los eventuales incumplimientos de los indicadores de desempeño (IFO y CBDmin) serán reportados a las empresas con fines informativos, pero <strong>no se aplicarán las sanciones pecuniarias</strong> previstas en el catálogo de infracciones.</li>
-                        <li><strong>Propósito de Adaptación:</strong> Esta comunicación tiene como objetivo principal que cada empresa pueda:
-                            <ol>
-                                <li>Ajustar su operación a los nuevos niveles de servicio (Niveles A, B y C) y parámetros de buses mínimos (CBDmin).</li>
-                                <li>Verificar la precisión de la transmisión de sus datos operativos (GPS) y validaciones de billetaje.</li>
-                                <li>Realizar correcciones técnicas antes del inicio de la Etapa 2 (Parcial), donde comenzarán a regir las multas en franjas pico y pospico.</li>
-                            </ol>
+                        <li><strong>Vigencia de Sanciones Pecuniarias:</strong> En cumplimiento del <strong>Artículo 21.2</strong>, los incumplimientos detectados desde el <strong>19 de mayo de 2026</strong> son pasibles de multas pecuniarias según el catálogo de infracciones (<strong>Art. 15</strong>).</li>
+                        <li><strong>Alcance de las Multas:</strong> Durante esta etapa, las actas de comprobación por incumplimiento del IFO (Niveles B y C) y de flota mínima (ICCBDM) se aplicarán exclusivamente en las siguientes franjas:
+                            <ul style="margin: 5px 0; padding-left: 20px;">
+                                <li><strong>Lunes a Viernes:</strong> Franjas Picos y Pos Picos.</li>
+                                <li><strong>Sábados:</strong> Únicamente franja Pico.</li>
+                            </ul>
                         </li>
-                        <li><strong>Tratamiento de Datos:</strong> El cálculo del Índice de Flota Operativa (IFO) y de Cantidad Mínima de Buses Diferentes (CBDmin) aplica factores de ajustes correspondientes a días atípicos, cuyos cálculos podría arrojar valores superlativos, los cuales serán analizados durante esta Etapa 1 (Adaptación).</li>
+                        <li><strong>Impacto en Subsidios (CRO):</strong> Independientemente de la restricción de multas para ciertas franjas, se recuerda que para la emisión de la Constancia de Rendimiento Operativo (CRO) —habilitante para el cobro del subsidio— el sistema promedia el cumplimiento del ICCBDM en la totalidad de las franjas operativas (incluyendo madrugada y nocturno), debiendo alcanzar un umbral mínimo mensual del <strong>95%</strong>.</li>
+                        <li><strong>Tratamiento de Datos:</strong> El cálculo aplica factores de ajuste automáticos por días atípicos (lluvia &gt; 5mm) y feriados, garantizando la equidad en la evaluación.</li>
                     </ul>
                 </div>
 
-                <p>Este reporte diario constituye el canal oficial de comunicación para garantizar la transparencia y la robustez técnica del sistema antes de la plena vigencia del régimen sancionatorio.</p>
+                <p>Este reporte diario constituye una herramienta de transparencia para que cada empresa realice el seguimiento continuo de sus indicadores antes del inicio de la <strong>Etapa 3 (Implementación Plena)</strong>, prevista para el <strong>17 de agosto de 2026</strong>.</p>
 
                 {seccion_clima}
 
@@ -906,13 +906,7 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
                                 <li><strong>• CBD:</strong> Cantidad de Buses Diferentes (unidades físicas observadas).</li>
                                 <li><strong>• ICCBDM:</strong> Índice de Cumplimiento de Cantidad de Buses Diferentes Mínimos.</li>
                                 <li><strong>• IFO:</strong> Índice de Flota Operativa (Regularidad de la oferta).</li>
-                                <li><strong>• Umbral Obligatorio:</strong> Mínimo exigible según el IFO Sistema del mes anterior:
-                                    <ul style="margin: 2px 0 2px 10px; font-size: 11px; color: #475569; list-style-type: none;">
-                                        <li>- Si Sistema &gt; 95% &rarr; Umbral = 95%</li>
-                                        <li>- Si Sistema &lt; 90% &rarr; Umbral = 90%</li>
-                                        <li>- Si 90% &le; Sistema &le; 95% &rarr; Umbral = IFO Sistema</li>
-                                    </ul>
-                                </li>
+                                <li><strong>• Umbral Obligatorio (IFO Mensual):</strong> Mínimo exigible según el IFO Sistema del mes anterior (Rango entre 90% y 95%).</li>
                             </ul>
                         </div>
                         <div style="flex: 1; min-width: 250px;">
@@ -920,15 +914,15 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
                             <div style="margin-top: 5px;">
                                 <div style="display: flex; gap: 10px; margin-bottom: 5px;">
                                     <span style="background-color: #e6ffe6; border: 1px solid #b7eb8f; padding: 2px 8px; border-radius: 3px; font-size: 10px;">Verde</span>
-                                    <span>Cumplimiento Óptimo (IFO &ge; 90%(Nivel A) | ICCBDM &ge; 100% | Mensual &ge; Umbral)</span>
+                                    <span>Cumplimiento Óptimo (IFO &ge; 90% (Nivel A) | ICCBDM &ge; 100%).</span>
                                 </div>
                                 <div style="display: flex; gap: 10px; margin-bottom: 5px;">
                                     <span style="background-color: #ffffe6; border: 1px solid #ffe58f; padding: 2px 8px; border-radius: 3px; font-size: 10px;">Amarillo</span>
-                                    <span>Cumplimiento Regular (IFO 80% - 89%) - (Nivel B)</span>
+                                    <span>Cumplimiento Regular (IFO 80% - 89.99%) - (Nivel B). <em>Nota: Acumular 5 o más en el mes genera multa leve.</em></span>
                                 </div>
                                 <div style="display: flex; gap: 10px;">
                                     <span style="background-color: #ffe6e6; border: 1px solid #ffa39e; padding: 2px 8px; border-radius: 3px; font-size: 10px;">Rojo</span>
-                                    <span>Cumplimiento Crítico / Insuficiente (IFO < 80%(Nivel C) | ICCBDM < 100%)</span>
+                                    <span>Cumplimiento Crítico / Insuficiente (IFO &lt; 80% (Nivel C) | ICCBDM &lt; 100%). <em>Nota: Genera infracción intermedia directa por día.</em></span>
                                 </div>
                             </div>
                         </div>
@@ -942,9 +936,9 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
 
                 <h3 class="section-title">PROCEDIMIENTO Y BASE LEGAL</h3>
                 <ul>
-                    <li><strong>Alerta Automática:</strong> El sistema genera este informe de manera automatizada.</li>
-                    <li><strong>Vigencia Gradual:</strong> Conforme al Artículo 21, durante la Etapa 1 (febrero y marzo de 2026), los incumplimientos se reportarán únicamente a efectos informativos, sin aplicación de multas. Las sanciones efectivas iniciarán en la Etapa 2 (abril de 2026) solo para picos y pos picos de lunes a sábado.</li>
-                    <li><strong>Marco Regulatorio:</strong> Todo el proceso se rige por el Capítulo IV de la Resolución GVMT N° 120/2025.</li>
+                    <li><strong>Alerta Automática:</strong> El sistema genera este informe de manera automatizada para efectos de control preventivo.</li>
+                    <li><strong>Vigencia Gradual:</strong> Conforme al Artículo 21 (Res. 120/25) y su prórroga por Res. 26/26, la Etapa 2 finaliza el <strong>17 de agosto de 2026</strong>. Desde esa fecha, todas las franjas (incluyendo madrugada y noche) serán sancionables.</li>
+                    <li><strong>Marco Regulatorio:</strong> Todo el proceso se rige por el Capítulo IV de la Resolución GVMT N° 120/2025 y sus modificatorias Res. 21/2026 y 26/2026.</li>
                 </ul>
 
                 {f'''
@@ -1101,8 +1095,8 @@ def enviar_informe_incumplimientos(datos_incumplimientos, fecha_referencia=None,
         #prefix = "[SIMULACIÓN EMPRESA]" if email_destino else "[DMT] OFICIAL" 
         #msg['Subject'] = f'{prefix} Reporte Diario - Métricas IFO/ICCBDM - {fecha_referencia.strftime("%Y-%m-%d")}'
         
-        # Nuevo Asunto Oficial Etapa 1
-        msg['Subject'] = f'Reporte Oficial de Desempeño Operativo – Etapa 1 (Adaptación) - Res. GVMT N° 120/2025 - {fecha_referencia.strftime("%Y-%m-%d")}'
+        # Nuevo Asunto Oficial Etapa 2
+        msg['Subject'] = f'Reporte Oficial de Desempeño Operativo – Etapa 2 (Implementación Parcial) - Res. GVMT N° 120/2025 - {fecha_referencia.strftime("%Y-%m-%d")}'
         
         # Generar el contenido HTML del informe (incluyendo visualización de CC)
         html_content = generar_html_informe(datos_incumplimientos, fecha_referencia, EMAIL_CC, incluir_resumen_infracciones=incluir_resumen_infracciones)

@@ -55,3 +55,5 @@ services:
 networks:
   cbd-monitor-network:
     driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: 1400
