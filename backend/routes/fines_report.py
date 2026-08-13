@@ -106,29 +106,45 @@ async def generate_fines_report(
             FROM (
                 SELECT id_eot_vmt_hex, AVG(daily_ifo_topeado) as eot_monthly_ifo_topeado
                 FROM (
-                    SELECT id_eot_vmt_hex, fecha, LEAST(AVG(ifo), 1.1) as daily_ifo_topeado
-                    FROM control_metricas.ifo_historico
-                    WHERE fecha BETWEEN %s AND %s
-                    GROUP BY id_eot_vmt_hex, fecha
+                    SELECT h.id_eot_vmt_hex, h.fecha, LEAST(AVG(h.ifo), 1.1) as daily_ifo_topeado
+                    FROM control_metricas.ifo_historico h
+                    JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
+                    WHERE h.fecha BETWEEN %s AND %s
+                      AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
+                      AND EXTRACT(ISODOW FROM h.fecha) < 7
+                      AND (
+                        (EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5 AND (UPPER(f.denominacion) LIKE '%PICO%'))
+                        OR
+                        (EXTRACT(ISODOW FROM h.fecha) = 6 AND (UPPER(f.denominacion) LIKE '%PICO%' AND UPPER(f.denominacion) NOT LIKE '%POS%'))
+                      )
+                    GROUP BY h.id_eot_vmt_hex, h.fecha
                 ) daily_avgs
                 GROUP BY id_eot_vmt_hex
             ) eot_avgs
         """, (prev_start, prev_end))
         res_sys = cursor.fetchone()
-        system_ifo_topeado_pct = float((res_sys['system_ifo_topeado'] or 0.0) * 100)
+        system_ifo_topeado_pct = float((res_sys['system_ifo_topeado'] or 0.0) * 100) if res_sys else 0.0
         
         if system_ifo_topeado_pct > 95: umbral_objetivo = 95.0
         elif system_ifo_topeado_pct < 90: umbral_objetivo = 90.0
         else: umbral_objetivo = system_ifo_topeado_pct
         
-        # Calcular IFO mensual por EOT (rango normal o recortado, según start_date)
+        # Calcular IFO mensual por EOT (excluyendo domingos, feriados y franjas no aplicables según día)
         cursor.execute("""
             SELECT id_eot_vmt_hex, AVG(daily_ifo_topeado) as monthly_ifo_topeado
             FROM (
-                SELECT id_eot_vmt_hex, fecha, LEAST(AVG(ifo), 1.1) as daily_ifo_topeado
-                FROM control_metricas.ifo_historico
-                WHERE fecha BETWEEN %s AND %s
-                GROUP BY id_eot_vmt_hex, fecha
+                SELECT h.id_eot_vmt_hex, h.fecha, LEAST(AVG(h.ifo), 1.1) as daily_ifo_topeado
+                FROM control_metricas.ifo_historico h
+                JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
+                WHERE h.fecha BETWEEN %s AND %s
+                  AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
+                  AND EXTRACT(ISODOW FROM h.fecha) < 7
+                  AND (
+                    (EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5 AND (UPPER(f.denominacion) LIKE '%PICO%'))
+                    OR
+                    (EXTRACT(ISODOW FROM h.fecha) = 6 AND (UPPER(f.denominacion) LIKE '%PICO%' AND UPPER(f.denominacion) NOT LIKE '%POS%'))
+                  )
+                GROUP BY h.id_eot_vmt_hex, h.fecha
             ) daily_avgs
             GROUP BY id_eot_vmt_hex
         """, (start_date, end_date))

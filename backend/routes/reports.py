@@ -119,11 +119,22 @@ async def get_monthly_summary(
         for td_id, td_data in tipos_dia_info.items():
             for f_str, dia_data in td_data['dias'].items():
                 franjas_dia = dia_data['franjas']
-                ifos = [f['ifo'] for f in franjas_dia.values() if f.get('ifo') is not None]
-                if ifos:
-                    avg_diario = min(sum(ifos) / len(ifos), 110.0)
+                valid_ifos = []
+                for fid, f in franjas_dia.items():
+                    if f.get('ifo') is None: continue
+                    denom = (f.get('denominacion') or '').upper()
+                    if td_id == 5:
+                        if 'PICO' in denom:
+                            valid_ifos.append(f['ifo'])
+                    elif td_id == 6:
+                        if 'PICO' in denom and 'POS' not in denom:
+                            valid_ifos.append(f['ifo'])
+
+                if valid_ifos:
+                    avg_diario = min(sum(valid_ifos) / len(valid_ifos), 110.0)
                     dia_data['ifo_diario'] = avg_diario
-                    ifos_diarios_mes.append(avg_diario)
+                    if td_id != 7: # Excluir domingos y feriados del cálculo del IFO Mensual
+                        ifos_diarios_mes.append(avg_diario)
 
         ifo_mes = sum(ifos_diarios_mes) / len(ifos_diarios_mes) if ifos_diarios_mes else 0
         
@@ -174,7 +185,15 @@ async def get_system_ifo_baseline(fecha: date, db: DatabaseConnection = Depends(
                 AVG(h.ifo) as ifo_dia_real,
                 LEAST(AVG(h.ifo), 1.1) as ifo_dia_topeado
             FROM control_metricas.ifo_historico h
+            JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
             WHERE h.fecha >= %s AND h.fecha <= %s
+              AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
+              AND EXTRACT(ISODOW FROM h.fecha) < 7
+              AND (
+                (EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5 AND (UPPER(f.denominacion) LIKE '%PICO%'))
+                OR
+                (EXTRACT(ISODOW FROM h.fecha) = 6 AND (UPPER(f.denominacion) LIKE '%PICO%' AND UPPER(f.denominacion) NOT LIKE '%POS%'))
+              )
             GROUP BY h.id_eot_vmt_hex, h.fecha
         ),
         ifo_mensual_eot AS (

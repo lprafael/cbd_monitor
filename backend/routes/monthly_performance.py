@@ -82,6 +82,13 @@ async def get_monthly_performance(
                     JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
                     WHERE h.id_eot_vmt_hex = %s
                       AND h.fecha BETWEEN %s AND %s
+                      AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
+                      AND EXTRACT(ISODOW FROM h.fecha) < 7
+                      AND (
+                        (EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5 AND (UPPER(f.denominacion) LIKE '%PICO%'))
+                        OR
+                        (EXTRACT(ISODOW FROM h.fecha) = 6 AND (UPPER(f.denominacion) LIKE '%PICO%' AND UPPER(f.denominacion) NOT LIKE '%POS%'))
+                      )
                     GROUP BY fecha, h.id_franja
                 ) franja_level
                 GROUP BY fecha
@@ -114,7 +121,13 @@ async def get_monthly_performance(
                 JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
                 WHERE h.id_eot_vmt_hex = %s
                   AND h.fecha BETWEEN %s AND %s
-                  -- Incluimos todos los días sin excepciones
+                  AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
+                  AND EXTRACT(ISODOW FROM h.fecha) < 7
+                  AND (
+                    (EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5 AND (UPPER(f.denominacion) LIKE '%PICO%'))
+                    OR
+                    (EXTRACT(ISODOW FROM h.fecha) = 6 AND (UPPER(f.denominacion) LIKE '%PICO%' AND UPPER(f.denominacion) NOT LIKE '%POS%'))
+                  )
                 GROUP BY fecha, h.id_franja
             ) franja_level
             GROUP BY fecha
@@ -165,6 +178,13 @@ async def get_monthly_performance(
                         FROM control_metricas.ifo_historico h
                         JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
                         WHERE h.fecha BETWEEN %s AND %s
+                          AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
+                          AND EXTRACT(ISODOW FROM h.fecha) < 7
+                          AND (
+                            (EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5 AND (UPPER(f.denominacion) LIKE '%PICO%'))
+                            OR
+                            (EXTRACT(ISODOW FROM h.fecha) = 6 AND (UPPER(f.denominacion) LIKE '%PICO%' AND UPPER(f.denominacion) NOT LIKE '%POS%'))
+                          )
                         GROUP BY id_eot_vmt_hex, fecha, h.id_franja
                     ) franja_level
                     GROUP BY id_eot_vmt_hex, fecha

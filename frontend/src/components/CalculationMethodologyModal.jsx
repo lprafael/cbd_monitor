@@ -79,23 +79,19 @@ const CalculationMethodologyModal = ({ isOpen, onClose }) => {
                         <h3>📌 Consideraciones del Período</h3>
                         <div className="exclusions-info">
                             <div className="exclusion-card highlight">
-                                <h4>Días Atípicos y Feriados</h4>
-                                <p><strong>Nota importante:</strong> Según el requerimiento actual, estos días <strong>SI</strong> se consideran en el promedio mensual, aunque se mantienen identificados visualmente para auditoría:</p>
+                                <h4>Días Atípicos, Domingos y Feriados</h4>
                                 <ul>
-                                    <li><strong>Domingos:</strong> Incluidos en el promedio</li>
-                                    <li><strong>Feriados:</strong> Incluidos en el promedio</li>
-                                    <li><strong>Días Atípicos:</strong> Incluidos en el promedio</li>
+                                    <li><strong>Lunes a Viernes:</strong> Solo se consideran franjas Pico y Pos Pico.</li>
+                                    <li><strong>Sábados:</strong> Solo se considera franja Pico.</li>
+                                    <li>❌ <strong>Domingos y Feriados:</strong> Excluidos del cálculo del IFO Mensual.</li>
                                 </ul>
                             </div>
                             <div className="exclusion-card">
-                                <h4>Franjas Incluidas</h4>
+                                <h4>Franjas Incluidas según Día</h4>
                                 <ul>
-                                    <li>✅ Madrugada</li>
-                                    <li>✅ Pico Mañana</li>
-                                    <li>✅ Entre Picos</li>
-                                    <li>✅ Pico Tarde</li>
-                                    <li>✅ Pos Pico</li>
-                                    <li>✅ Nocturna</li>
+                                    <li>✅ <strong>Lun a Vie:</strong> Pico y Pos Pico</li>
+                                    <li>✅ <strong>Sábados:</strong> Solo Pico</li>
+                                    <li>❌ <strong>Excluidos:</strong> Madrugada y Nocturna</li>
                                 </ul>
                             </div>
                             <div className="exclusion-card">
