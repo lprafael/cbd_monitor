@@ -110,12 +110,27 @@ async def generate_fines_report(
                     FROM control_metricas.ifo_historico h
                     JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
                     WHERE h.fecha BETWEEN %s AND %s
-                      AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
                       AND EXTRACT(ISODOW FROM h.fecha) < 7
+                      AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
                       AND (
-                        (EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5 AND (UPPER(f.denominacion) LIKE '%PICO%'))
+                        (
+                          EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5
+                          AND (
+                            UPPER(f.denominacion) LIKE '%%PICO%%'
+                            OR UPPER(f.denominacion) LIKE '%%POS%%PICO%%'
+                            OR UPPER(f.denominacion) LIKE '%%POSPICO%%'
+                          )
+                          AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%'
+                          AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%'
+                        )
                         OR
-                        (EXTRACT(ISODOW FROM h.fecha) = 6 AND (UPPER(f.denominacion) LIKE '%PICO%' AND UPPER(f.denominacion) NOT LIKE '%POS%'))
+                        (
+                          EXTRACT(ISODOW FROM h.fecha) = 6
+                          AND UPPER(f.denominacion) LIKE '%%PICO%%'
+                          AND UPPER(f.denominacion) NOT LIKE '%%POS%%'
+                          AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%'
+                          AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%'
+                        )
                       )
                     GROUP BY h.id_eot_vmt_hex, h.fecha
                 ) daily_avgs
@@ -123,13 +138,13 @@ async def generate_fines_report(
             ) eot_avgs
         """, (prev_start, prev_end))
         res_sys = cursor.fetchone()
-        system_ifo_topeado_pct = float((res_sys['system_ifo_topeado'] or 0.0) * 100) if res_sys else 0.0
+        system_ifo_topeado_pct = float((res_sys['system_ifo_topeado'] or 0.0) * 100)
         
         if system_ifo_topeado_pct > 95: umbral_objetivo = 95.0
         elif system_ifo_topeado_pct < 90: umbral_objetivo = 90.0
         else: umbral_objetivo = system_ifo_topeado_pct
         
-        # Calcular IFO mensual por EOT (excluyendo domingos, feriados y franjas no aplicables según día)
+        # Calcular IFO mensual por EOT (rango normal o recortado, según start_date)
         cursor.execute("""
             SELECT id_eot_vmt_hex, AVG(daily_ifo_topeado) as monthly_ifo_topeado
             FROM (
@@ -137,12 +152,27 @@ async def generate_fines_report(
                 FROM control_metricas.ifo_historico h
                 JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
                 WHERE h.fecha BETWEEN %s AND %s
-                  AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
                   AND EXTRACT(ISODOW FROM h.fecha) < 7
+                  AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
                   AND (
-                    (EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5 AND (UPPER(f.denominacion) LIKE '%PICO%'))
+                    (
+                      EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5
+                      AND (
+                        UPPER(f.denominacion) LIKE '%%PICO%%'
+                        OR UPPER(f.denominacion) LIKE '%%POS%%PICO%%'
+                        OR UPPER(f.denominacion) LIKE '%%POSPICO%%'
+                      )
+                      AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%'
+                      AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%'
+                    )
                     OR
-                    (EXTRACT(ISODOW FROM h.fecha) = 6 AND (UPPER(f.denominacion) LIKE '%PICO%' AND UPPER(f.denominacion) NOT LIKE '%POS%'))
+                    (
+                      EXTRACT(ISODOW FROM h.fecha) = 6
+                      AND UPPER(f.denominacion) LIKE '%%PICO%%'
+                      AND UPPER(f.denominacion) NOT LIKE '%%POS%%'
+                      AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%'
+                      AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%'
+                    )
                   )
                 GROUP BY h.id_eot_vmt_hex, h.fecha
             ) daily_avgs

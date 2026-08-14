@@ -154,6 +154,12 @@ function App({ onLogout, user }) {
     setCbdObjetivoData(null);
 
     try {
+      if (!selectedEots || selectedEots.length === 0) {
+        setError('Por favor, seleccione al menos una empresa (EOT).');
+        setLoading(false);
+        return;
+      }
+
       let endpoint = '';
       let body = {};
 

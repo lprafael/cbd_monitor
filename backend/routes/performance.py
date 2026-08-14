@@ -201,6 +201,22 @@ def get_fechas_referencia(cursor, fecha: date) -> list:
     return fechas_ajustadas
 
 
+def _safe_get_field(row, key, default=None):
+    """Obtiene un campo de forma segura de un registro que puede ser dict, tuple, list u objeto."""
+    if row is None:
+        return default
+    if isinstance(row, dict):
+        return row.get(key, default)
+    if isinstance(row, (list, tuple)):
+        idx = key if isinstance(key, int) else 0
+        if 0 <= idx < len(row):
+            return row[idx]
+        return default
+    if hasattr(row, str(key)):
+        return getattr(row, str(key))
+    return default
+
+
 def get_factores_ajuste_acumulados(cursor, fecha: date) -> tuple:
     """
     Calcula los factores de ajuste multiplicativos según Resolución 120/2025.
@@ -239,9 +255,7 @@ def get_factores_ajuste_acumulados(cursor, fecha: date) -> tuple:
         pre_feriado = False
         post_feriado = False
         for f in feriados_cercanos:
-            # feriados_cercanos devuelve objetos con atributo fecha o diccionarios según el cursor
-            # Usamos acceso genérico por índice si el cursor es normal
-            f_fecha = f[0] if isinstance(f, (list, tuple)) else f['fecha']
+            f_fecha = _safe_get_field(f, 'fecha', _safe_get_field(f, 0))
             if f_fecha == fecha_ant:
                 post_feriado = True
             if f_fecha == fecha_sig:
@@ -264,8 +278,7 @@ def get_factores_ajuste_acumulados(cursor, fecha: date) -> tuple:
     lluvia = cursor.fetchone()
     if lluvia:
         factor_total *= 0.50
-        # Usar acceso por nombre de columna para evitar KeyError
-        precipitacion = lluvia['mm_caidos'] if isinstance(lluvia, dict) else lluvia[0]
+        precipitacion = _safe_get_field(lluvia, 'mm_caidos', _safe_get_field(lluvia, 0, 0))
         ajustes.append(f"Lluvia {precipitacion}mm (0.50)")
         
     return round(factor_total, 2), ajustes

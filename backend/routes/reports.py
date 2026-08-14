@@ -119,22 +119,11 @@ async def get_monthly_summary(
         for td_id, td_data in tipos_dia_info.items():
             for f_str, dia_data in td_data['dias'].items():
                 franjas_dia = dia_data['franjas']
-                valid_ifos = []
-                for fid, f in franjas_dia.items():
-                    if f.get('ifo') is None: continue
-                    denom = (f.get('denominacion') or '').upper()
-                    if td_id == 5:
-                        if 'PICO' in denom:
-                            valid_ifos.append(f['ifo'])
-                    elif td_id == 6:
-                        if 'PICO' in denom and 'POS' not in denom:
-                            valid_ifos.append(f['ifo'])
-
-                if valid_ifos:
-                    avg_diario = min(sum(valid_ifos) / len(valid_ifos), 110.0)
+                ifos = [f['ifo'] for f in franjas_dia.values() if f.get('ifo') is not None]
+                if ifos:
+                    avg_diario = min(sum(ifos) / len(ifos), 110.0)
                     dia_data['ifo_diario'] = avg_diario
-                    if td_id != 7: # Excluir domingos y feriados del cálculo del IFO Mensual
-                        ifos_diarios_mes.append(avg_diario)
+                    ifos_diarios_mes.append(avg_diario)
 
         ifo_mes = sum(ifos_diarios_mes) / len(ifos_diarios_mes) if ifos_diarios_mes else 0
         
@@ -187,12 +176,27 @@ async def get_system_ifo_baseline(fecha: date, db: DatabaseConnection = Depends(
             FROM control_metricas.ifo_historico h
             JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
             WHERE h.fecha >= %s AND h.fecha <= %s
-              AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
               AND EXTRACT(ISODOW FROM h.fecha) < 7
+              AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
               AND (
-                (EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5 AND (UPPER(f.denominacion) LIKE '%PICO%'))
+                (
+                  EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5
+                  AND (
+                    UPPER(f.denominacion) LIKE '%%PICO%%'
+                    OR UPPER(f.denominacion) LIKE '%%POS%%PICO%%'
+                    OR UPPER(f.denominacion) LIKE '%%POSPICO%%'
+                  )
+                  AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%'
+                  AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%'
+                )
                 OR
-                (EXTRACT(ISODOW FROM h.fecha) = 6 AND (UPPER(f.denominacion) LIKE '%PICO%' AND UPPER(f.denominacion) NOT LIKE '%POS%'))
+                (
+                  EXTRACT(ISODOW FROM h.fecha) = 6
+                  AND UPPER(f.denominacion) LIKE '%%PICO%%'
+                  AND UPPER(f.denominacion) NOT LIKE '%%POS%%'
+                  AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%'
+                  AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%'
+                )
               )
             GROUP BY h.id_eot_vmt_hex, h.fecha
         ),
@@ -307,10 +311,29 @@ async def get_system_ifo_breakdown(
         WITH ifo_diario AS (
             SELECT h.id_eot_vmt_hex, h.fecha, AVG(h.ifo) as ifo_dia, LEAST(AVG(h.ifo), 1.1) as ifo_dia_topeado, EXTRACT(ISODOW FROM h.fecha) as dia_semana
             FROM control_metricas.ifo_historico h
+            JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
             WHERE h.fecha >= %s AND h.fecha <= %s
+              AND EXTRACT(ISODOW FROM h.fecha) < 7
+              AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
               AND (
-                  (EXTRACT(ISODOW FROM h.fecha) IN (1, 2, 3, 4, 5) AND h.id_franja IN (30, 31, 32, 33)) OR
-                  (EXTRACT(ISODOW FROM h.fecha) = 6 AND h.id_franja = 35)
+                (
+                  EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5
+                  AND (
+                    UPPER(f.denominacion) LIKE '%%PICO%%'
+                    OR UPPER(f.denominacion) LIKE '%%POS%%PICO%%'
+                    OR UPPER(f.denominacion) LIKE '%%POSPICO%%'
+                  )
+                  AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%'
+                  AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%'
+                )
+                OR
+                (
+                  EXTRACT(ISODOW FROM h.fecha) = 6
+                  AND UPPER(f.denominacion) LIKE '%%PICO%%'
+                  AND UPPER(f.denominacion) NOT LIKE '%%POS%%'
+                  AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%'
+                  AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%'
+                )
               )
             GROUP BY h.id_eot_vmt_hex, h.fecha
         ),
@@ -329,10 +352,29 @@ async def get_system_ifo_breakdown(
             SELECT h.id_eot_vmt_hex, h.fecha, h.id_franja,
                 LEAST(AVG(COALESCE(h.cbd_indice, LEAST(h.ifo, 1.0))), 1.0) as iccbdm_franja_val
             FROM control_metricas.ifo_historico h
+            JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
             WHERE h.fecha >= %s AND h.fecha <= %s
+              AND EXTRACT(ISODOW FROM h.fecha) < 7
+              AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
               AND (
-                  (EXTRACT(ISODOW FROM h.fecha) IN (1, 2, 3, 4, 5) AND h.id_franja IN (30, 31, 32, 33)) OR
-                  (EXTRACT(ISODOW FROM h.fecha) = 6 AND h.id_franja = 35)
+                (
+                  EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5
+                  AND (
+                    UPPER(f.denominacion) LIKE '%%PICO%%'
+                    OR UPPER(f.denominacion) LIKE '%%POS%%PICO%%'
+                    OR UPPER(f.denominacion) LIKE '%%POSPICO%%'
+                  )
+                  AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%'
+                  AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%'
+                )
+                OR
+                (
+                  EXTRACT(ISODOW FROM h.fecha) = 6
+                  AND UPPER(f.denominacion) LIKE '%%PICO%%'
+                  AND UPPER(f.denominacion) NOT LIKE '%%POS%%'
+                  AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%'
+                  AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%'
+                )
               )
             GROUP BY h.id_eot_vmt_hex, h.fecha, h.id_franja
         ),
@@ -390,10 +432,29 @@ async def get_system_ifo_breakdown(
             WITH ifo_diario_eot AS (
                 SELECT h.id_eot_vmt_hex, h.fecha, AVG(h.ifo) as ifo_dia_real
                 FROM control_metricas.ifo_historico h
+                JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
                 WHERE h.fecha >= %s AND h.fecha <= %s
+                  AND EXTRACT(ISODOW FROM h.fecha) < 7
+                  AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
                   AND (
-                      (EXTRACT(ISODOW FROM h.fecha) IN (1, 2, 3, 4, 5) AND h.id_franja IN (30, 31, 32, 33)) OR
-                      (EXTRACT(ISODOW FROM h.fecha) = 6 AND h.id_franja = 35)
+                    (
+                      EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5
+                      AND (
+                        UPPER(f.denominacion) LIKE '%%PICO%%'
+                        OR UPPER(f.denominacion) LIKE '%%POS%%PICO%%'
+                        OR UPPER(f.denominacion) LIKE '%%POSPICO%%'
+                      )
+                      AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%'
+                      AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%'
+                    )
+                    OR
+                    (
+                      EXTRACT(ISODOW FROM h.fecha) = 6
+                      AND UPPER(f.denominacion) LIKE '%%PICO%%'
+                      AND UPPER(f.denominacion) NOT LIKE '%%POS%%'
+                      AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%'
+                      AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%'
+                    )
                   )
                 GROUP BY h.id_eot_vmt_hex, h.fecha
             )
@@ -502,9 +563,27 @@ async def get_eot_monthly_breakdown(eot_id: str, year: int, month: int, db: Data
             FROM control_metricas.ifo_historico h
             JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
             WHERE h.id_eot_vmt_hex = %s AND h.fecha BETWEEN %s AND %s
+              AND EXTRACT(ISODOW FROM h.fecha) < 7
+              AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
               AND (
-                  (EXTRACT(ISODOW FROM h.fecha) IN (1, 2, 3, 4, 5) AND h.id_franja IN (30, 31, 32, 33)) OR
-                  (EXTRACT(ISODOW FROM h.fecha) = 6 AND h.id_franja = 35)
+                (
+                  EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5
+                  AND (
+                    UPPER(f.denominacion) LIKE '%%PICO%%'
+                    OR UPPER(f.denominacion) LIKE '%%POS%%PICO%%'
+                    OR UPPER(f.denominacion) LIKE '%%POSPICO%%'
+                  )
+                  AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%'
+                  AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%'
+                )
+                OR
+                (
+                  EXTRACT(ISODOW FROM h.fecha) = 6
+                  AND UPPER(f.denominacion) LIKE '%%PICO%%'
+                  AND UPPER(f.denominacion) NOT LIKE '%%POS%%'
+                  AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%'
+                  AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%'
+                )
               )
             GROUP BY 1, 2, 3 ORDER BY 1, 2;
         """, (eot_id, inicio, fin))
@@ -568,10 +647,29 @@ async def get_subsidy_breakdown(
                 h.id_franja,
                 LEAST(AVG(COALESCE(h.cbd_indice, LEAST(h.ifo, 1.0))), 1.0) as iccbdm_franja_val
             FROM control_metricas.ifo_historico h
+            JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
             WHERE h.fecha >= %s AND h.fecha <= %s
+              AND EXTRACT(ISODOW FROM h.fecha) < 7
+              AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
               AND (
-                  (EXTRACT(ISODOW FROM h.fecha) IN (1, 2, 3, 4, 5) AND h.id_franja IN (30, 31, 32, 33)) OR
-                  (EXTRACT(ISODOW FROM h.fecha) = 6 AND h.id_franja = 35)
+                (
+                  EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5
+                  AND (
+                    UPPER(f.denominacion) LIKE '%%PICO%%'
+                    OR UPPER(f.denominacion) LIKE '%%POS%%PICO%%'
+                    OR UPPER(f.denominacion) LIKE '%%POSPICO%%'
+                  )
+                  AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%'
+                  AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%'
+                )
+                OR
+                (
+                  EXTRACT(ISODOW FROM h.fecha) = 6
+                  AND UPPER(f.denominacion) LIKE '%%PICO%%'
+                  AND UPPER(f.denominacion) NOT LIKE '%%POS%%'
+                  AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%'
+                  AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%'
+                )
               )
             GROUP BY h.id_eot_vmt_hex, h.fecha, h.id_franja
         ),
@@ -674,9 +772,27 @@ async def get_eot_subsidy_breakdown(eot_id: str, year: int, month: int, db: Data
             FROM control_metricas.ifo_historico h
             JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
             WHERE h.id_eot_vmt_hex = %s AND h.fecha BETWEEN %s AND %s
+              AND EXTRACT(ISODOW FROM h.fecha) < 7
+              AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
               AND (
-                  (EXTRACT(ISODOW FROM h.fecha) IN (1, 2, 3, 4, 5) AND h.id_franja IN (30, 31, 32, 33)) OR
-                  (EXTRACT(ISODOW FROM h.fecha) = 6 AND h.id_franja = 35)
+                (
+                  EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5
+                  AND (
+                    UPPER(f.denominacion) LIKE '%%PICO%%'
+                    OR UPPER(f.denominacion) LIKE '%%POS%%PICO%%'
+                    OR UPPER(f.denominacion) LIKE '%%POSPICO%%'
+                  )
+                  AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%'
+                  AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%'
+                )
+                OR
+                (
+                  EXTRACT(ISODOW FROM h.fecha) = 6
+                  AND UPPER(f.denominacion) LIKE '%%PICO%%'
+                  AND UPPER(f.denominacion) NOT LIKE '%%POS%%'
+                  AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%'
+                  AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%'
+                )
               )
             GROUP BY 1, 2, 3 ORDER BY 1, 2;
         """, (eot_id, inicio, fin))

@@ -202,6 +202,22 @@ def get_fechas_referencia_detalle(cursor, fecha: date) -> tuple:
     return fechas_ajustadas, detalle
 
 
+def _safe_get_field(row, key, default=None):
+    """Obtiene un campo de forma segura de un registro que puede ser dict, tuple, list u objeto."""
+    if row is None:
+        return default
+    if isinstance(row, dict):
+        return row.get(key, default)
+    if isinstance(row, (list, tuple)):
+        idx = key if isinstance(key, int) else 0
+        if 0 <= idx < len(row):
+            return row[idx]
+        return default
+    if hasattr(row, str(key)):
+        return getattr(row, str(key))
+    return default
+
+
 def get_factores_ajuste_acumulados(cursor, fecha: date) -> tuple:
     """
     Calcula los factores de ajuste multiplicativos según Resolución 120/2025.
@@ -219,15 +235,15 @@ def get_factores_ajuste_acumulados(cursor, fecha: date) -> tuple:
         fecha_ant = fecha - timedelta(days=1); fecha_sig = fecha + timedelta(days=1)
         cursor.execute("SELECT fecha FROM public.feriados WHERE fecha IS NOT NULL AND (fecha = %s OR fecha = %s)", (fecha_ant, fecha_sig))
         feriados_cercanos = cursor.fetchall()
-        pre = any(f[0] == fecha_sig if isinstance(f, (list, tuple)) else f['fecha'] == fecha_sig for f in feriados_cercanos)
-        post = any(f[0] == fecha_ant if isinstance(f, (list, tuple)) else f['fecha'] == fecha_ant for f in feriados_cercanos)
+        pre = any(_safe_get_field(f, 'fecha', _safe_get_field(f, 0)) == fecha_sig for f in feriados_cercanos)
+        post = any(_safe_get_field(f, 'fecha', _safe_get_field(f, 0)) == fecha_ant for f in feriados_cercanos)
         if post: factor_total *= 0.70; ajustes.append("Post-Feriado (0.70)")
         if pre: factor_total *= 0.70; ajustes.append("Pre-Feriado (0.70)")
     cursor.execute("SELECT mm_caidos FROM control_metricas.t_casuisticas_lluvia WHERE fecha_evento=%s AND mm_caidos > 5 ORDER BY mm_caidos DESC LIMIT 1", (fecha,))
     lluvia = cursor.fetchone()
     if lluvia:
         factor_total *= 0.50
-        precipitacion = lluvia['mm_caidos'] if isinstance(lluvia, dict) else lluvia[0]
+        precipitacion = _safe_get_field(lluvia, 'mm_caidos', _safe_get_field(lluvia, 0, 0))
         ajustes.append(f"Lluvia {precipitacion}mm (0.50)")
     return round(factor_total, 2), ajustes
 
