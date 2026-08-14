@@ -240,10 +240,10 @@ export const generateCROWord = async ({
 
   // 6. Construir Tabla de Firmas
   const noBorder = {
-    top: { style: BorderStyle.NONE, size: 0, color: "AUTO" },
-    bottom: { style: BorderStyle.NONE, size: 0, color: "AUTO" },
-    left: { style: BorderStyle.NONE, size: 0, color: "AUTO" },
-    right: { style: BorderStyle.NONE, size: 0, color: "AUTO" }
+    top: { style: BorderStyle.NONE, size: 0, color: "auto" },
+    bottom: { style: BorderStyle.NONE, size: 0, color: "auto" },
+    left: { style: BorderStyle.NONE, size: 0, color: "auto" },
+    right: { style: BorderStyle.NONE, size: 0, color: "auto" }
   };
 
   const tablaFirmas = new Table({
