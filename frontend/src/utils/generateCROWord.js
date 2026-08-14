@@ -73,23 +73,22 @@ export const generateCROWord = async ({
       }),
       new Paragraph({
         border: {
-          bottom: { color: "000000", space: 1, value: BorderStyle.SINGLE, size: 6 }
+          bottom: { color: "000000", space: 2, value: BorderStyle.SINGLE, size: 8 }
         },
         children: []
       })
     ]
   });
 
-  // 3. Pie de página institucional
+  // 3. Pie de página institucional con raya horizontal encima
   const docFooter = new Footer({
     children: [
       new Paragraph({
         border: {
-          top: { color: "000000", space: 1, value: BorderStyle.SINGLE, size: 6 }
+          top: { color: "000000", space: 6, value: BorderStyle.SINGLE, size: 12 }
         },
-        children: []
-      }),
-      new Paragraph({
+        alignment: AlignmentType.JUSTIFY,
+        spacing: { before: 100, after: 40 },
         children: [
           new TextRun({
             text: "Misión: ",
@@ -106,6 +105,7 @@ export const generateCROWord = async ({
         ]
       }),
       new Paragraph({
+        alignment: AlignmentType.JUSTIFY,
         children: [
           new TextRun({
             text: "Visión: ",
@@ -124,9 +124,18 @@ export const generateCROWord = async ({
     ]
   });
 
-  // 4. Formatear Datos Generales
+  // 4. Formatear Número de CRO (incluir /2026 siempre después del número)
   const numCroClean = numeroCRO ? numeroCRO.trim() : "";
-  const nroCROFinal = numCroClean !== "" ? numCroClean : `___ / ${year || 2026}`;
+  const yearSuffix = year || 2026;
+  let nroCROFinal = "";
+  if (!numCroClean) {
+    nroCROFinal = `___ / ${yearSuffix}`;
+  } else if (numCroClean.includes("/")) {
+    nroCROFinal = numCroClean;
+  } else {
+    nroCROFinal = `${numCroClean} / ${yearSuffix}`;
+  }
+
   const mesOperativoStr = getMonthName(month);
   const iccbdmVal = typeof eot.iccbdm_mensual === "number" ? eot.iccbdm_mensual : parseFloat(eot.iccbdm_mensual || 0);
   const cumple = eot.cumple_subsidio !== undefined ? eot.cumple_subsidio : (eot.estado_color !== "red" && iccbdmVal >= 95.0);
@@ -150,11 +159,11 @@ export const generateCROWord = async ({
     textoExpedicion = `Se expide la presente Constancia de Rendimiento Operativo en la ciudad de Asunción, a los ${diaEmision} días del mes de ${mesEmisionNombre} de ${anioEmision}, para su remisión a la Dirección Metropolitana de Transporte y fines administrativos pertinentes.`;
   }
 
-  // Estilo Base de Parrafo Tahoma 11pt
+  // Estilos Base
   const fontObj = { font: "Tahoma", size: 22 };
   const fontBold = { font: "Tahoma", size: 22, bold: true };
 
-  // 5. Construir Tabla I (Evaluación)
+  // 5. Tabla I (Evaluación)
   const cellBorder = {
     top: { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" },
     bottom: { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" },
@@ -201,6 +210,7 @@ export const generateCROWord = async ({
             borders: cellBorder,
             children: [
               new Paragraph({
+                alignment: AlignmentType.JUSTIFY,
                 children: [
                   new TextRun({ text: "Índice de Cumplimiento de Cantidad de Buses Distintos Mínimo Mensual (ICCBDM Mensual)\n", font: "Tahoma", size: 20, bold: true }),
                   new TextRun({ text: "(Medición consolidada de flota operativa a nivel empresa)", font: "Tahoma", size: 18, italics: true })
@@ -238,7 +248,7 @@ export const generateCROWord = async ({
     ]
   });
 
-  // 6. Construir Tabla de Firmas
+  // 6. Tabla de Franjas Operativas Computables (Alineada en tabla limpia)
   const noBorder = {
     top: { style: BorderStyle.NONE, size: 0, color: "auto" },
     bottom: { style: BorderStyle.NONE, size: 0, color: "auto" },
@@ -246,6 +256,89 @@ export const generateCROWord = async ({
     right: { style: BorderStyle.NONE, size: 0, color: "auto" }
   };
 
+  const tablaFranjas = new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    rows: [
+      // Header 1
+      new TableRow({
+        children: [
+          new TableCell({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            columnSpan: 3,
+            borders: noBorder,
+            children: [
+              new Paragraph({
+                spacing: { before: 80, after: 40 },
+                children: [
+                  new TextRun({ text: "1. Lunes a Viernes:", font: "Tahoma", size: 22, bold: true })
+                ]
+              })
+            ]
+          })
+        ]
+      }),
+      // Item 1.1
+      new TableRow({
+        children: [
+          new TableCell({ width: { size: 4, type: WidthType.PERCENTAGE }, borders: noBorder, children: [new Paragraph({ children: [] })] }),
+          new TableCell({ width: { size: 26, type: WidthType.PERCENTAGE }, borders: noBorder, children: [new Paragraph({ children: [new TextRun({ text: "• Pico Mañana:", font: "Tahoma", size: 20, bold: true })] })] }),
+          new TableCell({ width: { size: 70, type: WidthType.PERCENTAGE }, borders: noBorder, children: [new Paragraph({ children: [new TextRun({ text: "05:00 a 07:59 h   -> COMPUTABLE (Alcanzada por exigibilidad y sanción)", font: "Tahoma", size: 20 })] })] })
+        ]
+      }),
+      // Item 1.2
+      new TableRow({
+        children: [
+          new TableCell({ width: { size: 4, type: WidthType.PERCENTAGE }, borders: noBorder, children: [new Paragraph({ children: [] })] }),
+          new TableCell({ width: { size: 26, type: WidthType.PERCENTAGE }, borders: noBorder, children: [new Paragraph({ children: [new TextRun({ text: "• Pos Pico (Entre):", font: "Tahoma", size: 20, bold: true })] })] }),
+          new TableCell({ width: { size: 70, type: WidthType.PERCENTAGE }, borders: noBorder, children: [new Paragraph({ children: [new TextRun({ text: "08:00 a 15:59 h   -> COMPUTABLE (Alcanzada por exigibilidad y sanción)", font: "Tahoma", size: 20 })] })] })
+        ]
+      }),
+      // Item 1.3
+      new TableRow({
+        children: [
+          new TableCell({ width: { size: 4, type: WidthType.PERCENTAGE }, borders: noBorder, children: [new Paragraph({ children: [] })] }),
+          new TableCell({ width: { size: 26, type: WidthType.PERCENTAGE }, borders: noBorder, children: [new Paragraph({ children: [new TextRun({ text: "• Pico Tarde:", font: "Tahoma", size: 20, bold: true })] })] }),
+          new TableCell({ width: { size: 70, type: WidthType.PERCENTAGE }, borders: noBorder, children: [new Paragraph({ children: [new TextRun({ text: "16:00 a 18:59 h   -> COMPUTABLE (Alcanzada por exigibilidad y sanción)", font: "Tahoma", size: 20 })] })] })
+        ]
+      }),
+      // Item 1.4
+      new TableRow({
+        children: [
+          new TableCell({ width: { size: 4, type: WidthType.PERCENTAGE }, borders: noBorder, children: [new Paragraph({ children: [] })] }),
+          new TableCell({ width: { size: 26, type: WidthType.PERCENTAGE }, borders: noBorder, children: [new Paragraph({ children: [new TextRun({ text: "• Pos Pico Tarde:", font: "Tahoma", size: 20, bold: true })] })] }),
+          new TableCell({ width: { size: 70, type: WidthType.PERCENTAGE }, borders: noBorder, children: [new Paragraph({ children: [new TextRun({ text: "19:00 a 20:59 h   -> COMPUTABLE (Alcanzada por exigibilidad y sanción)", font: "Tahoma", size: 20 })] })] })
+        ]
+      }),
+      // Header 2
+      new TableRow({
+        children: [
+          new TableCell({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            columnSpan: 3,
+            borders: noBorder,
+            children: [
+              new Paragraph({
+                spacing: { before: 120, after: 40 },
+                children: [
+                  new TextRun({ text: "2. Sábados:", font: "Tahoma", size: 22, bold: true })
+                ]
+              })
+            ]
+          })
+        ]
+      }),
+      // Item 2.1
+      new TableRow({
+        children: [
+          new TableCell({ width: { size: 4, type: WidthType.PERCENTAGE }, borders: noBorder, children: [new Paragraph({ children: [] })] }),
+          new TableCell({ width: { size: 26, type: WidthType.PERCENTAGE }, borders: noBorder, children: [new Paragraph({ children: [new TextRun({ text: "• Pico Sábados:", font: "Tahoma", size: 20, bold: true })] })] }),
+          new TableCell({ width: { size: 70, type: WidthType.PERCENTAGE }, borders: noBorder, children: [new Paragraph({ children: [new TextRun({ text: "06:00 a 15:59 h   -> COMPUTABLE (Alcanzada por exigibilidad y sanción)", font: "Tahoma", size: 20 })] })] })
+        ]
+      })
+    ]
+  });
+
+  // 7. Tabla de Firmas
   const tablaFirmas = new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
     rows: [
@@ -274,7 +367,7 @@ export const generateCROWord = async ({
     ]
   });
 
-  // 7. Armar el contenido del Documento
+  // 8. Armar el contenido del Documento
   const doc = new Document({
     sections: [
       {
@@ -307,6 +400,7 @@ export const generateCROWord = async ({
 
           // CONSTE QUE
           new Paragraph({
+            alignment: AlignmentType.JUSTIFY,
             spacing: { after: 150 },
             children: [new TextRun({ text: "CONSTE QUE:", font: "Tahoma", size: 22, bold: true })]
           }),
@@ -348,6 +442,7 @@ export const generateCROWord = async ({
 
           // Sección I - Encabezado
           new Paragraph({
+            alignment: AlignmentType.JUSTIFY,
             spacing: { before: 200, after: 150 },
             children: [
               new TextRun({
@@ -367,6 +462,7 @@ export const generateCROWord = async ({
 
           // Sección II
           new Paragraph({
+            alignment: AlignmentType.JUSTIFY,
             spacing: { before: 150, after: 150 },
             children: [
               new TextRun({
@@ -382,34 +478,34 @@ export const generateCROWord = async ({
             spacing: { after: 150 },
             children: [
               new TextRun({
-                text: "En estricta concordancia con el Dictamen C.J. N° 357/2026 emitido por la Coordinación Jurídica del VMT (en armonización con los Arts. 4° y 21 de la Res. GVMT N° 120/2025 y la Res. GVMT N° 21/2026), la evaluación de exigibilidad técnica para la presente etapa de implementación se circunscribe exclusivamente a las siguientes franjas operativas:",
+                text: "En estricta concordancia con el Dictamen ",
+                font: "Tahoma",
+                size: 22
+              }),
+              new TextRun({
+                text: "C.J. N° 357/2026",
+                font: "Tahoma",
+                size: 22,
+                bold: true
+              }),
+              new TextRun({
+                text: " emitido por la Coordinación Jurídica del VMT (en armonización con los Arts. 4° y 21 de la Res. GVMT N° 120/2025 y la Res. GVMT N° 21/2026), la evaluación de exigibilidad técnica para la presente etapa de implementación se circunscribe exclusivamente a las siguientes franjas operativas:",
                 font: "Tahoma",
                 size: 22
               })
             ]
           }),
+
+          // Tabla ordenada de Franjas
+          tablaFranjas,
+
+          // Nota de Franjas Exceptuadas
           new Paragraph({
-            spacing: { after: 80 },
-            children: [
-              new TextRun({ text: "  1. Lunes a Viernes:\n", font: "Tahoma", size: 22, bold: true }),
-              new TextRun({ text: "     • Pico Mañana:        05:00 a 07:59 h  -> COMPUTABLE (Alcanzada por exigibilidad y sanción)\n", font: "Tahoma", size: 20 }),
-              new TextRun({ text: "     • Pos Pico (Entre):   08:00 a 15:59 h  -> COMPUTABLE (Alcanzada por exigibilidad y sanción)\n", font: "Tahoma", size: 20 }),
-              new TextRun({ text: "     • Pico Tarde:         16:00 a 18:59 h  -> COMPUTABLE (Alcanzada por exigibilidad y sanción)\n", font: "Tahoma", size: 20 }),
-              new TextRun({ text: "     • Pos Pico Tarde:     19:00 a 20:59 h  -> COMPUTABLE (Alcanzada por exigibilidad y sanción)", font: "Tahoma", size: 20 })
-            ]
-          }),
-          new Paragraph({
-            spacing: { after: 120 },
-            children: [
-              new TextRun({ text: "  2. Sábados:\n", font: "Tahoma", size: 22, bold: true }),
-              new TextRun({ text: "     • Pico Sábados:       06:00 a 15:59 h  -> COMPUTABLE (Alcanzada por exigibilidad y sanción)", font: "Tahoma", size: 20 })
-            ]
-          }),
-          new Paragraph({
-            spacing: { after: 250 },
+            alignment: AlignmentType.JUSTIFY,
+            spacing: { before: 120, after: 250 },
             children: [
               new TextRun({
-                text: "  * Franjas Exceptuadas en la presente etapa (Solo monitoreo informativo): Madrugada (L-V), Nocturna (L-V), Pos Pico Sábados, Nocturna Sábados, Domingos y Feriados.",
+                text: "* Franjas Exceptuadas en la presente etapa (Solo monitoreo informativo): Madrugada (L-V), Nocturna (L-V), Pos Pico Sábados, Nocturna Sábados, Domingos y Feriados.",
                 font: "Tahoma",
                 size: 18,
                 italics: true
@@ -419,6 +515,7 @@ export const generateCROWord = async ({
 
           // Sección III
           new Paragraph({
+            alignment: AlignmentType.JUSTIFY,
             spacing: { before: 150, after: 150 },
             children: [
               new TextRun({
@@ -487,6 +584,7 @@ export const generateCROWord = async ({
 
           // Sección IV
           new Paragraph({
+            alignment: AlignmentType.JUSTIFY,
             spacing: { before: 150, after: 150 },
             children: [
               new TextRun({
@@ -554,7 +652,7 @@ export const generateCROWord = async ({
     ]
   });
 
-  // 8. Generar y descargar el archivo .docx
+  // 9. Generar y descargar el archivo .docx
   const blob = await Packer.toBlob(doc);
   const cleanName = eot.eot_nombre.replace(/[^a-zA-Z0-9]/g, "_");
   saveAs(blob, `CRO_${cleanName}_${mesOperativoStr}_${year}.docx`);
