@@ -14,7 +14,6 @@ import {
   Footer,
   ShadingType
 } from "docx";
-import { saveAs } from "file-saver";
 
 const urlToBlob = async (url) => {
   const resp = await fetch(url);
@@ -631,8 +630,20 @@ export const generateCROWord = async ({
     ]
   });
 
-  // 9. Generar y descargar el archivo .docx
+  // 9. Generar y descargar el archivo .docx de forma directa nativa
   const blob = await Packer.toBlob(doc);
   const cleanName = eot.eot_nombre.replace(/[^a-zA-Z0-9]/g, "_");
-  saveAs(blob, `CRO_${cleanName}_${mesOperativoStr}_${year}.docx`);
+  const fileName = `CRO_${cleanName}_${mesOperativoStr}_${year}.docx`;
+
+  const link = document.createElement("a");
+  link.style.display = "none";
+  link.href = URL.createObjectURL(blob);
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+
+  setTimeout(() => {
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+  }, 200);
 };
