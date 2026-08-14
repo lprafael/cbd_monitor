@@ -1,12 +1,21 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './SubsidyCalculationDashboard.css';
 import { API_BASE_URL } from '../config';
+import { generateCROWord } from '../utils/generateCROWord';
 
 const SubsidyCalculationDashboard = ({ year, month }) => {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [expandedEots, setExpandedEots] = useState({});
+
+    // Modal CRO State
+    const [croModalOpen, setCroModalOpen] = useState(false);
+    const [selectedEotForCRO, setSelectedEotForCRO] = useState(null);
+    const [numeroCRO, setNumeroCRO] = useState('');
+    const [fechaEmision, setFechaEmision] = useState(new Date().toISOString().split('T')[0]);
+    const [isFechaBlanco, setIsFechaBlanco] = useState(false);
+    const [generatingCRO, setGeneratingCRO] = useState(false);
 
     const fetchSubsidyData = useCallback(async () => {
         if (!year || !month) return;
@@ -73,9 +82,34 @@ const SubsidyCalculationDashboard = ({ year, month }) => {
         window.print();
     };
 
-    const handleGenerateCRO = (eot, e) => {
+    const handleOpenCROModal = (eot, e) => {
         e.stopPropagation();
-        alert(`📜 Generando Constancia de Rendimiento Operativo (CRO)\n\nEmpresa: ${eot.eot_nombre}\nPeríodo: ${getMonthName(month)} ${year}\nICCBDM Mensual: ${eot.iccbdm_mensual.toFixed(2)}%\nEstado: ${eot.cumple_subsidio ? 'HABILITADO PARA SUBSIDIO' : 'NO HABILITADO'}`);
+        setSelectedEotForCRO(eot);
+        setNumeroCRO('');
+        setFechaEmision(new Date().toISOString().split('T')[0]);
+        setIsFechaBlanco(false);
+        setCroModalOpen(true);
+    };
+
+    const handleConfirmCRO = async () => {
+        if (!selectedEotForCRO) return;
+        setGeneratingCRO(true);
+        try {
+            await generateCROWord({
+                eot: selectedEotForCRO,
+                year,
+                month,
+                numeroCRO,
+                fechaEmision,
+                isFechaBlanco
+            });
+            setCroModalOpen(false);
+        } catch (err) {
+            console.error("Error al generar CRO:", err);
+            alert("Error al generar el documento CRO: " + err.message);
+        } finally {
+            setGeneratingCRO(false);
+        }
     };
 
     if (loading) {
@@ -202,7 +236,7 @@ const SubsidyCalculationDashboard = ({ year, month }) => {
                                         <td className="actions-col">
                                             <button
                                                 className="cro-button"
-                                                onClick={(e) => handleGenerateCRO(eot, e)}
+                                                onClick={(e) => handleOpenCROModal(eot, e)}
                                                 title={`Generar Constancia de Rendimiento Operativo (CRO) para ${eot.eot_nombre}`}
                                             >
                                                 📜 Generar CRO
@@ -290,6 +324,55 @@ const SubsidyCalculationDashboard = ({ year, month }) => {
                     </table>
                 </div>
             </div>
+
+            {/* Modal Prompt para Datos de la Constancia de Rendimiento Operativo (CRO) */}
+            {croModalOpen && (
+                <div className="cro-modal-overlay" onClick={(e) => e.stopPropagation()}>
+                    <div className="cro-modal-content">
+                        <h3>Constancia de Rendimiento Operativo (CRO) - {selectedEotForCRO?.eot_nombre}</h3>
+                        
+                        <div className="form-group">
+                            <label>Número de Constancia (CRO):</label>
+                            <input 
+                                type="text" 
+                                placeholder="Ej: 123/2026" 
+                                value={numeroCRO} 
+                                onChange={(e) => setNumeroCRO(e.target.value)} 
+                            />
+                            <small>Si se deja en blanco se imprimirá "___/{year || 2026}"</small>
+                        </div>
+
+                        <div className="form-group">
+                            <label>Fecha de Emisión:</label>
+                            <input 
+                                type="date" 
+                                value={fechaEmision} 
+                                onChange={(e) => setFechaEmision(e.target.value)} 
+                                disabled={isFechaBlanco}
+                            />
+                            <small>Si no ingresa, usará la fecha actual del sistema.</small>
+                        </div>
+
+                        <div className="form-group-checkbox">
+                            <label>
+                                <input 
+                                    type="checkbox" 
+                                    checked={isFechaBlanco} 
+                                    onChange={(e) => setIsFechaBlanco(e.target.checked)} 
+                                />
+                                Dejar fecha en blanco
+                            </label>
+                        </div>
+
+                        <div className="cro-modal-actions">
+                            <button className="btn-cancel" onClick={() => setCroModalOpen(false)}>Cancelar</button>
+                            <button className="btn-confirm" onClick={handleConfirmCRO} disabled={generatingCRO}>
+                                {generatingCRO ? 'Generando Word...' : 'Generar Word'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
