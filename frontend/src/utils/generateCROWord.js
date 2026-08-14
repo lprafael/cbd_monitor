@@ -631,7 +631,10 @@ export const generateCROWord = async ({
   });
 
   // 9. Generar y descargar el archivo .docx de forma directa nativa
-  const blob = await Packer.toBlob(doc);
+  const rawBlob = await Packer.toBlob(doc);
+  const blob = new Blob([rawBlob], {
+    type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  });
   const cleanName = eot.eot_nombre.replace(/[^a-zA-Z0-9]/g, "_");
   const fileName = `CRO_${cleanName}_${mesOperativoStr}_${year}.docx`;
 
@@ -645,5 +648,5 @@ export const generateCROWord = async ({
   setTimeout(() => {
     document.body.removeChild(link);
     URL.revokeObjectURL(link.href);
-  }, 200);
+  }, 300);
 };
