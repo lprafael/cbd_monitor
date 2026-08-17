@@ -54,22 +54,22 @@ export const generateCROWord = async ({
         alignment: AlignmentType.CENTER,
         children: logoBuffer
           ? [
-              new ImageRun({
-                data: logoBuffer,
-                transformation: {
-                  width: 480,
-                  height: 55
-                }
-              })
-            ]
+            new ImageRun({
+              data: logoBuffer,
+              transformation: {
+                width: 480,
+                height: 55
+              }
+            })
+          ]
           : [
-              new TextRun({
-                text: "GOBIERNO DEL PARAGUAY | MINISTERIO DE OBRAS PÚBLICAS Y COMUNICACIONES",
-                bold: true,
-                font: "Tahoma",
-                size: 18
-              })
-            ]
+            new TextRun({
+              text: "GOBIERNO DEL PARAGUAY | MINISTERIO DE OBRAS PÚBLICAS Y COMUNICACIONES",
+              bold: true,
+              font: "Tahoma",
+              size: 18
+            })
+          ]
       }),
       new Paragraph({
         border: {
@@ -165,10 +165,10 @@ export const generateCROWord = async ({
 
   // 5. Tabla I (Evaluación)
   const cellBorder = {
-    top: { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" },
-    bottom: { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" },
-    left: { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" },
-    right: { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" }
+    top: { style: BorderStyle.SINGLE, size: 6, color: "000000" },
+    bottom: { style: BorderStyle.SINGLE, size: 6, color: "000000" },
+    left: { style: BorderStyle.SINGLE, size: 6, color: "000000" },
+    right: { style: BorderStyle.SINGLE, size: 6, color: "000000" }
   };
 
   const tablaEvaluacion = new Table({
@@ -236,8 +236,7 @@ export const generateCROWord = async ({
                     text: resultadoEvaluacion,
                     font: "Tahoma",
                     size: 20,
-                    bold: true,
-                    color: cumple ? "15803D" : "B91C1C"
+                    bold: true
                   })
                 ]
               })
@@ -415,7 +414,7 @@ export const generateCROWord = async ({
               new TextRun({ text: `${eot.eot_nombre.toUpperCase()}`, font: "Tahoma", size: 22, bold: true }),
               new TextRun({ text: ", prestadora del servicio metropolitano de transporte público en las líneas e itinerarios autorizados bajo su concesión, durante el mes operativo correspondiente a ", font: "Tahoma", size: 22 }),
               new TextRun({ text: `${mesOperativoStr.toUpperCase()} DE ${year}`, font: "Tahoma", size: 22, bold: true }),
-              new TextRun({ text: ", ha registrado en la base de datos de la Central de Control y Monitoreo del Billetaje Electrónico (CCM) los siguientes indicadores consolidados de rendimiento a nivel empresa:", font: "Tahoma", size: 22 })
+              new TextRun({ text: ", ha registrado en la base de datos de la Central de Control y Monitoreo(CCM) del Sistema Nacional de Billetaje Electrónico(SNBE) los siguientes indicadores consolidados de rendimiento a nivel empresa:", font: "Tahoma", size: 22 })
             ]
           }),
 
@@ -500,7 +499,7 @@ export const generateCROWord = async ({
             children: [
               new TextRun({ text: "1. PARÁMETRO VIGENTE Y METODOLOGÍA: ", font: "Tahoma", size: 22, bold: true }),
               new TextRun({
-                text: "Los índices operativos consignados fueron calculados en base a los registros transaccionales, AVL y telemetría de la Central de Control y Monitoreo del Billetaje Electrónico (Ley N° 5230/2014), aplicando el Índice de Cumplimiento de Cantidad de Buses Distintos Mínimo Mensual (ICCBDM Mensual) reglamentado en el Artículo 11 de la Resolución GVMT N° 120/2025 (\"Por la cual se establecen nuevos indicadores de desempeño, niveles de servicio y parámetros de evaluación de rendimiento para el servicio de transporte público metropolitano de pasajeros y se implementa un sistema integral de control y monitoreo\"), modificada por las Resoluciones GVMT N° 21/2026 y N° 26/2026.",
+                text: "Los índices operativos consignados fueron calculados en base a los registros transaccionales y GPS(según Resolución GVMT N° 65/2024) de la Central de Control y Monitoreo del Billetaje Electrónico (Ley N° 5230/2014), aplicando el Índice de Cumplimiento de Cantidad de Buses Distintos Mínimo Mensual (ICCBDM Mensual) reglamentado en el Artículo 11 de la Resolución GVMT N° 120/2025 (\"Por la cual se establecen nuevos indicadores de desempeño, niveles de servicio y parámetros de evaluación de rendimiento para el servicio de transporte público metropolitano de pasajeros y se implementa un sistema integral de control y monitoreo\"), modificada por las Resoluciones GVMT N° 21/2026 y N° 26/2026.",
                 font: "Tahoma",
                 size: 22
               })
@@ -578,7 +577,7 @@ export const generateCROWord = async ({
             spacing: { after: 250 },
             children: [
               new TextRun({
-                text: `Visto el informe técnico emitido por la Central de Control y Monitoreo del Billetaje Electrónico (CCM) y habiéndose evaluado el desempeño bajo el umbral legal mínimo del 95.00% del ICCBDM Mensual en las franjas computables fijadas en el Dictamen C.J. N° 357/2026, se concluye que la Empresa Operadora de Transporte `,
+                text: `Visto el informe técnico emitido por la CCCM del SNBE y habiéndose evaluado el desempeño bajo el umbral legal mínimo del 95.00% del ICCBDM Mensual en las franjas computables fijadas en el Dictamen C.J. N° 357/2026, se concluye que la Empresa Operadora de Transporte `,
                 font: "Tahoma",
                 size: 22
               }),
