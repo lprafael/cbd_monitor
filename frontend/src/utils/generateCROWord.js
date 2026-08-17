@@ -456,9 +456,7 @@ export const generateCROWord = async ({
             indent: { firstLine: 720 },
             spacing: { after: 150 },
             children: [
-              new TextRun({ text: "En estricta concordancia con el Dictamen ", font: "Tahoma", size: 22 }),
-              new TextRun({ text: "C.J. N° 357/2026", font: "Tahoma", size: 22, bold: true }),
-              new TextRun({ text: " emitido por la Coordinación Jurídica del VMT (en armonización con los Arts. 4° y 21 de la Res. GVMT N° 120/2025 y la Res. GVMT N° 21/2026), la evaluación de exigibilidad técnica para la presente etapa de implementación se circunscribe exclusivamente a las siguientes franjas operativas:", font: "Tahoma", size: 22 })
+              new TextRun({ text: "En estricta concordancia con las normativas vigentes (los Arts. 4° y 21 de la Res. GVMT N° 120/2025 y la Res. GVMT N° 21/2026), la evaluación de exigibilidad técnica para la presente etapa de implementación se circunscribe exclusivamente a las siguientes franjas operativas:", font: "Tahoma", size: 22 })
             ]
           }),
 
@@ -512,7 +510,7 @@ export const generateCROWord = async ({
             children: [
               new TextRun({ text: "2. ABROGACIÓN DEL RÉGIMEN ANTERIOR: ", font: "Tahoma", size: 22, bold: true }),
               new TextRun({
-                text: "De acuerdo con el régimen transitorio establecido en el Art. 23 de la Res. GVMT N° 120/2025 y refrendado por el Dictamen C.J. N° 357/2026, la anterior Resolución GVMT N° 290/2021 (y sus modificatorias 223/2021, 244/2021 y 11/2024) quedó abrogada de pleno derecho al 30 de junio de 2026. Por consiguiente, la antigua evaluación fraccionada por troncales ha sido sustituida de manera exclusiva por la evaluación global de flota a nivel empresa (ICCBDM Mensual) a partir de la operativa de julio de 2026.",
+                text: "De acuerdo con el régimen transitorio establecido en el Art. 23 de la Res. GVMT N° 120/2025, la anterior Resolución GVMT N° 290/2021 quedó abrogada de pleno derecho al 30 de junio de 2026. Por consiguiente, la antigua evaluación fraccionada por troncales ha sido sustituida de manera exclusiva por la evaluación global de flota a nivel empresa (ICCBDM Mensual) a partir de la operativa de julio de 2026.",
                 font: "Tahoma",
                 size: 22
               })
@@ -523,20 +521,7 @@ export const generateCROWord = async ({
             indent: { firstLine: 720 },
             spacing: { after: 120 },
             children: [
-              new TextRun({ text: "3. EXCLUSIONES NORMATIVAS EXPRESAS: ", font: "Tahoma", size: 22, bold: true }),
-              new TextRun({
-                text: 'En cumplimiento de los Arts. 9° y 10 de la Resolución GVMT N° 120/2025 y el Dictamen C.J. N° 357/2026, se hallan excluidas del cálculo del CBDmín y del IFO las líneas nocturnas especiales "Búho" (B1 a B4) y las operadas con buses 100% eléctricos (E1 a E3), rigiéndose por sus respectivos pliegos contractuales.',
-                font: "Tahoma",
-                size: 22
-              })
-            ]
-          }),
-          new Paragraph({
-            alignment: AlignmentType.JUSTIFY,
-            indent: { firstLine: 720 },
-            spacing: { after: 120 },
-            children: [
-              new TextRun({ text: "4. RESPALDO PARA EL RÉGIMEN DE SUBSIDIOS: ", font: "Tahoma", size: 22, bold: true }),
+              new TextRun({ text: "3. RESPALDO PARA EL RÉGIMEN DE SUBSIDIOS: ", font: "Tahoma", size: 22, bold: true }),
               new TextRun({
                 text: 'La presente Constancia certifica el cumplimiento del requisito sustancial exigido por el Artículo 9°, inciso i) del Decreto N° 710/2023 ("Cumplir con los niveles de servicio establecidos por el Gabinete del Viceministro de Transporte, comprobada por la Constancia de Rendimiento Operativo del mes solicitado") en concordancia con su Artículo 16 (decaimiento del derecho), y el procedimiento previsto en el Artículo 2°, numeral II, inciso C.a) de la Resolución MOPC N° 1901/2023, poseyendo plena validez y eficacia jurídica para la tramitación de las solicitudes de pago de subsidio.',
                 font: "Tahoma",
@@ -549,7 +534,7 @@ export const generateCROWord = async ({
             indent: { firstLine: 720 },
             spacing: { after: 250 },
             children: [
-              new TextRun({ text: "5. CONTROL DE USOS LLAMATIVOS: ", font: "Tahoma", size: 22, bold: true }),
+              new TextRun({ text: "4. CONTROL DE USOS LLAMATIVOS: ", font: "Tahoma", size: 22, bold: true }),
               new TextRun({
                 text: `En concordancia con lo dispuesto en la Resolución GVMT N° 166/2023, esta Coordinación eleva de forma paralela a la Dirección Metropolitana de Transporte el Memorándum CID N° ${numeroMemorandum ? numeroMemorandum.trim() : `___/${year || 2026}`}, contentivo del informe de validaciones y transacciones consideradas como "usos llamativos" durante el mes evaluado.`,
                 font: "Tahoma",
@@ -577,7 +562,7 @@ export const generateCROWord = async ({
             spacing: { after: 250 },
             children: [
               new TextRun({
-                text: `Visto el informe técnico emitido por la CCM del SNBE y habiéndose evaluado el desempeño bajo el umbral legal mínimo del 95.00% del ICCBDM Mensual en las franjas computables fijadas en el Dictamen C.J. N° 357/2026, se concluye que la Empresa Operadora de Transporte `,
+                text: `Visto el informe técnico emitido por la CCCM del SNBE y habiéndose evaluado el desempeño bajo el umbral legal mínimo del 95.00% del ICCBDM Mensual en las franjas computables fijadas, se concluye que la Empresa Operadora de Transporte `,
                 font: "Tahoma",
                 size: 22
               }),
