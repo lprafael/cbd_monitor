@@ -577,7 +577,7 @@ export const generateCROWord = async ({
             spacing: { after: 250 },
             children: [
               new TextRun({
-                text: `Visto el informe técnico emitido por la CCCM del SNBE y habiéndose evaluado el desempeño bajo el umbral legal mínimo del 95.00% del ICCBDM Mensual en las franjas computables fijadas en el Dictamen C.J. N° 357/2026, se concluye que la Empresa Operadora de Transporte `,
+                text: `Visto el informe técnico emitido por la CCM del SNBE y habiéndose evaluado el desempeño bajo el umbral legal mínimo del 95.00% del ICCBDM Mensual en las franjas computables fijadas en el Dictamen C.J. N° 357/2026, se concluye que la Empresa Operadora de Transporte `,
                 font: "Tahoma",
                 size: 22
               }),
