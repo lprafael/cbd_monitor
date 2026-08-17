@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import './SubsidyCalculationDashboard.css';
 import { API_BASE_URL } from '../config';
 import { generateCROWord } from '../utils/generateCROWord';
+import { generateGeneralReportExcel } from '../utils/generateGeneralReportExcel';
 
 const SubsidyCalculationDashboard = ({ year, month }) => {
     const [data, setData] = useState(null);
@@ -80,7 +81,8 @@ const SubsidyCalculationDashboard = ({ year, month }) => {
     };
 
     const handleGenerateGeneralReport = () => {
-        window.print();
+        if (!data) return;
+        generateGeneralReportExcel({ data, year, month });
     };
 
     const handleOpenCROModal = (eot, e) => {
@@ -150,9 +152,9 @@ const SubsidyCalculationDashboard = ({ year, month }) => {
                         <button 
                             className="general-report-button"
                             onClick={handleGenerateGeneralReport}
-                            title="Generar e imprimir reporte general de todas las empresas"
+                            title="Exportar reporte general de todas las empresas a Excel"
                         >
-                            📄 Generar Reporte General
+                            📊 Exportar a Excel
                         </button>
                     </div>
                 </div>
