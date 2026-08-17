@@ -442,8 +442,8 @@ export const generateCROWord = async ({
   const blob = new Blob([rawBlob], {
     type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
   });
-  const cleanName = eot.eot_nombre.replace(/[^a-zA-Z0-9]/g, "_");
-  const fileName = `CRO_${cleanName}_${mesOperativoStr}_${year}.docx`;
+  const safeNroCRO = nroCROFinal.replace(/\s*\/\s*/g, "-").replace(/_+/g, "Borrador");
+  const fileName = `${safeNroCRO}.docx`;
 
   const link = document.createElement("a");
   link.style.display = "none";
