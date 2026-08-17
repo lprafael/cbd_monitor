@@ -201,16 +201,39 @@ def get_factores_ajuste_acumulados(cursor, fecha: date) -> tuple:
         post = any(_fecha_val(f) == fecha_ant for f in feriados_cercanos)
         if post: factor_total *= 0.70; ajustes.append("Post-Feriado (0.70)")
         if pre: factor_total *= 0.70; ajustes.append("Pre-Feriado (0.70)")
+    # 3. Factor Climático y Días Atípicos (Capa 3)
     try:
-        cursor.execute(
-            "SELECT mm_caidos FROM control_metricas.t_casuisticas_lluvia WHERE fecha_evento=%s AND mm_caidos > 5 ORDER BY mm_caidos DESC LIMIT 1",
-            (fecha,)
-        )
-        lluvia = cursor.fetchone()
-        if lluvia:
-            factor_total *= 0.50
-            precipitacion = lluvia.get('mm_caidos', lluvia[0] if isinstance(lluvia, (list, tuple)) else 0)
-            ajustes.append(f"Lluvia {precipitacion}mm (0.50)")
+        cursor.execute("""
+            SELECT tipo_atipico, factor_exigencia, observacion
+            FROM control_metricas.dias_atipicos
+            WHERE fecha = %s
+        """, (fecha,))
+        atipicos = cursor.fetchall()
+        
+        lluvia_aplicada = False
+        for atipico in atipicos:
+            tipo = atipico.get('tipo_atipico', atipico[0] if isinstance(atipico, (list, tuple)) else '')
+            factor_val = atipico.get('factor_exigencia', atipico[1] if isinstance(atipico, (list, tuple)) else 1.0)
+            factor = float(factor_val)
+            obs = atipico.get('observacion', atipico[2] if isinstance(atipico, (list, tuple)) else '')
+            
+            factor_total *= factor
+            if tipo == 'LLUVIA':
+                ajustes.append(f"Lluvia ({obs}) ({factor})")
+                lluvia_aplicada = True
+            else:
+                ajustes.append(f"{tipo} ({factor})")
+                
+        if not lluvia_aplicada:
+            cursor.execute(
+                "SELECT mm_caidos FROM control_metricas.t_casuisticas_lluvia WHERE fecha_evento=%s AND mm_caidos > 5 ORDER BY mm_caidos DESC LIMIT 1",
+                (fecha,)
+            )
+            lluvia = cursor.fetchone()
+            if lluvia:
+                factor_total *= 0.50
+                precipitacion = lluvia.get('mm_caidos', lluvia[0] if isinstance(lluvia, (list, tuple)) else 0)
+                ajustes.append(f"Lluvia {precipitacion}mm (0.50)")
     except Exception:
         pass
     return round(factor_total, 2), ajustes

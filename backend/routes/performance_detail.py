@@ -239,12 +239,34 @@ def get_factores_ajuste_acumulados(cursor, fecha: date) -> tuple:
         post = any(_safe_get_field(f, 'fecha', _safe_get_field(f, 0)) == fecha_ant for f in feriados_cercanos)
         if post: factor_total *= 0.70; ajustes.append("Post-Feriado (0.70)")
         if pre: factor_total *= 0.70; ajustes.append("Pre-Feriado (0.70)")
-    cursor.execute("SELECT mm_caidos FROM control_metricas.t_casuisticas_lluvia WHERE fecha_evento=%s AND mm_caidos > 5 ORDER BY mm_caidos DESC LIMIT 1", (fecha,))
-    lluvia = cursor.fetchone()
-    if lluvia:
-        factor_total *= 0.50
-        precipitacion = _safe_get_field(lluvia, 'mm_caidos', _safe_get_field(lluvia, 0, 0))
-        ajustes.append(f"Lluvia {precipitacion}mm (0.50)")
+    # 3. Factor Climático y Días Atípicos (Capa 3)
+    cursor.execute("""
+        SELECT tipo_atipico, factor_exigencia, observacion
+        FROM control_metricas.dias_atipicos
+        WHERE fecha = %s
+    """, (fecha,))
+    atipicos = cursor.fetchall()
+    
+    lluvia_aplicada = False
+    for atipico in atipicos:
+        tipo = _safe_get_field(atipico, 'tipo_atipico', '')
+        factor = float(_safe_get_field(atipico, 'factor_exigencia', 1.0))
+        obs = _safe_get_field(atipico, 'observacion', '')
+        
+        factor_total *= factor
+        if tipo == 'LLUVIA':
+            ajustes.append(f"Lluvia ({obs}) ({factor})")
+            lluvia_aplicada = True
+        else:
+            ajustes.append(f"{tipo} ({factor})")
+            
+    if not lluvia_aplicada:
+        cursor.execute("SELECT mm_caidos FROM control_metricas.t_casuisticas_lluvia WHERE fecha_evento=%s AND mm_caidos > 5 ORDER BY mm_caidos DESC LIMIT 1", (fecha,))
+        lluvia = cursor.fetchone()
+        if lluvia:
+            factor_total *= 0.50
+            precipitacion = _safe_get_field(lluvia, 'mm_caidos', _safe_get_field(lluvia, 0, 0))
+            ajustes.append(f"Lluvia {precipitacion}mm (0.50)")
     return round(factor_total, 2), ajustes
 
 
