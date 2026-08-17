@@ -252,7 +252,7 @@ export const generateGeneralReportExcel = ({ data, year, month }) => {
     <!-- Nota al pie -->
     <Style ss:ID="sFootnote">
       <Alignment ss:Horizontal="Left" ss:Vertical="Center" ss:Indent="1"/>
-      <Font ss:FontName="Tahoma" ss:Size="9" ss:Italic="1" ss:Color="#666666"/>
+      <Font ss:FontName="Tahoma" ss:Size="9" ss:Color="#000000"/>
       <Interior ss:Color="#FFFFFF" ss:Pattern="Solid"/>
     </Style>
   </Styles>
