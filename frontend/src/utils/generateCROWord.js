@@ -291,7 +291,7 @@ export const generateCROWord = async ({
             spacing: { before: 200, after: 0 },
             children: [
               new TextRun({
-                text: `CONSTANCIA DE RENDIMIENTO OPERATIVO ${nroCROFinal}`,
+                text: `CONSTANCIA DE RENDIMIENTO OPERATIVO N° ${nroCROFinal}`,
                 font: "Tahoma",
                 size: 24,
                 bold: true
