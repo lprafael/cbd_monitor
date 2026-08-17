@@ -607,8 +607,7 @@ export const generateCROWord = async ({
                 text: `${resultadoEvaluacion}`,
                 font: "Tahoma",
                 size: 22,
-                bold: true,
-                color: cumple ? "15803D" : "B91C1C"
+                bold: true
               }),
               new TextRun({
                 text: ` con los Niveles de Servicio Mínimos exigidos para la habilitación al cobro del subsidio estatal al transporte.`,
