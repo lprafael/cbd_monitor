@@ -162,10 +162,10 @@ export const generateGeneralReportExcel = ({ data, year, month }) => {
       <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
       <Font ss:FontName="Tahoma" ss:Size="10"/>
       <Borders>
-        <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
-        <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
-        <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
-        <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
+        <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
+        <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
+        <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
+        <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
       </Borders>
     </Style>
     <!-- Dato centrado (alias) -->
@@ -173,10 +173,10 @@ export const generateGeneralReportExcel = ({ data, year, month }) => {
       <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
       <Font ss:FontName="Tahoma" ss:Size="10"/>
       <Borders>
-        <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
-        <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
-        <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
-        <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
+        <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
+        <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
+        <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
+        <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
       </Borders>
     </Style>
     <!-- Número centrado -->
@@ -185,10 +185,10 @@ export const generateGeneralReportExcel = ({ data, year, month }) => {
       <Font ss:FontName="Tahoma" ss:Size="10"/>
       <NumberFormat ss:Format="General"/>
       <Borders>
-        <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
-        <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
-        <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
-        <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
+        <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
+        <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
+        <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
+        <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
       </Borders>
     </Style>
     <!-- Número centrado (alias) -->
@@ -196,10 +196,10 @@ export const generateGeneralReportExcel = ({ data, year, month }) => {
       <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
       <Font ss:FontName="Tahoma" ss:Size="10"/>
       <Borders>
-        <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
-        <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
-        <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
-        <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
+        <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
+        <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
+        <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
+        <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
       </Borders>
     </Style>
     <!-- Nombre de empresa (izquierda) -->
@@ -207,10 +207,10 @@ export const generateGeneralReportExcel = ({ data, year, month }) => {
       <Alignment ss:Horizontal="Left" ss:Vertical="Center" ss:Indent="1"/>
       <Font ss:FontName="Tahoma" ss:Size="10"/>
       <Borders>
-        <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
-        <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
-        <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
-        <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
+        <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
+        <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
+        <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
+        <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
       </Borders>
     </Style>
     <!-- CUMPLE -->
@@ -219,10 +219,10 @@ export const generateGeneralReportExcel = ({ data, year, month }) => {
       <Font ss:FontName="Tahoma" ss:Size="10" ss:Bold="1" ss:Color="#155724"/>
       <Interior ss:Color="#D4EDDA" ss:Pattern="Solid"/>
       <Borders>
-        <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#C3E6CB"/>
-        <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#C3E6CB"/>
-        <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#C3E6CB"/>
-        <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#C3E6CB"/>
+        <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
+        <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
+        <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
+        <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
       </Borders>
     </Style>
     <!-- NO CUMPLE -->
@@ -231,10 +231,10 @@ export const generateGeneralReportExcel = ({ data, year, month }) => {
       <Font ss:FontName="Tahoma" ss:Size="10" ss:Bold="1" ss:Color="#721C24"/>
       <Interior ss:Color="#F8D7DA" ss:Pattern="Solid"/>
       <Borders>
-        <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#F5C6CB"/>
-        <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#F5C6CB"/>
-        <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#F5C6CB"/>
-        <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#F5C6CB"/>
+        <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
+        <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
+        <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
+        <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
       </Borders>
     </Style>
     <!-- Resumen -->
