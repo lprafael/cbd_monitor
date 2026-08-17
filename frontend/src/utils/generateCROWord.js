@@ -34,7 +34,8 @@ export const generateCROWord = async ({
   month,
   numeroCRO,
   fechaEmision,
-  isFechaBlanco
+  isFechaBlanco,
+  numeroMemorandum
 }) => {
   // 1. Cargar Logo MOPC VMT
   const logoUrl = process.env.PUBLIC_URL + "/imagenes/Logo_MOPC_VMT_CRO.png";
@@ -407,6 +408,7 @@ export const generateCROWord = async ({
           // Párrafo Inicial
           new Paragraph({
             alignment: AlignmentType.JUSTIFY,
+            indent: { firstLine: 720 },
             spacing: { after: 200 },
             children: [
               new TextRun({ text: "La Empresa Operadora de Transporte (EOT) ", font: "Tahoma", size: 22 }),
@@ -452,6 +454,7 @@ export const generateCROWord = async ({
           }),
           new Paragraph({
             alignment: AlignmentType.JUSTIFY,
+            indent: { firstLine: 720 },
             spacing: { after: 150 },
             children: [
               new TextRun({ text: "En estricta concordancia con el Dictamen ", font: "Tahoma", size: 22 }),
@@ -492,6 +495,7 @@ export const generateCROWord = async ({
           }),
           new Paragraph({
             alignment: AlignmentType.JUSTIFY,
+            indent: { firstLine: 720 },
             spacing: { after: 120 },
             children: [
               new TextRun({ text: "1. PARÁMETRO VIGENTE Y METODOLOGÍA: ", font: "Tahoma", size: 22, bold: true }),
@@ -504,6 +508,7 @@ export const generateCROWord = async ({
           }),
           new Paragraph({
             alignment: AlignmentType.JUSTIFY,
+            indent: { firstLine: 720 },
             spacing: { after: 120 },
             children: [
               new TextRun({ text: "2. ABROGACIÓN DEL RÉGIMEN ANTERIOR: ", font: "Tahoma", size: 22, bold: true }),
@@ -516,6 +521,7 @@ export const generateCROWord = async ({
           }),
           new Paragraph({
             alignment: AlignmentType.JUSTIFY,
+            indent: { firstLine: 720 },
             spacing: { after: 120 },
             children: [
               new TextRun({ text: "3. EXCLUSIONES NORMATIVAS EXPRESAS: ", font: "Tahoma", size: 22, bold: true }),
@@ -528,6 +534,7 @@ export const generateCROWord = async ({
           }),
           new Paragraph({
             alignment: AlignmentType.JUSTIFY,
+            indent: { firstLine: 720 },
             spacing: { after: 120 },
             children: [
               new TextRun({ text: "4. RESPALDO PARA EL RÉGIMEN DE SUBSIDIOS: ", font: "Tahoma", size: 22, bold: true }),
@@ -540,11 +547,12 @@ export const generateCROWord = async ({
           }),
           new Paragraph({
             alignment: AlignmentType.JUSTIFY,
+            indent: { firstLine: 720 },
             spacing: { after: 250 },
             children: [
               new TextRun({ text: "5. CONTROL DE USOS LLAMATIVOS: ", font: "Tahoma", size: 22, bold: true }),
               new TextRun({
-                text: 'En concordancia con lo dispuesto en la Resolución GVMT N° 166/2023, esta Coordinación eleva de forma paralela a la Dirección Metropolitana de Transporte el Memorándum CID N° [XXX]/2026, contentivo del informe de validaciones y transacciones consideradas como "usos llamativos" durante el mes evaluado.',
+                text: `En concordancia con lo dispuesto en la Resolución GVMT N° 166/2023, esta Coordinación eleva de forma paralela a la Dirección Metropolitana de Transporte el Memorándum CID N° ${numeroMemorandum ? numeroMemorandum.trim() : `___/${year || 2026}`}, contentivo del informe de validaciones y transacciones consideradas como "usos llamativos" durante el mes evaluado.`,
                 font: "Tahoma",
                 size: 22
               })
@@ -566,6 +574,7 @@ export const generateCROWord = async ({
           }),
           new Paragraph({
             alignment: AlignmentType.JUSTIFY,
+            indent: { firstLine: 720 },
             spacing: { after: 250 },
             children: [
               new TextRun({
@@ -613,6 +622,7 @@ export const generateCROWord = async ({
           // Párrafo Expedición
           new Paragraph({
             alignment: AlignmentType.JUSTIFY,
+            indent: { firstLine: 720 },
             spacing: { before: 200, after: 400 },
             children: [
               new TextRun({

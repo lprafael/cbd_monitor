@@ -13,6 +13,7 @@ const SubsidyCalculationDashboard = ({ year, month }) => {
     const [croModalOpen, setCroModalOpen] = useState(false);
     const [selectedEotForCRO, setSelectedEotForCRO] = useState(null);
     const [numeroCRO, setNumeroCRO] = useState('');
+    const [numeroMemorandum, setNumeroMemorandum] = useState('');
     const [fechaEmision, setFechaEmision] = useState(new Date().toISOString().split('T')[0]);
     const [isFechaBlanco, setIsFechaBlanco] = useState(false);
     const [generatingCRO, setGeneratingCRO] = useState(false);
@@ -86,6 +87,7 @@ const SubsidyCalculationDashboard = ({ year, month }) => {
         e.stopPropagation();
         setSelectedEotForCRO(eot);
         setNumeroCRO('');
+        setNumeroMemorandum('');
         setFechaEmision(new Date().toISOString().split('T')[0]);
         setIsFechaBlanco(false);
         setCroModalOpen(true);
@@ -101,7 +103,8 @@ const SubsidyCalculationDashboard = ({ year, month }) => {
                 month,
                 numeroCRO,
                 fechaEmision,
-                isFechaBlanco
+                isFechaBlanco,
+                numeroMemorandum
             });
             setCroModalOpen(false);
         } catch (err) {
@@ -338,6 +341,17 @@ const SubsidyCalculationDashboard = ({ year, month }) => {
                                 placeholder="Ej: 123/2026" 
                                 value={numeroCRO} 
                                 onChange={(e) => setNumeroCRO(e.target.value)} 
+                            />
+                            <small>Si se deja en blanco se imprimirá "___/{year || 2026}"</small>
+                        </div>
+
+                        <div className="form-group">
+                            <label>Número de Memorándum CID:</label>
+                            <input 
+                                type="text" 
+                                placeholder={`Ej: 45/${year || 2026}`} 
+                                value={numeroMemorandum} 
+                                onChange={(e) => setNumeroMemorandum(e.target.value)} 
                             />
                             <small>Si se deja en blanco se imprimirá "___/{year || 2026}"</small>
                         </div>
