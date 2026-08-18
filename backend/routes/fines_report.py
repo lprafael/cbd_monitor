@@ -52,6 +52,10 @@ async def generate_fines_report(
         cursor.execute("SELECT fecha FROM public.feriados WHERE fecha BETWEEN %s AND %s", (start_date, end_date))
         db_feriados = set(row['fecha'] for row in cursor.fetchall())
         
+        # 1.b Obtener días atípicos
+        cursor.execute("SELECT fecha FROM control_metricas.dias_atipicos WHERE fecha BETWEEN %s AND %s", (start_date, end_date))
+        db_atipicos = set(row['fecha'] for row in cursor.fetchall())
+        
         # 2. Obtener EOTs
         cursor.execute("SELECT cod_catalogo, eot_nombre, id_eot_vmt_hex FROM public.eots WHERE cod_catalogo NOT IN (72) AND permisionario IS TRUE")
         eots = cursor.fetchall()
@@ -112,6 +116,7 @@ async def generate_fines_report(
                     WHERE h.fecha BETWEEN %s AND %s
                       AND EXTRACT(ISODOW FROM h.fecha) < 7
                       AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
+                      AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
                       AND (
                         (
                           EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5
@@ -154,6 +159,7 @@ async def generate_fines_report(
                 WHERE h.fecha BETWEEN %s AND %s
                   AND EXTRACT(ISODOW FROM h.fecha) < 7
                   AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
+                  AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
                   AND (
                     (
                       EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5
@@ -207,6 +213,7 @@ async def generate_fines_report(
             for fecha_eval in fechas_ordenadas:
                 id_tipo_dia = get_tipo_dia_id(fecha_eval, db_feriados)
                 if id_tipo_dia == 7: continue # Descartar Domingos y Feriados
+                if fecha_eval in db_atipicos: continue # Descartar Días Atípicos (Lluvia, etc.)
                 
                 franjas_dia = dias_data[fecha_eval]
                 
