@@ -212,7 +212,8 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
                       </table>
                     )}
                   </div>
-                ))}
+                  );
+                })}
 
                 {grandTotalJornales > 0 && (
                   <div className="grand-totals">
