@@ -11,6 +11,7 @@ router = APIRouter(prefix="/api/fines-report", tags=["Fines Report"])
 class FinesReportRequest(BaseModel):
     month: int
     year: int
+    evaluar_reincidencia: bool = True
 
 def obtener_valor_jornal(fecha_eval: date) -> int:
     """
@@ -42,6 +43,7 @@ async def generate_fines_report(
     try:
         month = request.month
         year = request.year
+        evaluar_reincidencia = request.evaluar_reincidencia
         
         start_date, end_date = get_month_range(year, month)
         
@@ -300,7 +302,8 @@ async def generate_fines_report(
             for row in cursor.fetchall():
                 eot_ifo = float(row['monthly_ifo_topeado'] * 100)
                 if 0 < eot_ifo < m_umbral:
-                    eots_con_incumplimiento_15_1_previo.add(row['id_eot_vmt_hex'])
+                    if evaluar_reincidencia:
+                        eots_con_incumplimiento_15_1_previo.add(row['id_eot_vmt_hex'])
                     fallas_ifo_6meses[row['id_eot_vmt_hex']] += 1
                     if month_idx < 2:
                         infracciones_previas_trimestre[row['id_eot_vmt_hex']] += 1
@@ -320,11 +323,13 @@ async def generate_fines_report(
             """, (m_start, m_end))
             for row in cursor.fetchall():
                 if (row['b_pico_count'] or 0) >= 5:
-                    eots_con_incumplimiento_15_2_previo.add(row['id_eot_vmt_hex'])
+                    if evaluar_reincidencia:
+                        eots_con_incumplimiento_15_2_previo.add(row['id_eot_vmt_hex'])
                     if month_idx < 2:
                         infracciones_previas_trimestre[row['id_eot_vmt_hex']] += 1
                 if (row['b_pospico_count'] or 0) >= 5:
-                    eots_con_incumplimiento_15_4_previo.add(row['id_eot_vmt_hex'])
+                    if evaluar_reincidencia:
+                        eots_con_incumplimiento_15_4_previo.add(row['id_eot_vmt_hex'])
                     if month_idx < 2:
                         infracciones_previas_trimestre[row['id_eot_vmt_hex']] += 1
 

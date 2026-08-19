@@ -8,7 +8,7 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
-  const [reincidencias, setReincidencias] = useState({});
+  const [evaluarReincidencia, setEvaluarReincidencia] = useState(true);
   const [actaModalOpen, setActaModalOpen] = useState(false);
   const [selectedEmpresa, setSelectedEmpresa] = useState(null);
   const [numeroActa, setNumeroActa] = useState("");
@@ -30,30 +30,15 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
     setActaModalOpen(false);
   };
 
-  const handleReincidenciaChange = (eot_hex, checked) => {
-    setReincidencias(prev => ({ ...prev, [eot_hex]: checked }));
-  };
-
-  const handleToggleAllReincidencias = (checked) => {
-    if (!data || !data.reporte) return;
-    const filtered = data.reporte.filter(empresa => !empresa.eot_nombre.toUpperCase().includes('ARAPOTI'));
-    const nextState = { ...reincidencias };
-    filtered.forEach(empresa => {
-      nextState[empresa.eot_hex] = checked;
-    });
-    setReincidencias(nextState);
-  };
-
   useEffect(() => {
     if (isOpen && fecha) {
-      fetchFinesData();
+      fetchFinesData(evaluarReincidencia);
     }
-  }, [isOpen, fecha]);
+  }, [isOpen, fecha, evaluarReincidencia]);
 
-  const fetchFinesData = async () => {
+  const fetchFinesData = async (withReincidencia = true) => {
     setLoading(true);
     setError(null);
-    setReincidencias({});
     try {
       const [year, month] = fecha.split('-');
       const resp = await fetch(`${API_BASE_URL}/fines-report`, {
@@ -63,7 +48,8 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
         },
         body: JSON.stringify({
           month: parseInt(month, 10),
-          year: parseInt(year, 10)
+          year: parseInt(year, 10),
+          evaluar_reincidencia: withReincidencia
         })
       });
       
@@ -92,77 +78,13 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
 
   let processedReporte = [];
   if (data && data.reporte) {
-    const filtered = data.reporte.filter(empresa => !empresa.eot_nombre.toUpperCase().includes('ARAPOTI'));
+    processedReporte = data.reporte.filter(empresa => !empresa.eot_nombre.toUpperCase().includes('ARAPOTI'));
     
-    const getValorJornal = (fechaStr) => {
-      if (!fechaStr) return 117077;
-      const f = fechaStr.substring(0, 10);
-      if (f >= '2026-07-01' || f >= '2026-07') {
-        return 117077;
-      }
-      return 111502;
-    };
-
-    processedReporte = filtered.map(empresa => {
-      const isReincidente = reincidencias[empresa.eot_hex];
-      let newInfracciones = [];
-      let newTotalJornales = 0;
-      let newTotalGuaranies = 0;
-
-      if (isReincidente) {
-        newInfracciones = empresa.infracciones.map(inf => {
-          const vJornal = getValorJornal(inf.fecha || fecha);
-          if (inf.base === 'Art. 15.1') {
-            return {
-              ...inf,
-              base: 'Art. 16.1',
-              desc: inf.desc.replace('IFO Mensual', 'Reincidencia IFO Mensual'),
-              jornales: 224.9,
-              monto: Math.round(224.9 * vJornal)
-            };
-          } else if (inf.base === 'Art. 15.2') {
-            return {
-              ...inf,
-              base: 'Art. 16.2',
-              desc: inf.desc.replace('Acumulación 5 Franjas Pico', 'Reincidencia Acumulación 5 Franjas Pico'),
-              jornales: 20,
-              monto: Math.round(20 * vJornal)
-            };
-          } else if (inf.base === 'Art. 15.4') {
-            return {
-              ...inf,
-              base: 'Art. 16.4',
-              desc: inf.desc.replace('Acumulación 5 Franjas Pos Pico', 'Reincidencia Acumulación 5 Franjas Pos Pico'),
-              jornales: 20,
-              monto: Math.round(20 * vJornal)
-            };
-          }
-          return inf;
-        });
-      } else {
-        newInfracciones = empresa.infracciones;
-      }
-
-      newInfracciones.forEach(inf => {
-        newTotalJornales += inf.jornales;
-        newTotalGuaranies += inf.monto;
-      });
-
-      return {
-        ...empresa,
-        infracciones: newInfracciones,
-        total_jornales: newTotalJornales,
-        total_guaranies: newTotalGuaranies
-      };
-    });
-
     processedReporte.forEach(empresa => {
       if (empresa.total_jornales) grandTotalJornales += empresa.total_jornales;
       if (empresa.total_guaranies) grandTotalMonto += empresa.total_guaranies;
     });
   }
-
-  const allReincidentes = processedReporte.length > 0 && processedReporte.every(empresa => !!reincidencias[empresa.eot_hex]);
 
   const handlePrint = () => {
     window.print();
@@ -180,16 +102,14 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
             <span className="current-date">Mes de Referencia: {fecha}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            {processedReporte.length > 0 && (
-              <label className="reincidencia-label-all" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer', fontWeight: 'bold', color: '#dc2626', background: '#fee2e2', padding: '6px 12px', borderRadius: '6px', border: '1px solid #fca5a5' }}>
-                <input 
-                  type="checkbox" 
-                  checked={allReincidentes}
-                  onChange={(e) => handleToggleAllReincidencias(e.target.checked)}
-                />
-                Marcar todos c/reincidencia
-              </label>
-            )}
+            <label className="reincidencia-label-all" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer', fontWeight: 'bold', color: '#1e3a8a', background: '#dbeafe', padding: '6px 12px', borderRadius: '6px', border: '1px solid #bfdbfe' }}>
+              <input 
+                type="checkbox" 
+                checked={evaluarReincidencia}
+                onChange={(e) => setEvaluarReincidencia(e.target.checked)}
+              />
+              Calcular con reincidencia (si corresponde)
+            </label>
             <button className="print-btn" onClick={handlePrint} title="Imprimir PDF y Descargar Notificaciones (Word)">🖨️ Generar PDF y Notificaciones</button>
             <button className="close-btn" onClick={onClose} title="Cerrar">✖</button>
           </div>
@@ -225,7 +145,9 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
               <p className="no-data">No se encontraron datos para este mes.</p>
             ) : (
               <>
-                {processedReporte.map((empresa, idx) => (
+                {processedReporte.map((empresa, idx) => {
+                  const tieneReincidencia = empresa.infracciones.some(inf => inf.base.startsWith('Art. 16'));
+                  return (
                   <div key={idx} className="eot-fines-card">
                     <div className="eot-fines-header">
                       <h3>{empresa.eot_nombre}</h3>
@@ -236,14 +158,15 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
                             <span className="total-guaranies">Total Gs: {formatCurrency(empresa.total_guaranies)}</span>
                           </div>
                         )}
-                        <label className="reincidencia-label" style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px', cursor: 'pointer', fontWeight: 'bold', color: '#dc2626' }}>
-                          <input 
-                            type="checkbox" 
-                            checked={!!reincidencias[empresa.eot_hex]}
-                            onChange={(e) => handleReincidenciaChange(empresa.eot_hex, e.target.checked)}
-                          />
-                          c/reincidencia
-                        </label>
+                        {tieneReincidencia ? (
+                          <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#b91c1c', backgroundColor: '#fee2e2', padding: '3px 8px', borderRadius: '4px', border: '1px solid #fca5a5' }}>
+                            ⚠️ Con Reincidencia
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#15803d', backgroundColor: '#dcfce7', padding: '3px 8px', borderRadius: '4px', border: '1px solid #86efac' }}>
+                            ✓ Tarifa Base
+                          </span>
+                        )}
                         <button 
                           className="generate-acta-btn" 
                           onClick={() => handleOpenActaModal(empresa)}
