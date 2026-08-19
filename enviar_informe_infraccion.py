@@ -148,8 +148,14 @@ def obtener_datos_mensuales_eot(id_eot_vmt_hex: str, fecha_referencia: date):
         from psycopg2.extras import RealDictCursor
         import concurrent.futures
         
+        from datetime import date, timedelta
         # Primer día del mes
         primer_dia_mes = fecha_referencia.replace(day=1)
+        
+        # Para calcular reincidencias, traemos 7 días extra hacia atrás
+        cutoff_date = date(2026, 5, 19)
+        eval_start = max(primer_dia_mes, cutoff_date)
+        hist_start = max(eval_start - timedelta(days=7), cutoff_date)
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
@@ -169,7 +175,7 @@ def obtener_datos_mensuales_eot(id_eot_vmt_hex: str, fecha_referencia: date):
                   AND (f.inicio_vigencia IS NULL OR f.inicio_vigencia <= %s)
                   AND (f.fin_vigencia IS NULL OR f.fin_vigencia >= %s)
                 ORDER BY f.hora_inicio
-            """, (id_tipo_dia, fecha_referencia, primer_dia_mes))
+            """, (id_tipo_dia, fecha_referencia, hist_start))
             franjas_tipo = cur.fetchall()
             franjas_ordenadas = sorted(franjas_tipo, key=lambda x: x['hora_inicio'] if x['hora_inicio'] else '')
             
@@ -187,7 +193,7 @@ def obtener_datos_mensuales_eot(id_eot_vmt_hex: str, fecha_referencia: date):
                       AND (vigencia_hasta IS NULL OR vigencia_hasta >= %s)
                     ORDER BY vigencia_desde DESC NULLS LAST
                     LIMIT 1
-                """, (id_franja, id_tipo_dia, fecha_referencia, primer_dia_mes))
+                """, (id_franja, id_tipo_dia, fecha_referencia, hist_start))
                 param_result = cur.fetchone()
                 cbd_minimo = param_result['cbd_minimo_franja'] if param_result else None
                 
@@ -208,12 +214,12 @@ def obtener_datos_mensuales_eot(id_eot_vmt_hex: str, fecha_referencia: date):
               AND fecha >= %s 
               AND fecha <= %s
             ORDER BY fecha, id_franja
-        """, (id_eot_vmt_hex, primer_dia_mes, fecha_referencia))
+        """, (id_eot_vmt_hex, hist_start, fecha_referencia))
         datos_ifo = cur.fetchall()
         
-        # Inicializar todas las fechas del mes agrupadas por tipo de día
+        # Inicializar todas las fechas del rango agrupadas por tipo de día
         from datetime import date, timedelta
-        fecha_actual = primer_dia_mes
+        fecha_actual = hist_start
         while fecha_actual <= fecha_referencia:
             id_tipo_dia = get_tipo_dia_id(fecha_actual)
             if id_tipo_dia in tipos_dia_info:
@@ -445,6 +451,12 @@ def analizar_infracciones_res_120(eot_nombre, datos_mensuales, fecha_referencia)
     if not datos_mensuales:
         return []
 
+    from datetime import date
+    cutoff_date = date(2026, 5, 19)
+    # Suponiendo que fecha_referencia es del mes que evaluamos
+    primer_dia_mes = fecha_referencia.replace(day=1)
+    eval_start = max(primer_dia_mes, cutoff_date)
+
     # Categorización de franjas
     def categorizar(nombre):
         nombre = (nombre or "").upper()
@@ -465,108 +477,112 @@ def analizar_infracciones_res_120(eot_nombre, datos_mensuales, fecha_referencia)
     
     # Acumuladores y estado
     acum_b = {'PICO': 0, 'POS_PICO': 0}
-    historial_faltas = [] # Lista de todas las sanciones detectadas
+    acum_b_reinc = {'PICO': 0, 'POS_PICO': 0}
+    historial_faltas = []
     
-    # Trackers para reincidencia
-    ultimo_15_3 = None # Fecha del último Art 15.3 (C Pico)
-    ultimo_15_5 = None # Fecha del último Art 15.5 (C PosPico)
-    ultimo_15_6 = None # Fecha del último Art 15.6 (ICCBDM)
+    # Trackers
+    ultimo_15_3_fecha = None
+    ultimo_15_5_fecha = None
+    ultimo_15_6_fecha = None
     
-    # Trackers para Art 15.2 -> 16.2 (B Pico)
-    trigger_15_2 = False
-    acum_b_reinc = 0
-    start_reinc_16_2 = None
-    trigger_16_2 = False
-
-    # Trackers para Art 15.4 -> 16.4 (B PosPico)
-    trigger_15_4 = False
-    acum_b_reinc_pos = 0
-    start_reinc_16_4 = None
-    trigger_16_4 = False
+    trigger_15_2_fecha = None
+    trigger_15_4_fecha = None
 
     for fecha in fechas_ordenadas:
         dia_info = todas_fechas_dict[fecha]
         franjas_dia = dia_info['data']['franjas']
         franjas_metadata = dia_info['metadata']
+        td_id = get_tipo_dia_id(fecha)
         
-        fail_15_3 = False; fail_15_5 = False; fail_15_6 = False
-        count_b_pico = 0; count_b_pospico = 0
-
+        fail_15_3 = False
+        fail_15_5 = False
+        fail_15_6 = False
+        
         for fid, f_res in franjas_dia.items():
             cat = categorizar(franjas_metadata.get(fid, {}).get('denominacion', ''))
             if cat == "OTRO" or f_res.get('ifo') is None: continue
             
-            # Etapa 2: Excluir Pos Pico de Sábado del cálculo de multas
-            td_id = get_tipo_dia_id(fecha)
             if td_id == 6 and cat == 'POS_PICO':
                 continue
             
-            ifo = f_res.get('ifo')
-            cbd = f_res.get('cbd')
+            ifo_val = float(f_res['ifo'])
+            cbd_idx = float(f_res.get('cbd', 0.0))
             
-            if cbd is not None and cbd < 1.0: fail_15_6 = True
-            
+            # Art 15.6 (ICCBDM)
+            if cbd_idx < 1.0:
+                fail_15_6 = True
+
+            # Art 15.3 y 15.5
             if cat == 'PICO':
-                if ifo < 80: fail_15_3 = True
-                elif ifo < 90: 
-                    count_b_pico += 1
-                    if not trigger_15_2: acum_b['PICO'] += 1
-                    elif not trigger_16_2: acum_b_reinc += 1
+                if ifo_val < 80:
+                    fail_15_3 = True
+                elif ifo_val < 90:
+                    if not trigger_15_2_fecha:
+                        if fecha >= eval_start: acum_b['PICO'] += 1
+                    else:
+                        if 1 <= (fecha - trigger_15_2_fecha).days <= 7:
+                            if fecha >= eval_start: acum_b_reinc['PICO'] += 1
+
             elif cat == 'POS_PICO':
-                if ifo < 80: fail_15_5 = True
-                elif ifo < 90:
-                    count_b_pospico += 1
-                    if not trigger_15_4: acum_b['POS_PICO'] += 1
-                    elif not trigger_16_4: acum_b_reinc_pos += 1
+                if ifo_val < 80:
+                    fail_15_5 = True
+                elif ifo_val < 90:
+                    if not trigger_15_4_fecha:
+                        if fecha >= eval_start: acum_b['POS_PICO'] += 1
+                    else:
+                        if 1 <= (fecha - trigger_15_4_fecha).days <= 7:
+                            if fecha >= eval_start: acum_b_reinc['POS_PICO'] += 1
 
-        # EVALUACIÓN DE REGLAS
-        # 1. ICCBDM (15.6 / 16.6)
+        # Evaluaciones Diarias
         if fail_15_6:
-            if ultimo_15_6 and (fecha - ultimo_15_6).days <= 2:
-                historial_faltas.append({'fecha': fecha, 'base': 'Art. 16.6', 'desc': 'Reincidencia ICCBDM (2 días)', 'jornales': 45})
+            if ultimo_15_6_fecha and 1 <= (fecha - ultimo_15_6_fecha).days <= 2:
+                if fecha >= eval_start:
+                    historial_faltas.append({'fecha': fecha, 'base': 'Art. 16.6', 'desc': 'Reincidencia ICCBDM (Día)', 'jornales': 45})
             else:
-                historial_faltas.append({'fecha': fecha, 'base': 'Art. 15.6', 'desc': 'Incumplimiento ICCBDM (Buses Mínimos)', 'jornales': 20})
-                ultimo_15_6 = fecha
+                if fecha >= eval_start:
+                    historial_faltas.append({'fecha': fecha, 'base': 'Art. 15.6', 'desc': 'Incumplimiento ICCBDM Día', 'jornales': 20})
+                if not ultimo_15_6_fecha or (fecha - ultimo_15_6_fecha).days > 2:
+                    ultimo_15_6_fecha = fecha
 
-        # 2. NIVEL C PICO (15.3 / 16.3)
         if fail_15_3:
-            if ultimo_15_3 and (fecha - ultimo_15_3).days <= 7:
-                # Solo una reincidencia 16.3 al mes según prompt
-                if not any(f['base'] == 'Art. 16.3' for f in historial_faltas):
-                    historial_faltas.append({'fecha': fecha, 'base': 'Art. 16.3', 'desc': 'Reincidencia Nivel C Pico (7 días)', 'jornales': 45})
+            if ultimo_15_3_fecha and 1 <= (fecha - ultimo_15_3_fecha).days <= 7:
+                if fecha >= eval_start:
+                    historial_faltas.append({'fecha': fecha, 'base': 'Art. 16.3', 'desc': 'Reincidencia Nivel C Franja Pico', 'jornales': 45})
             else:
-                historial_faltas.append({'fecha': fecha, 'base': 'Art. 15.3', 'desc': 'Nivel C en Franja Pico', 'jornales': 20})
-                ultimo_15_3 = fecha
+                if fecha >= eval_start:
+                    historial_faltas.append({'fecha': fecha, 'base': 'Art. 15.3', 'desc': 'Nivel C Franja Pico', 'jornales': 20})
+                if not ultimo_15_3_fecha or (fecha - ultimo_15_3_fecha).days > 7:
+                    ultimo_15_3_fecha = fecha
 
-        # 3. NIVEL C POS PICO (15.5 / 16.5)
         if fail_15_5:
-            if ultimo_15_5 and (fecha - ultimo_15_5).days <= 7:
-                if not any(f['base'] == 'Art. 16.5' for f in historial_faltas):
-                    historial_faltas.append({'fecha': fecha, 'base': 'Art. 16.5', 'desc': 'Reincidencia Nivel C Pos Pico (7 días)', 'jornales': 45})
+            if ultimo_15_5_fecha and 1 <= (fecha - ultimo_15_5_fecha).days <= 7:
+                if fecha >= eval_start:
+                    historial_faltas.append({'fecha': fecha, 'base': 'Art. 16.5', 'desc': 'Reincidencia Nivel C Franja Pos Pico', 'jornales': 45})
             else:
-                historial_faltas.append({'fecha': fecha, 'base': 'Art. 15.5', 'desc': 'Nivel C en Franja Pos Pico', 'jornales': 20})
-                ultimo_15_5 = fecha
+                if fecha >= eval_start:
+                    historial_faltas.append({'fecha': fecha, 'base': 'Art. 15.5', 'desc': 'Nivel C Franja Pos Pico', 'jornales': 20})
+                if not ultimo_15_5_fecha or (fecha - ultimo_15_5_fecha).days > 7:
+                    ultimo_15_5_fecha = fecha
 
-        # 4. ACUMULACIÓN NIVEL B (15.2 / 16.2 y 15.4 / 16.4)
-        if not trigger_15_2 and acum_b['PICO'] >= 5:
-            historial_faltas.append({'fecha': fecha, 'base': 'Art. 15.2', 'desc': 'Acumulación 5 Franjas Pico Nivel B', 'jornales': 10})
-            trigger_15_2 = True
-            start_reinc_16_2 = fecha
-        
-        if trigger_15_2 and not trigger_16_2 and acum_b_reinc >= 5:
-            if (fecha - start_reinc_16_2).days <= 7:
-                historial_faltas.append({'fecha': fecha, 'base': 'Art. 16.2', 'desc': 'Reincidencia Nivel B Pico (5 adicionales en 7 días)', 'jornales': 20})
-                trigger_16_2 = True
+        # Acumulación Diaria
+        if fecha >= eval_start:
+            if not trigger_15_2_fecha and acum_b['PICO'] >= 5:
+                historial_faltas.append({'fecha': fecha, 'base': 'Art. 15.2', 'desc': 'Acumulación 5 Franjas Pico Nivel B', 'jornales': 10})
+                trigger_15_2_fecha = fecha
+            elif trigger_15_2_fecha and acum_b_reinc['PICO'] >= 5:
+                if 1 <= (fecha - trigger_15_2_fecha).days <= 7:
+                    historial_faltas.append({'fecha': fecha, 'base': 'Art. 16.2', 'desc': 'Reincidencia Nivel B Pico (5 más en 7 días)', 'jornales': 20})
+                    trigger_15_2_fecha = fecha
+                    acum_b_reinc['PICO'] = 0
 
-        if not trigger_15_4 and acum_b['POS_PICO'] >= 5:
-            historial_faltas.append({'fecha': fecha, 'base': 'Art. 15.4', 'desc': 'Acumulación 5 Franjas Pos Pico Nivel B', 'jornales': 10})
-            trigger_15_4 = True
-            start_reinc_16_4 = fecha
-
-        if trigger_15_4 and not trigger_16_4 and acum_b_reinc_pos >= 5:
-            if (fecha - start_reinc_16_4).days <= 7:
-                historial_faltas.append({'fecha': fecha, 'base': 'Art. 16.4', 'desc': 'Reincidencia Nivel B Pos Pico (5 adicionales en 7 días)', 'jornales': 20})
-                trigger_16_4 = True
+            if not trigger_15_4_fecha and acum_b['POS_PICO'] >= 5:
+                historial_faltas.append({'fecha': fecha, 'base': 'Art. 15.4', 'desc': 'Acumulación 5 Franjas Pos Pico Nivel B', 'jornales': 10})
+                trigger_15_4_fecha = fecha
+            elif trigger_15_4_fecha and acum_b_reinc['POS_PICO'] >= 5:
+                if 1 <= (fecha - trigger_15_4_fecha).days <= 7:
+                    historial_faltas.append({'fecha': fecha, 'base': 'Art. 16.4', 'desc': 'Reincidencia Nivel B Pos Pico (5 más en 7 días)', 'jornales': 20})
+                    trigger_15_4_fecha = fecha
+                    acum_b_reinc['POS_PICO'] = 0
 
     # Transformar para el reporte
     sanciones = []
