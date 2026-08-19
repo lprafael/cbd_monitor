@@ -53,6 +53,7 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
   const fetchFinesData = async () => {
     setLoading(true);
     setError(null);
+    setReincidencias({});
     try {
       const [year, month] = fecha.split('-');
       const resp = await fetch(`${API_BASE_URL}/fines-report`, {
