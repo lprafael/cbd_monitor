@@ -93,6 +93,15 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
   if (data && data.reporte) {
     const filtered = data.reporte.filter(empresa => !empresa.eot_nombre.toUpperCase().includes('ARAPOTI'));
     
+    const getValorJornal = (fechaStr) => {
+      if (!fechaStr) return 117077;
+      const f = fechaStr.substring(0, 10);
+      if (f >= '2026-07-01' || f >= '2026-07') {
+        return 117077;
+      }
+      return 111502;
+    };
+
     processedReporte = filtered.map(empresa => {
       const isReincidente = reincidencias[empresa.eot_hex];
       let newInfracciones = [];
@@ -101,13 +110,14 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
 
       if (isReincidente) {
         newInfracciones = empresa.infracciones.map(inf => {
+          const vJornal = getValorJornal(inf.fecha || fecha);
           if (inf.base === 'Art. 15.1') {
             return {
               ...inf,
               base: 'Art. 16.1',
               desc: inf.desc.replace('IFO Mensual', 'Reincidencia IFO Mensual'),
               jornales: 224.9,
-              monto: 25076796
+              monto: Math.round(224.9 * vJornal)
             };
           } else if (inf.base === 'Art. 15.2') {
             return {
@@ -115,7 +125,7 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
               base: 'Art. 16.2',
               desc: inf.desc.replace('Acumulación 5 Franjas Pico', 'Reincidencia Acumulación 5 Franjas Pico'),
               jornales: 20,
-              monto: 2230040
+              monto: Math.round(20 * vJornal)
             };
           } else if (inf.base === 'Art. 15.4') {
             return {
@@ -123,7 +133,7 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
               base: 'Art. 16.4',
               desc: inf.desc.replace('Acumulación 5 Franjas Pos Pico', 'Reincidencia Acumulación 5 Franjas Pos Pico'),
               jornales: 20,
-              monto: 2230040
+              monto: Math.round(20 * vJornal)
             };
           }
           return inf;

@@ -12,7 +12,15 @@ class FinesReportRequest(BaseModel):
     month: int
     year: int
 
-VALOR_JORNAL = 111502
+def obtener_valor_jornal(fecha_eval: date) -> int:
+    """
+    Retorna el valor del jornal mínimo según la vigencia de la fecha.
+    - Hasta el 30/06/2026: 111.502 Gs.
+    - A partir del 01/07/2026: 117.077 Gs.
+    """
+    if fecha_eval >= date(2026, 7, 1):
+        return 117077
+    return 111502
 
 def get_tipo_dia_id(fecha_obj, db_feriados):
     """5=LABORAL, 6=SABADO, 7=NO LABORAL"""
@@ -472,7 +480,7 @@ async def generate_fines_report(
             if historial_faltas:
                 # Calcular totales
                 total_jornales = sum(f['jornales'] for f in historial_faltas)
-                total_guaranies = int(round(total_jornales * VALOR_JORNAL))
+                total_guaranies = sum(int(round(f['jornales'] * obtener_valor_jornal(f['fecha']))) for f in historial_faltas)
                 
                 # Evaluación de Causales de Sumario Administrativo (Art. 18.2)
                 alertas_sumario = []
@@ -498,7 +506,7 @@ async def generate_fines_report(
                             'base': f['base'],
                             'desc': f['desc'],
                             'jornales': f['jornales'],
-                            'monto': int(round(f['jornales'] * VALOR_JORNAL))
+                            'monto': int(round(f['jornales'] * obtener_valor_jornal(f['fecha'])))
                         } for f in historial_faltas
                     ]
                 })

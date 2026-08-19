@@ -512,7 +512,10 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
     
     # Acumulador para el resumen de infracciones (solo si hay datos)
     resumen_infracciones_lista = []
-    VALOR_JORNAL = 111502
+    def obtener_valor_jornal(fecha_eval):
+        if fecha_eval >= date(2026, 7, 1):
+            return 117077
+        return 111502
 
     # Generar sección por EOT con tabla detalle (Ordenado alfabéticamente)
     secciones_eot_html = ""
@@ -533,13 +536,14 @@ def generar_html_informe(datos_incumplimientos, fecha_referencia, email_cc=None,
         if datos_mensuales:
             inf_detectadas = analizar_infracciones_res_120(eot_nombre, datos_mensuales, fecha_referencia, umbral_obligatorio)
             for inf in inf_detectadas:
+                v_jornal = obtener_valor_jornal(inf['fecha'])
                 resumen_infracciones_lista.append({
                     'empresa': eot_nombre,
                     'fecha': inf['fecha'],
                     'base': inf['base'],
                     'descripcion': inf['desc'],
                     'jornales': inf['jornales'],
-                    'monto': inf['jornales'] * VALOR_JORNAL
+                    'monto': inf['jornales'] * v_jornal
                 })
 
         if not datos_mensuales:
