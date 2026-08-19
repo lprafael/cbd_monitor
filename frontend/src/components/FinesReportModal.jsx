@@ -105,9 +105,25 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
             return {
               ...inf,
               base: 'Art. 16.1',
-              desc: inf.desc.replace('IFO Mensual', 'Reincidencia IFO Mensual (Art. 16.1)'),
-              jornales: 224.9, // 173 + 30%
+              desc: inf.desc.replace('IFO Mensual', 'Reincidencia IFO Mensual'),
+              jornales: 224.9,
               monto: 25076796
+            };
+          } else if (inf.base === 'Art. 15.2') {
+            return {
+              ...inf,
+              base: 'Art. 16.2',
+              desc: inf.desc.replace('Acumulación 5 Franjas Pico', 'Reincidencia Acumulación 5 Franjas Pico'),
+              jornales: 20,
+              monto: 2230040
+            };
+          } else if (inf.base === 'Art. 15.4') {
+            return {
+              ...inf,
+              base: 'Art. 16.4',
+              desc: inf.desc.replace('Acumulación 5 Franjas Pos Pico', 'Reincidencia Acumulación 5 Franjas Pos Pico'),
+              jornales: 20,
+              monto: 2230040
             };
           }
           return inf;
@@ -209,13 +225,13 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
                             <span className="total-guaranies">Total Gs: {formatCurrency(empresa.total_guaranies)}</span>
                           </div>
                         )}
-                        <label className="reincidencia-label" style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px', cursor: 'pointer', fontWeight: 'bold', color: '#dc2626' }} title="Marcar para tipificar 2da caída de IFO Mensual en 6 meses (Art. 16.1)">
+                        <label className="reincidencia-label" style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px', cursor: 'pointer', fontWeight: 'bold', color: '#dc2626' }}>
                           <input 
                             type="checkbox" 
                             checked={!!reincidencias[empresa.eot_hex]}
                             onChange={(e) => handleReincidenciaChange(empresa.eot_hex, e.target.checked)}
                           />
-                          c/reincidencia (15.1)
+                          c/reincidencia
                         </label>
                         <button 
                           className="generate-acta-btn" 
@@ -226,10 +242,11 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
                         </button>
                       </div>
                     </div>
-                    {empresa.alertas && empresa.alertas.length > 0 && (
-                      <div className="eot-alertas" style={{ padding: '10px', backgroundColor: '#fee2e2', color: '#b91c1c', borderLeft: '4px solid #ef4444', marginBottom: '15px', fontSize: '14px', fontWeight: 'bold' }}>
-                        {empresa.alertas.map((alerta, i) => (
-                          <div key={i}>⚠️ {alerta}</div>
+
+                    {empresa.alerta_sumario && empresa.motivos_sumario && (
+                      <div className="eot-alertas" style={{ padding: '8px 12px', backgroundColor: '#fee2e2', color: '#b91c1c', borderLeft: '4px solid #ef4444', marginTop: '10px', marginBottom: '10px', fontSize: '13px', fontWeight: 'bold', borderRadius: '4px' }}>
+                        {empresa.motivos_sumario.map((motivo, mi) => (
+                          <div key={mi}>⚠️ {motivo}</div>
                         ))}
                       </div>
                     )}
