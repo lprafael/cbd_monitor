@@ -198,9 +198,10 @@ async def generate_fines_report(
         eots_con_incumplimiento_15_2_previo = set()
         eots_con_incumplimiento_15_4_previo = set()
         fallas_ifo_6meses = defaultdict(int)
+        infracciones_previas_trimestre = defaultdict(int)
 
         check_y, check_m = prev_year, prev_month
-        for _ in range(6):
+        for month_idx in range(6):
             if check_y < 2026 or (check_y == 2026 and check_m < 5):
                 break
             m_start, m_end = get_month_range(check_y, check_m)
@@ -293,6 +294,8 @@ async def generate_fines_report(
                 if 0 < eot_ifo < m_umbral:
                     eots_con_incumplimiento_15_1_previo.add(row['id_eot_vmt_hex'])
                     fallas_ifo_6meses[row['id_eot_vmt_hex']] += 1
+                    if month_idx < 2:
+                        infracciones_previas_trimestre[row['id_eot_vmt_hex']] += 1
 
             # Conteo de franjas Nivel B (Pico y Pos Pico) en el mes check
             cursor.execute("""
@@ -310,8 +313,34 @@ async def generate_fines_report(
             for row in cursor.fetchall():
                 if (row['b_pico_count'] or 0) >= 5:
                     eots_con_incumplimiento_15_2_previo.add(row['id_eot_vmt_hex'])
+                    if month_idx < 2:
+                        infracciones_previas_trimestre[row['id_eot_vmt_hex']] += 1
                 if (row['b_pospico_count'] or 0) >= 5:
                     eots_con_incumplimiento_15_4_previo.add(row['id_eot_vmt_hex'])
+                    if month_idx < 2:
+                        infracciones_previas_trimestre[row['id_eot_vmt_hex']] += 1
+
+            if month_idx < 2:
+                # Conteo de días con Nivel C o ICCBDM en los meses previos del trimestre
+                cursor.execute("""
+                    SELECT h.id_eot_vmt_hex,
+                           COUNT(DISTINCT CASE WHEN (UPPER(f.denominacion) LIKE '%%PICO%%' AND UPPER(f.denominacion) NOT LIKE '%%POS%%' AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%' AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%') AND h.ifo < 0.80 THEN h.fecha END) as dias_c_pico,
+                           COUNT(DISTINCT CASE WHEN (EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5 AND (UPPER(f.denominacion) LIKE '%%POS%%PICO%%' OR UPPER(f.denominacion) LIKE '%%POSPICO%%') AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%' AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%') AND h.ifo < 0.80 THEN h.fecha END) as dias_c_pospico,
+                           COUNT(DISTINCT CASE WHEN h.cbd_indice IS NOT NULL AND h.cbd_indice < 1.0 THEN h.fecha END) as dias_fail_cbd
+                    FROM control_metricas.ifo_historico h
+                    JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
+                    WHERE h.fecha BETWEEN %s AND %s
+                      AND EXTRACT(ISODOW FROM h.fecha) < 7
+                      AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
+                      AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
+                    GROUP BY h.id_eot_vmt_hex
+                """, (m_start, m_end))
+                for row in cursor.fetchall():
+                    infracciones_previas_trimestre[row['id_eot_vmt_hex']] += (
+                        (row['dias_c_pico'] or 0) + 
+                        (row['dias_c_pospico'] or 0) + 
+                        (row['dias_fail_cbd'] or 0)
+                    )
 
             check_y, check_m = get_previous_month(check_y, check_m)
 
@@ -448,9 +477,11 @@ async def generate_fines_report(
                 # Evaluación de Causales de Sumario Administrativo (Art. 18.2)
                 alertas_sumario = []
                 if fallas_ifo_6meses[eot_hex] >= 3:
-                    alertas_sumario.append("Causal de Sumario: Acumulación de 3 fallas de IFO (<80% o bajo umbral) en 6 meses (Art. 18.2)")
-                if len(historial_faltas) >= 20:
-                    alertas_sumario.append("Causal de Sumario: Acumulación de 20 o más infracciones en el periodo (Art. 18.2)")
+                    alertas_sumario.append(f"Causal de Sumario: Acumulación de {fallas_ifo_6meses[eot_hex]} fallas de IFO (<80% o bajo umbral) en 6 meses (Art. 18.2)")
+                
+                total_infracciones_trimestre = len(historial_faltas) + infracciones_previas_trimestre[eot_hex]
+                if total_infracciones_trimestre >= 20:
+                    alertas_sumario.append(f"Causal de Sumario: Acumulación de {total_infracciones_trimestre} infracciones en el trimestre (Art. 18.2)")
 
                 reporte_final.append({
                     'eot_nombre': eot_nombre,
@@ -458,6 +489,7 @@ async def generate_fines_report(
                     'total_jornales': total_jornales,
                     'total_guaranies': total_guaranies,
                     'total_infracciones': len(historial_faltas),
+                    'total_infracciones_trimestre': total_infracciones_trimestre,
                     'alerta_sumario': len(alertas_sumario) > 0,
                     'motivos_sumario': alertas_sumario,
                     'infracciones': [
