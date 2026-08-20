@@ -62,8 +62,7 @@ async def generate_fines_report(
             if start_date < FECHA_INICIO_ETAPA2:
                 start_date = FECHA_INICIO_ETAPA2
 
-        # Ventana de evaluación extendida hacia atrás hasta 7 días para capturar reincidencias que crucen meses
-        eval_start_date = max(FECHA_INICIO_ETAPA2, start_date - timedelta(days=7))
+        eval_start_date = start_date
 
         # 1. Obtener feriados
         cursor.execute("SELECT fecha FROM public.feriados WHERE fecha BETWEEN %s AND %s", (eval_start_date, end_date))
