@@ -126,6 +126,11 @@ Aquí tienes el texto íntegro de la **Resolución GVMT Nº 120/2025**, consolid
 | **15.5** | IFO Franja | Nivel C en una o más franjas Pos Pico en el día | Intermedia | 20 |
 | **15.6** | CBDmin | Incumplimiento del ICCBDM Franja en el día | Intermedia | 20 |
 
+> **Principio de Exclusión Non Bis In Idem (Ley N° 6715/2021):**
+> * Si en una jornada diaria se aplica sanción directa de Nivel C en franjas Pico (**Art. 15.3**), las franjas Pico de ese día **no suman** al acumulador mensual de Nivel B (**Art. 15.2**).
+> * Si en una jornada diaria se aplica sanción directa de Nivel C en franjas Pos Pico (**Art. 15.5**), las franjas Pos Pico de ese día **no suman** al acumulador mensual de Nivel B (**Art. 15.4**).
+> * El **Art. 15.6** (Flota Mínima) es autónomo y no interfiere con el cómputo de IFO.
+
 **Artículo 16º.- REINCIDENCIAS.** (Modificado por Res. 2026):
 *   **16.1 (Base 15.1):** Reiteración en los siguientes 6 meses: 173 jornales + 30% recargo.
 *   **16.2 (Base 15.2):** Reiteración en los siguientes 6 meses: 20 jornales.

@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plan de Implementación - Regla Non Bis In Idem (Res. 120/2025)</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Mermaid.js -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --primary-light: #60a5fa;
+            --primary-bg: #eff6ff;
+            --accent: #8b5cf6;
+            --success: #10b981;
+            --success-bg: #ecfdf5;
+            --warning: #f59e0b;
+            --warning-bg: #fffbeb;
+            --danger: #ef4444;
+            --danger-bg: #fef2f2;
+            --dark: #0f172a;
+            --card-bg: #ffffff;
+            --bg: #f8fafc;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+            --shadow-lg: 0 10px 25px -5px rgba(0,0,0,0.08), 0 8px 10px -6px rgba(0,0,0,0.04);
+            --radius-lg: 16px;
+            --radius-md: 12px;
+            --radius-sm: 8px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            line-height: 1.6;
+            padding: 0;
+            margin: 0;
+        }
+
+        /* Top Header */
+        .header-bar {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #1e3a8a 100%);
+            color: white;
+            padding: 32px 40px;
+            box-shadow: 0 4px 20px rgba(15, 23, 42, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header-bar::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, rgba(0,0,0,0) 70%);
+            border-radius: 50%;
+        }
+
+        .header-content {
+            max-width: 1300px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .header-title-area h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-title-area p {
+            color: #94a3b8;
+            margin-top: 6px;
+            font-size: 14.5px;
+            font-weight: 500;
+        }
+
+        .header-badges {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12.5px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+
+        .badge-blue { background: rgba(59, 130, 246, 0.2); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.3); }
+        .badge-green { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .badge-purple { background: rgba(139, 92, 246, 0.2); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.3); }
+
+        .btn-action {
+            background: #ffffff;
+            color: #0f172a;
+            border: none;
+            padding: 10px 18px;
+            border-radius: var(--radius-sm);
+            font-size: 13.5px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
+
+        .btn-action:hover {
+            transform: translateY(-2px);
+            background: #f8fafc;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+        }
+
+        /* Container & Layout */
+        .main-container {
+            max-width: 1300px;
+            margin: 32px auto;
+            padding: 0 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 32px;
+        }
+
+        /* Summary Cards */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .metric-card {
+            background: var(--card-bg);
+            border-radius: var(--radius-md);
+            padding: 22px 24px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            transition: all 0.25s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-md);
+            border-color: var(--primary-light);
+        }
+
+        .metric-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .icon-blue { background: var(--primary-bg); color: var(--primary); }
+        .icon-green { background: var(--success-bg); color: var(--success); }
+        .icon-orange { background: var(--warning-bg); color: var(--warning); }
+        .icon-purple { background: #f5f3ff; color: var(--accent); }
+
+        .metric-info h3 {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .metric-info p {
+            font-size: 14.5px;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        /* Section Cards */
+        .section-card {
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+            padding: 32px;
+            position: relative;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .section-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title i {
+            color: var(--primary);
+        }
+
+        /* Alert Boxes */
+        .alert-box {
+            padding: 18px 22px;
+            border-radius: var(--radius-md);
+            margin-bottom: 24px;
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+            font-size: 14.5px;
+        }
+
+        .alert-important {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            color: #1e40af;
+        }
+
+        .alert-important i {
+            color: #2563eb;
+            font-size: 20px;
+            margin-top: 2px;
+        }
+
+        /* Flowchart Interactive Box & Zoom Controls */
+        .flowchart-container-box {
+            background: #ffffff;
+            border: 2px solid #cbd5e1;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+            margin: 24px 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .flowchart-toolbar {
+            background: #0f172a;
+            color: white;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            border-bottom: 1px solid #334155;
+            user-select: none;
+        }
+
+        .zoom-title {
+            font-size: 13.5px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #cbd5e1;
+        }
+
+        .zoom-buttons {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .zoom-btn {
+            background: #1e293b;
+            color: #f8fafc;
+            border: 1px solid #475569;
+            padding: 7px 14px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.15s ease;
+        }
+
+        .zoom-btn:hover {
+            background: var(--primary);
+            border-color: var(--primary-light);
+            transform: scale(1.05);
+        }
+
+        .zoom-btn:active {
+            transform: scale(0.95);
+        }
+
+        .zoom-level-badge {
+            background: #334155;
+            color: #60a5fa;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid #475569;
+            min-width: 58px;
+            text-align: center;
+        }
+
+        .flowchart-viewport {
+            width: 100%;
+            height: 650px;
+            background: radial-gradient(circle, #f1f5f9 10%, #f8fafc 90%);
+            overflow: auto;
+            position: relative;
+            cursor: grab;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 40px;
+        }
+
+        .flowchart-viewport:active {
+            cursor: grabbing;
+        }
+
+        .flowchart-content {
+            transform-origin: top center;
+            transition: transform 0.15s ease-out;
+            display: inline-block;
+            min-width: 100%;
+        }
+
+        .mermaid {
+            display: flex;
+            justify-content: center;
+        }
+
+        .mermaid svg {
+            max-width: none !important;
+            height: auto !important;
+        }
+
+        /* Fullscreen mode for flowchart */
+        .flowchart-container-box.fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 99999;
+            margin: 0;
+            border-radius: 0;
+            border: none;
+        }
+
+        .flowchart-container-box.fullscreen .flowchart-viewport {
+            height: calc(100vh - 60px);
+        }
+
+        /* Comparison Tables */
+        .table-responsive {
+            overflow-x: auto;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+            margin: 20px 0;
+        }
+
+        table.custom-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            text-align: left;
+        }
+
+        table.custom-table th {
+            background: #f1f5f9;
+            color: #334155;
+            font-weight: 700;
+            padding: 14px 18px;
+            border-bottom: 2px solid var(--border);
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+        }
+
+        table.custom-table td {
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+
+        table.custom-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        table.custom-table tr:hover td {
+            background: #f8fafc;
+        }
+
+        .tag-pill {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .tag-danger { background: #fee2e2; color: #dc2626; }
+        .tag-warning { background: #fef3c7; color: #d97706; }
+        .tag-success { background: #d1fae5; color: #059669; }
+        .tag-info { background: #e0e7ff; color: #4338ca; }
+
+        /* Code Blocks */
+        .code-container {
+            background: #0f172a;
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            margin: 20px 0;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .code-header {
+            background: #1e293b;
+            padding: 10px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #94a3b8;
+            font-size: 12.5px;
+            font-family: 'JetBrains Mono', monospace;
+            border-bottom: 1px solid #334155;
+        }
+
+        .code-header span {
+            color: #cbd5e1;
+            font-weight: 600;
+        }
+
+        pre code {
+            display: block;
+            padding: 18px;
+            color: #f8fafc;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13.5px;
+            overflow-x: auto;
+            line-height: 1.6;
+        }
+
+        .kw { color: #f472b6; font-weight: 600; }
+        .func { color: #60a5fa; }
+        .str { color: #a7f3d0; }
+        .comm { color: #64748b; font-style: italic; }
+        .num { color: #fde047; }
+
+        /* Interactive Simulator */
+        .simulator-box {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border: 2px solid #cbd5e1;
+            border-radius: var(--radius-lg);
+            padding: 28px;
+            margin-top: 24px;
+        }
+
+        .sim-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 850px) {
+            .sim-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .sim-panel {
+            background: white;
+            border-radius: var(--radius-md);
+            padding: 20px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .sim-panel h4 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .input-group {
+            margin-bottom: 14px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 6px;
+        }
+
+        .input-group select, .input-group input {
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: var(--radius-sm);
+            border: 1px solid #cbd5e1;
+            font-size: 14px;
+            font-family: inherit;
+            background: #ffffff;
+        }
+
+        .sim-result-card {
+            background: #0f172a;
+            color: white;
+            border-radius: var(--radius-md);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .res-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #1e293b;
+            font-size: 13.5px;
+        }
+
+        .res-row:last-child {
+            border-bottom: none;
+        }
+
+        .res-label {
+            color: #94a3b8;
+        }
+
+        .res-val {
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .res-val.active { color: #ef4444; }
+        .res-val.blocked { color: #f59e0b; }
+        .res-val.ok { color: #10b981; }
+
+        /* Step cards */
+        .steps-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 16px;
+            margin: 20px 0;
+        }
+
+        .step-card {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+            border-top: 4px solid var(--primary);
+        }
+
+        .step-number {
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .step-card h4 {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 8px;
+        }
+
+        .step-card p {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+            font-size: 13px;
+            border-top: 1px solid var(--border);
+            background: #ffffff;
+            margin-top: 40px;
+        }
+
+        /* Print styles */
+        @media print {
+            .header-bar {
+                background: #0f172a !important;
+                color: black !important;
+                padding: 16px;
+            }
+            .btn-action, .simulator-box, .flowchart-toolbar {
+                display: none !important;
+            }
+            .flowchart-viewport {
+                height: auto !important;
+                overflow: visible !important;
+            }
+            .section-card {
+                box-shadow: none !important;
+                border: 1px solid #ccc !important;
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="header-bar">
+        <div class="header-content">
+            <div class="header-title-area">
+                <div class="header-badges" style="margin-bottom: 12px;">
+                    <span class="badge badge-blue"><i class="fas fa-shield-alt"></i> Res. GVMT N° 120/2025</span>
+                    <span class="badge badge-green"><i class="fas fa-balance-scale"></i> Ley N° 6715/2021 (Non Bis In Idem)</span>
+                    <span class="badge badge-purple"><i class="fas fa-code-branch"></i> SICOM DMT</span>
+                </div>
+                <h1><i class="fas fa-project-diagram" style="color: #60a5fa;"></i> Plan de Implementación de Regla de Exclusión Diaria</h1>
+                <p>Exclusión de Nivel B (15.2 y 15.4) ante Sanción Directa de Nivel C (15.3 y 15.5) por principio de proporcionalidad</p>
+            </div>
+            <div>
+                <button class="btn-action" onclick="window.print()"><i class="fas fa-print"></i> Imprimir / Guardar PDF</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="main-container">
+
+        <!-- Metrics Grid -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-icon icon-blue">
+                    <i class="fas fa-sun"></i>
+                </div>
+                <div class="metric-info">
+                    <h3>Franjas Pico (15.2 vs 15.3)</h3>
+                    <p>Nivel C (20 jornales) bloquea acumulación de Nivel B Pico en el día</p>
+                </div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-icon icon-orange">
+                    <i class="fas fa-cloud-sun"></i>
+                </div>
+                <div class="metric-info">
+                    <h3>Pos Pico (15.4 vs 15.5)</h3>
+                    <p>Nivel C (20 jornales) bloquea acumulación de Nivel B Pos Pico en el día</p>
+                </div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-icon icon-green">
+                    <i class="fas fa-bus"></i>
+                </div>
+                <div class="metric-info">
+                    <h3>Flota Mínima (15.6)</h3>
+                    <p>ICCBDM es autónomo y no interfiere con IFO ni acumulación</p>
+                </div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-icon icon-purple">
+                    <i class="fas fa-calculator"></i>
+                </div>
+                <div class="metric-info">
+                    <h3>Cómputo Mensual</h3>
+                    <p>Umbral de tolerancia: Mínimo 5 franjas limpias para gatillar multa</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 1: Business Logic & Flowchart -->
+        <section class="section-card">
+            <div class="section-header">
+                <div class="section-title">
+                    <i class="fas fa-sitemap"></i>
+                    <span>1. Flujograma Gráfico de Ejecución y Decisión</span>
+                </div>
+                <span class="badge badge-blue">Resolución GVMT 120/2025</span>
+            </div>
+
+            <div class="alert-box alert-important">
+                <i class="fas fa-info-circle"></i>
+                <div>
+                    <strong>Principio de Segregación por Tipo de Franja:</strong><br>
+                    La sanción por Nivel C en franjas Pico (Art. 15.3) bloquea únicamente la sumatoria de Nivel B para Pico (Art. 15.2). Las franjas Pos Pico con Nivel B en esa misma jornada <strong>SÍ</strong> siguen sumando para el Art. 15.4 (siempre que no haya habido Nivel C en Pos Pico ese día).
+                </div>
+            </div>
+
+            <!-- Flowchart Container with Zoom Controls -->
+            <div class="flowchart-container-box" id="flowchartBox">
+                <div class="flowchart-toolbar">
+                    <div class="zoom-title">
+                        <i class="fas fa-search-plus"></i> Controles de Visualización y Zoom:
+                    </div>
+                    <div class="zoom-buttons">
+                        <button class="zoom-btn" onclick="zoomFlowchart(0.25)" title="Agrandar (Zoom +)"><i class="fas fa-plus"></i> Agrandar (+)</button>
+                        <button class="zoom-btn" onclick="zoomFlowchart(-0.25)" title="Reducir (Zoom -)"><i class="fas fa-minus"></i> Reducir (-)</button>
+                        <button class="zoom-btn" onclick="resetZoom()" title="Restablecer tamaño original"><i class="fas fa-undo"></i> 100%</button>
+                        <button class="zoom-btn" onclick="toggleFullscreen()" title="Modo Pantalla Completa" id="btnFs"><i class="fas fa-expand"></i> Pantalla Completa</button>
+                        <span class="zoom-level-badge" id="zoomBadge">130%</span>
+                    </div>
+                </div>
+
+                <div class="flowchart-viewport" id="flowchartViewport">
+                    <div class="flowchart-content" id="flowchartContent">
+                        <div class="mermaid" id="mermaidDiagram">
+flowchart TD
+    %% Definición de Estilos
+    classDef startNode fill:#0f172a,stroke:#3b82f6,stroke-width:3px,color:#ffffff,font-weight:bold,font-size:16px;
+    classDef decNode fill:#f8fafc,stroke:#2563eb,stroke-width:2.5px,color:#0f172a,font-weight:600,font-size:15px;
+    classDef fineNode fill:#fee2e2,stroke:#dc2626,stroke-width:3px,color:#991b1b,font-weight:bold,font-size:15px;
+    classDef blockNode fill:#fef3c7,stroke:#d97706,stroke-width:2.5px,color:#92400e,font-weight:600,font-size:14.5px;
+    classDef passNode fill:#d1fae5,stroke:#059669,stroke-width:2.5px,color:#065f46,font-weight:600,font-size:15px;
+    classDef accumNode fill:#eff6ff,stroke:#3b82f6,stroke-width:2.5px,color:#1e40af,font-weight:bold,font-size:15.5px;
+
+    START("🚀 INICIO: Evaluación Diaria de EOT (Día D)"):::startNode
+
+    START --> EVAL_PICO{"🔍 Franjas PICO\n¿Alguna con IFO < 80%?"}:::decNode
+    START --> EVAL_POS{"🔍 Franjas POS PICO\n¿Alguna con IFO < 80%?"}:::decNode
+    START --> EVAL_CBD{"🔍 Buses Mínimos\n¿ICCBDM < 1.0?"}:::decNode
+
+    %% Rama Pico
+    EVAL_PICO -- "SÍ (Nivel C)" --> FINE_15_3["⚖️ MULTA DIRECTA: Art. 15.3\n(20 Jornales)"]:::fineNode
+    FINE_15_3 --> BLOCK_PICO["⛔ BLOQUEO NON BIS IN IDEM\nFranjas Pico Nivel B del día NO suman"]:::blockNode
+    
+    EVAL_PICO -- "NO" --> CHECK_B_PICO{"¿Hubo Franjas Pico\ncon 80% ≤ IFO < 90%?"}:::decNode
+    CHECK_B_PICO -- "SÍ" --> ADD_B_PICO["➕ Sumar a acumulador mensual\nacum_b['PICO'] += N"]:::passNode
+    CHECK_B_PICO -- "NO" --> NOOP_PICO["⏭️ No suma Nivel B"]:::startNode
+
+    %% Rama Pos Pico
+    EVAL_POS -- "SÍ (Nivel C)" --> FINE_15_5["⚖️ MULTA DIRECTA: Art. 15.5\n(20 Jornales)"]:::fineNode
+    FINE_15_5 --> BLOCK_POS["⛔ BLOQUEO NON BIS IN IDEM\nFranjas Pos Pico Nivel B del día NO suman"]:::blockNode
+    
+    EVAL_POS -- "NO" --> CHECK_B_POS{"¿Hubo Franjas Pos Pico\ncon 80% ≤ IFO < 90%?"}:::decNode
+    CHECK_B_POS -- "SÍ" --> ADD_B_POS["➕ Sumar a acumulador mensual\nacum_b['POS_PICO'] += N"]:::passNode
+    CHECK_B_POS -- "NO" --> NOOP_POS["⏭️ No suma Nivel B"]:::startNode
+
+    %% Rama CBD
+    EVAL_CBD -- "SÍ" --> FINE_15_6["⚖️ MULTA DIRECTA: Art. 15.6\n(20 Jornales - Independiente)"]:::fineNode
+    EVAL_CBD -- "NO" --> OK_CBD["✅ Cumplimiento CBD"]:::passNode
+
+    %% Fin de Mes
+    ADD_B_PICO --> FIN_MES_PICO{"🏁 Cierre de Mes\n¿acum_b['PICO'] ≥ 5?"}:::accumNode
+    ADD_B_POS --> FIN_MES_POS{"🏁 Cierre de Mes\n¿acum_b['POS_PICO'] ≥ 5?"}:::accumNode
+
+    FIN_MES_PICO -- "SÍ (≥ 5)" --> MULTA_15_2["🚨 MULTA MENSUAL: Art. 15.2 / 16.2\n(10 o 20 Jornales)"]:::fineNode
+    FIN_MES_PICO -- "NO (< 5)" --> LIBRE_15_2["✅ Exento de Multa Nivel B Pico"]:::passNode
+
+    FIN_MES_POS -- "SÍ (≥ 5)" --> MULTA_15_4["🚨 MULTA MENSUAL: Art. 15.4 / 16.4\n(10 o 20 Jornales)"]:::fineNode
+    FIN_MES_POS -- "NO (< 5)" --> LIBRE_15_4["✅ Exento de Multa Nivel B Pos Pico"]:::passNode
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Steps Grid -->
+            <div class="steps-container">
+                <div class="step-card">
+                    <div class="step-number">Paso 1</div>
+                    <h4>Liquidación Diaria Directa</h4>
+                    <p>Se evalúan las franjas operativas del día. Si se detecta IFO &lt; 80%, se aplica inmediatamente la sanción del Art. 15.3 (Pico) o Art. 15.5 (Pos Pico).</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">Paso 2</div>
+                    <h4>Filtro de Exclusión Segregado</h4>
+                    <p>Si el día fue multado por 15.3, las franjas Pico de esa jornada no aportan al conteo de Nivel B (15.2). Igual para Pos Pico (15.5 bloquea 15.4).</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">Paso 3</div>
+                    <h4>Acumulación de Días Limpios</h4>
+                    <p>Las franjas en Nivel B (80% a 89%) ocurridas en días sin falta de Nivel C en esa franja se van sumando en sus respectivos acumuladores mensuales.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">Paso 4</div>
+                    <h4>Validación de Umbral Mensual</h4>
+                    <p>Al cierre de mes o evaluación progresiva, si el acumulador alcanza 5 franjas, se configura la infracción del Art. 15.2 o Art. 15.4.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Matriz Comparativa de Infracciones -->
+        <section class="section-card">
+            <div class="section-header">
+                <div class="section-title">
+                    <i class="fas fa-table"></i>
+                    <span>2. Matriz de Infracciones y Régimen de Bloqueo</span>
+                </div>
+                <span class="badge badge-purple">Catálogo de Artículos</span>
+            </div>
+
+            <div class="table-responsive">
+                <table class="custom-table">
+                    <thead>
+                        <tr>
+                            <th>Artículo</th>
+                            <th>Indicador / Franja</th>
+                            <th>Condición de Disparo</th>
+                            <th>Tipo / Frecuencia</th>
+                            <th>Sanción Base</th>
+                            <th>Impacto Non Bis In Idem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Art. 15.1</strong></td>
+                            <td>IFO Mensual Sistema</td>
+                            <td>IFO Mensual EOT &lt; Umbral Objetivo</td>
+                            <td><span class="tag-pill tag-danger">Gravísima / Mensual</span></td>
+                            <td>173 Jornales</td>
+                            <td>Independiente del desempeño diario por franja.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Art. 15.3</strong></td>
+                            <td>IFO Franja Pico</td>
+                            <td>IFO &lt; 80.00% en ≥ 1 franja Pico en el día</td>
+                            <td><span class="tag-pill tag-danger">Intermedia / Diaria</span></td>
+                            <td>20 Jornales / día</td>
+                            <td><strong>BLOQUEA</strong> acumulación de Art. 15.2 en este día.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Art. 15.2</strong></td>
+                            <td>IFO Franja Pico (Nivel B)</td>
+                            <td>Acumular 5 franjas Pico (80% ≤ IFO &lt; 90%) en el mes</td>
+                            <td><span class="tag-pill tag-warning">Leve / Mensual</span></td>
+                            <td>10 Jornales (Reinc. 20)</td>
+                            <td>Solo suma en días donde <strong>NO</strong> se aplicó Art. 15.3.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Art. 15.5</strong></td>
+                            <td>IFO Franja Pos Pico</td>
+                            <td>IFO &lt; 80.00% en ≥ 1 franja Pos Pico en el día</td>
+                            <td><span class="tag-pill tag-danger">Intermedia / Diaria</span></td>
+                            <td>20 Jornales / día</td>
+                            <td><strong>BLOQUEA</strong> acumulación de Art. 15.4 en este día.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Art. 15.4</strong></td>
+                            <td>IFO Franja Pos Pico (Nivel B)</td>
+                            <td>Acumular 5 franjas Pos Pico (80% ≤ IFO &lt; 90%) en el mes</td>
+                            <td><span class="tag-pill tag-warning">Leve / Mensual</span></td>
+                            <td>10 Jornales (Reinc. 20)</td>
+                            <td>Solo suma en días donde <strong>NO</strong> se aplicó Art. 15.5.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Art. 15.6</strong></td>
+                            <td>Flota Mínima (ICCBDM)</td>
+                            <td>ICCBDM &lt; 1.0 en ≥ 1 franja en el día</td>
+                            <td><span class="tag-pill tag-info">Intermedia / Diaria</span></td>
+                            <td>20 Jornales / día</td>
+                            <td><strong>Autónomo</strong>. Puede coexistir con 15.3, 15.5, 15.2 y 15.4.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Section 3: Interactive Simulator -->
+        <section class="section-card">
+            <div class="section-header">
+                <div class="section-title">
+                    <i class="fas fa-vial"></i>
+                    <span>3. Simulador Interactivo de Casos Operativos</span>
+                </div>
+                <span class="badge badge-green">Test en Tiempo Real</span>
+            </div>
+
+            <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 20px;">
+                Ajusta el rendimiento operativo de las franjas de una jornada diaria para observar cómo el motor de reglas aplica las sanciones directas y bloquea selectivamente la acumulación de Nivel B:
+            </p>
+
+            <div class="simulator-box">
+                <div class="sim-grid">
+                    <!-- Panel de Entradas -->
+                    <div class="sim-panel">
+                        <h4><i class="fas fa-sliders-h" style="color: var(--primary);"></i> Configurar Franjas del Día</h4>
+                        
+                        <div class="input-group">
+                            <label>Pico Mañana (05:00 - 07:59):</label>
+                            <select id="sim_pico_m" onchange="calcularSimulador()">
+                                <option value="95">Nivel A: 95.00% (Cumple)</option>
+                                <option value="85" selected>Nivel B: 85.00% (Falta Leve)</option>
+                                <option value="72">Nivel C: 72.00% (Falta Intermedia)</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group">
+                            <label>Pico Tarde (16:00 - 18:59):</label>
+                            <select id="sim_pico_t" onchange="calcularSimulador()">
+                                <option value="95">Nivel A: 95.00% (Cumple)</option>
+                                <option value="85">Nivel B: 85.00% (Falta Leve)</option>
+                                <option value="70" selected>Nivel C: 70.00% (Falta Intermedia)</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group">
+                            <label>Pos Pico Mañana (08:00 - 15:59):</label>
+                            <select id="sim_pos_m" onchange="calcularSimulador()">
+                                <option value="95">Nivel A: 95.00% (Cumple)</option>
+                                <option value="88" selected>Nivel B: 88.00% (Falta Leve)</option>
+                                <option value="65">Nivel C: 65.00% (Falta Intermedia)</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group">
+                            <label>ICCBDM (Buses Mínimos en Franjas):</label>
+                            <select id="sim_cbd" onchange="calcularSimulador()">
+                                <option value="1.0" selected>1.00 - Cumple Flota Mínima</option>
+                                <option value="0.8">0.80 - Incumple Flota Mínima (Falta Art. 15.6)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Panel de Resultados -->
+                    <div class="sim-panel" style="background: #0f172a; border-color: #1e293b;">
+                        <h4 style="color: #f8fafc;"><i class="fas fa-gavel" style="color: #f59e0b;"></i> Resultado del Motor de Reglas</h4>
+                        
+                        <div class="sim-result-card">
+                            <div class="res-row">
+                                <span class="res-label">Multa Art. 15.3 (C Pico):</span>
+                                <span class="res-val" id="res_15_3">--</span>
+                            </div>
+                            <div class="res-row">
+                                <span class="res-label">Acumulación Art. 15.2 (B Pico):</span>
+                                <span class="res-val" id="res_15_2_block">--</span>
+                            </div>
+                            <div class="res-row">
+                                <span class="res-label">Multa Art. 15.5 (C Pos Pico):</span>
+                                <span class="res-val" id="res_15_5">--</span>
+                            </div>
+                            <div class="res-row">
+                                <span class="res-label">Acumulación Art. 15.4 (B Pos Pico):</span>
+                                <span class="res-val" id="res_15_4_block">--</span>
+                            </div>
+                            <div class="res-row">
+                                <span class="res-label">Multa Art. 15.6 (ICCBDM):</span>
+                                <span class="res-val" id="res_15_6">--</span>
+                            </div>
+                            <div class="res-row" style="margin-top: 10px; padding-top: 12px; border-top: 2px dashed #334155;">
+                                <span class="res-label" style="color: white; font-weight: 700;">Total Jornales del Día:</span>
+                                <span class="res-val" id="res_total_jornales" style="font-size: 16px; color: #60a5fa;">0 Jornales</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Code Changes and Technical Details -->
+        <section class="section-card">
+            <div class="section-header">
+                <div class="section-title">
+                    <i class="fas fa-code"></i>
+                    <span>4. Implementación Técnica en Código (Python & SQL)</span>
+                </div>
+                <span class="badge badge-blue">Backend Engine</span>
+            </div>
+
+            <h4 style="font-size: 15px; font-weight: 700; margin-bottom: 10px; color: var(--dark);">
+                A. Lógica Python en <code>backend/routes/fines_report.py</code> y <code>enviar_informe_infraccion.py</code>:
+            </h4>
+            <div class="code-container">
+                <div class="code-header">
+                    <span>Python: Bucle de Liquidación Diaria con Filtro Segregado</span>
+                    <i class="fas fa-file-code"></i>
+                </div>
+                <pre><code><span class="comm"># 1. Contabilizar fallas diarias de Nivel C e ICCBDM y detectar franjas Nivel B</span>
+fail_15_3, fail_15_5, fail_15_6 = <span class="kw">False</span>, <span class="kw">False</span>, <span class="kw">False</span>
+b_pico_dia = <span class="num">0</span>
+b_pospico_dia = <span class="num">0</span>
+
+<span class="kw">for</span> fid, f_res <span class="kw">in</span> franjas_dia.items():
+    cat = categorizar(franjas_metadata.get(fid, {}).get(<span class="str">'denominacion'</span>, <span class="str">''</span>))
+    <span class="kw">if</span> cat == <span class="str">"OTRO"</span> <span class="kw">or</span> f_res[<span class="str">'ifo'</span>] <span class="kw">is None</span>: <span class="kw">continue</span>
+    
+    ifo_val = <span class="func">float</span>(f_res[<span class="str">'ifo'</span>]) * <span class="num">100</span>
+    cbd_idx = <span class="func">float</span>(f_res[<span class="str">'cbd_indice'</span>]) <span class="kw">if</span> f_res[<span class="str">'cbd_indice'</span>] <span class="kw">is not None else</span> <span class="num">0.0</span>
+    
+    <span class="kw">if</span> cbd_idx < <span class="num">1.0</span>: fail_15_6 = <span class="kw">True</span>
+    
+    <span class="kw">if</span> cat == <span class="str">'PICO'</span>:
+        <span class="kw">if</span> ifo_val < <span class="num">80</span>: fail_15_3 = <span class="kw">True</span>
+        <span class="kw">elif</span> ifo_val < <span class="num">90</span>: b_pico_dia += <span class="num">1</span>
+    <span class="kw">elif</span> cat == <span class="str">'POS_PICO'</span>:
+        <span class="kw">if</span> ifo_val < <span class="num">80</span>: fail_15_5 = <span class="kw">True</span>
+        <span class="kw">elif</span> ifo_val < <span class="num">90</span>: b_pospico_dia += <span class="num">1</span>
+
+<span class="comm"># 2. Registrar Infracciones Diarias Directas de Nivel C e ICCBDM</span>
+<span class="kw">if</span> fail_15_6:
+    historial_faltas.append({<span class="str">'fecha'</span>: fecha_eval, <span class="str">'base'</span>: <span class="str">'Art. 15.6'</span>, <span class="str">'desc'</span>: <span class="str">'Incumplimiento ICCBDM (Buses Mínimos)'</span>, <span class="str">'jornales'</span>: <span class="num">20</span>})
+<span class="kw">if</span> fail_15_3:
+    historial_faltas.append({<span class="str">'fecha'</span>: fecha_eval, <span class="str">'base'</span>: <span class="str">'Art. 15.3'</span>, <span class="str">'desc'</span>: <span class="str">'Nivel C en Franja Pico'</span>, <span class="str">'jornales'</span>: <span class="num">20</span>})
+<span class="kw">if</span> fail_15_5:
+    historial_faltas.append({<span class="str">'fecha'</span>: fecha_eval, <span class="str">'base'</span>: <span class="str">'Art. 15.5'</span>, <span class="str">'desc'</span>: <span class="str">'Nivel C en Franja Pos Pico'</span>, <span class="str">'jornales'</span>: <span class="num">20</span>})
+
+<span class="comm"># 3. REGLA NON BIS IN IDEM: Excluir Nivel B si la franja ya fue multada por Nivel C hoy</span>
+<span class="kw">if not</span> fail_15_3 <span class="kw">and not</span> trigger_15_2:
+    acum_b[<span class="str">'PICO'</span>] += b_pico_dia
+
+<span class="kw">if not</span> fail_15_5 <span class="kw">and not</span> trigger_15_4:
+    acum_b[<span class="str">'POS_PICO'</span>] += b_pospico_dia
+
+<span class="comm"># 4. Gatillar Infracción Mensual de Nivel B (5 o más franjas acumuladas)</span>
+<span class="kw">if not</span> trigger_15_2 <span class="kw">and</span> acum_b[<span class="str">'PICO'</span>] >= <span class="num">5</span>:
+    trigger_15_2 = <span class="kw">True</span>
+    historial_faltas.append({<span class="str">'fecha'</span>: fecha_eval, <span class="str">'base'</span>: <span class="str">'Art. 15.2'</span>, <span class="str">'desc'</span>: <span class="str">'Acumulación 5 Franjas Pico Nivel B'</span>, <span class="str">'jornales'</span>: <span class="num">10</span>})
+
+<span class="kw">if not</span> trigger_15_4 <span class="kw">and</span> acum_b[<span class="str">'POS_PICO'</span>] >= <span class="num">5</span>:
+    trigger_15_4 = <span class="kw">True</span>
+    historial_faltas.append({<span class="str">'fecha'</span>: fecha_eval, <span class="str">'base'</span>: <span class="str">'Art. 15.4'</span>, <span class="str">'desc'</span>: <span class="str">'Acumulación 5 Franjas Pos Pico Nivel B'</span>, <span class="str">'jornales'</span>: <span class="num">10</span>})</code></pre>
+            </div>
+
+            <h4 style="font-size: 15px; font-weight: 700; margin: 24px 0 10px 0; color: var(--dark);">
+                B. Consulta SQL para Histórico de 6 Meses (Lookback de Reincidencias Art. 16.2 y 16.4):
+            </h4>
+            <div class="code-container">
+                <div class="code-header">
+                    <span>PostgreSQL: CTE con Exclusión de Jornadas Nivel C</span>
+                    <i class="fas fa-database"></i>
+                </div>
+                <pre><code><span class="kw">WITH</span> dias_con_c_pico <span class="kw">AS</span> (
+    <span class="kw">SELECT DISTINCT</span> h.id_eot_vmt_hex, h.fecha
+    <span class="kw">FROM</span> control_metricas.ifo_historico h
+    <span class="kw">JOIN</span> control_metricas.franjas_operativas f <span class="kw">ON</span> h.id_franja = f.id_franja
+    <span class="kw">WHERE</span> h.fecha <span class="kw">BETWEEN</span> %s <span class="kw">AND</span> %s
+      <span class="kw">AND</span> <span class="func">EXTRACT</span>(ISODOW <span class="kw">FROM</span> h.fecha) < <span class="num">7</span>
+      <span class="kw">AND</span> h.fecha <span class="kw">NOT IN</span> (<span class="kw">SELECT</span> fecha <span class="kw">FROM</span> public.feriados)
+      <span class="kw">AND</span> h.fecha <span class="kw">NOT IN</span> (<span class="kw">SELECT</span> fecha <span class="kw">FROM</span> control_metricas.dias_atipicos)
+      <span class="kw">AND</span> (<span class="func">UPPER</span>(f.denominacion) <span class="kw">LIKE</span> <span class="str">'%PICO%'</span> <span class="kw">AND</span> <span class="func">UPPER</span>(f.denominacion) <span class="kw">NOT LIKE</span> <span class="str">'%POS%'</span>)
+      <span class="kw">AND</span> h.ifo < <span class="num">0.80</span>
+),
+dias_con_c_pospico <span class="kw">AS</span> (
+    <span class="kw">SELECT DISTINCT</span> h.id_eot_vmt_hex, h.fecha
+    <span class="kw">FROM</span> control_metricas.ifo_historico h
+    <span class="kw">JOIN</span> control_metricas.franjas_operativas f <span class="kw">ON</span> h.id_franja = f.id_franja
+    <span class="kw">WHERE</span> h.fecha <span class="kw">BETWEEN</span> %s <span class="kw">AND</span> %s
+      <span class="kw">AND</span> <span class="func">EXTRACT</span>(ISODOW <span class="kw">FROM</span> h.fecha) <span class="kw">BETWEEN</span> <span class="num">1</span> <span class="kw">AND</span> <span class="num">5</span>
+      <span class="kw">AND</span> h.fecha <span class="kw">NOT IN</span> (<span class="kw">SELECT</span> fecha <span class="kw">FROM</span> public.feriados)
+      <span class="kw">AND</span> h.fecha <span class="kw">NOT IN</span> (<span class="kw">SELECT</span> fecha <span class="kw">FROM</span> control_metricas.dias_atipicos)
+      <span class="kw">AND</span> (<span class="func">UPPER</span>(f.denominacion) <span class="kw">LIKE</span> <span class="str">'%POS%PICO%'</span> <span class="kw">OR</span> <span class="func">UPPER</span>(f.denominacion) <span class="kw">LIKE</span> <span class="str">'%POSPICO%'</span>)
+      <span class="kw">AND</span> h.ifo < <span class="num">0.80</span>
+)
+<span class="kw">SELECT</span> h.id_eot_vmt_hex,
+       <span class="func">SUM</span>(<span class="kw">CASE WHEN</span> (<span class="func">UPPER</span>(f.denominacion) <span class="kw">LIKE</span> <span class="str">'%PICO%'</span> <span class="kw">AND</span> <span class="func">UPPER</span>(f.denominacion) <span class="kw">NOT LIKE</span> <span class="str">'%POS%'</span>) 
+                     <span class="kw">AND</span> (h.ifo >= <span class="num">0.80</span> <span class="kw">AND</span> h.ifo < <span class="num">0.90</span>) 
+                     <span class="kw">AND</span> cp.fecha <span class="kw">IS NULL THEN</span> <span class="num">1</span> <span class="kw">ELSE</span> <span class="num">0</span> <span class="kw">END</span>) <span class="kw">as</span> b_pico_count,
+       <span class="func">SUM</span>(<span class="kw">CASE WHEN</span> (<span class="func">EXTRACT</span>(ISODOW <span class="kw">FROM</span> h.fecha) <span class="kw">BETWEEN</span> <span class="num">1</span> <span class="kw">AND</span> <span class="num">5</span> <span class="kw">AND</span> (<span class="func">UPPER</span>(f.denominacion) <span class="kw">LIKE</span> <span class="str">'%POS%PICO%'</span> <span class="kw">OR</span> <span class="func">UPPER</span>(f.denominacion) <span class="kw">LIKE</span> <span class="str">'%POSPICO%'</span>)) 
+                     <span class="kw">AND</span> (h.ifo >= <span class="num">0.80</span> <span class="kw">AND</span> h.ifo < <span class="num">0.90</span>) 
+                     <span class="kw">AND</span> cpp.fecha <span class="kw">IS NULL THEN</span> <span class="num">1</span> <span class="kw">ELSE</span> <span class="num">0</span> <span class="kw">END</span>) <span class="kw">as</span> b_pospico_count
+<span class="kw">FROM</span> control_metricas.ifo_historico h
+<span class="kw">JOIN</span> control_metricas.franjas_operativas f <span class="kw">ON</span> h.id_franja = f.id_franja
+<span class="kw">LEFT JOIN</span> dias_con_c_pico cp <span class="kw">ON</span> h.id_eot_vmt_hex = cp.id_eot_vmt_hex <span class="kw">AND</span> h.fecha = cp.fecha
+<span class="kw">LEFT JOIN</span> dias_con_c_pospico cpp <span class="kw">ON</span> h.id_eot_vmt_hex = cpp.id_eot_vmt_hex <span class="kw">AND</span> h.fecha = cpp.fecha
+<span class="kw">WHERE</span> h.fecha <span class="kw">BETWEEN</span> %s <span class="kw">AND</span> %s
+<span class="kw">GROUP BY</span> h.id_eot_vmt_hex;</code></pre>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <p><strong>Viceministerio de Transporte (GVMT) — Coordinación de Innovación y Desarrollo (CID)</strong></p>
+        <p>Sistema Integral de Control y Monitoreo (SICOM) • Generado automáticamente</p>
+    </footer>
+
+    <!-- Interactive Simulator & Zoom Script -->
+    <script>
+        // Zoom & Pan Engine for Flowchart
+        let currentScale = 1.30; // Default larger scale for great readability
+        const minScale = 0.5;
+        const maxScale = 3.5;
+
+        // Init Mermaid with high quality settings
+        mermaid.initialize({ 
+            startOnLoad: true, 
+            theme: 'default',
+            flowchart: {
+                useMaxWidth: false,
+                htmlLabels: true,
+                curve: 'basis',
+                nodeSpacing: 45,
+                rankSpacing: 55
+            },
+            themeVariables: {
+                fontFamily: 'Plus Jakarta Sans, sans-serif',
+                fontSize: '15px'
+            }
+        });
+
+        function updateZoomUI() {
+            const content = document.getElementById('flowchartContent');
+            const badge = document.getElementById('zoomBadge');
+            if (content) {
+                content.style.transform = `scale(${currentScale})`;
+            }
+            if (badge) {
+                badge.innerText = `${Math.round(currentScale * 100)}%`;
+            }
+        }
+
+        function zoomFlowchart(delta) {
+            currentScale = Math.min(maxScale, Math.max(minScale, currentScale + delta));
+            updateZoomUI();
+        }
+
+        function resetZoom() {
+            currentScale = 1.0;
+            updateZoomUI();
+            const viewport = document.getElementById('flowchartViewport');
+            if (viewport) {
+                viewport.scrollLeft = (viewport.scrollWidth - viewport.clientWidth) / 2;
+                viewport.scrollTop = 0;
+            }
+        }
+
+        function toggleFullscreen() {
+            const box = document.getElementById('flowchartBox');
+            const btn = document.getElementById('btnFs');
+            if (!box) return;
+
+            box.classList.toggle('fullscreen');
+            const isFs = box.classList.contains('fullscreen');
+            if (btn) {
+                btn.innerHTML = isFs ? '<i class="fas fa-compress"></i> Salir' : '<i class="fas fa-expand"></i> Pantalla Completa';
+            }
+        }
+
+        // Drag to scroll / Pan support
+        const viewport = document.getElementById('flowchartViewport');
+        let isDown = false;
+        let startX, startY, scrollLeft, scrollTop;
+
+        if (viewport) {
+            viewport.addEventListener('mousedown', (e) => {
+                isDown = true;
+                startX = e.pageX - viewport.offsetLeft;
+                startY = e.pageY - viewport.offsetTop;
+                scrollLeft = viewport.scrollLeft;
+                scrollTop = viewport.scrollTop;
+            });
+
+            viewport.addEventListener('mouseleave', () => {
+                isDown = false;
+            });
+
+            viewport.addEventListener('mouseup', () => {
+                isDown = false;
+            });
+
+            viewport.addEventListener('mousemove', (e) => {
+                if (!isDown) return;
+                e.preventDefault();
+                const x = e.pageX - viewport.offsetLeft;
+                const y = e.pageY - viewport.offsetTop;
+                const walkX = (x - startX) * 1.5;
+                const walkY = (y - startY) * 1.5;
+                viewport.scrollLeft = scrollLeft - walkX;
+                viewport.scrollTop = scrollTop - walkY;
+            });
+
+            // Wheel zoom with Ctrl or trackpad pinch
+            viewport.addEventListener('wheel', (e) => {
+                if (e.ctrlKey) {
+                    e.preventDefault();
+                    if (e.deltaY < 0) {
+                        zoomFlowchart(0.1);
+                    } else {
+                        zoomFlowchart(-0.1);
+                    }
+                }
+            }, { passive: false });
+        }
+
+        // Simulator Logic
+        function calcularSimulador() {
+            const picoM = parseFloat(document.getElementById('sim_pico_m').value);
+            const picoT = parseFloat(document.getElementById('sim_pico_t').value);
+            const posM = parseFloat(document.getElementById('sim_pos_m').value);
+            const cbdVal = parseFloat(document.getElementById('sim_cbd').value);
+
+            let hasNivelCPico = (picoM < 80 || picoT < 80);
+            let bPicoCount = (picoM >= 80 && picoM < 90 ? 1 : 0) + (picoT >= 80 && picoT < 90 ? 1 : 0);
+
+            let hasNivelCPos = (posM < 80);
+            let bPosCount = (posM >= 80 && posM < 90 ? 1 : 0);
+
+            let hasCbdFail = (cbdVal < 1.0);
+
+            let totalJornales = 0;
+
+            // 15.3 (C Pico)
+            const el153 = document.getElementById('res_15_3');
+            if (hasNivelCPico) {
+                el153.innerText = "🚨 APLICA (20 Jornales)";
+                el153.className = "res-val active";
+                totalJornales += 20;
+            } else {
+                el153.innerText = "No Aplica (0)";
+                el153.className = "res-val ok";
+            }
+
+            // 15.2 Acumulación
+            const el152 = document.getElementById('res_15_2_block');
+            if (hasNivelCPico) {
+                el152.innerText = `⛔ BLOQUEADO (${bPicoCount} franjas omitidas)`;
+                el152.className = "res-val blocked";
+            } else if (bPicoCount > 0) {
+                el152.innerText = `➕ SUMA +${bPicoCount} franja(s) al mes`;
+                el152.className = "res-val ok";
+            } else {
+                el152.innerText = "0 franjas Nivel B hoy";
+                el152.className = "res-val";
+            }
+
+            // 15.5 (C Pos Pico)
+            const el155 = document.getElementById('res_15_5');
+            if (hasNivelCPos) {
+                el155.innerText = "🚨 APLICA (20 Jornales)";
+                el155.className = "res-val active";
+                totalJornales += 20;
+            } else {
+                el155.innerText = "No Aplica (0)";
+                el155.className = "res-val ok";
+            }
+
+            // 15.4 Acumulación
+            const el154 = document.getElementById('res_15_4_block');
+            if (hasNivelCPos) {
+                el154.innerText = `⛔ BLOQUEADO (${bPosCount} franjas omitidas)`;
+                el154.className = "res-val blocked";
+            } else if (bPosCount > 0) {
+                el154.innerText = `➕ SUMA +${bPosCount} franja(s) al mes`;
+                el154.className = "res-val ok";
+            } else {
+                el154.innerText = "0 franjas Nivel B hoy";
+                el154.className = "res-val";
+            }
+
+            // 15.6 (ICCBDM)
+            const el156 = document.getElementById('res_15_6');
+            if (hasCbdFail) {
+                el156.innerText = "🚨 APLICA (20 Jornales)";
+                el156.className = "res-val active";
+                totalJornales += 20;
+            } else {
+                el156.innerText = "Cumple (0)";
+                el156.className = "res-val ok";
+            }
+
+            // Total Jornales
+            document.getElementById('res_total_jornales').innerText = `${totalJornales} Jornales`;
+        }
+
+        // Ejecutar inicial y configurar escala
+        window.addEventListener('load', () => {
+            calcularSimulador();
+            updateZoomUI();
+        });
+    </script>
+</body>
+</html>

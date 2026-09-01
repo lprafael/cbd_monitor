@@ -307,19 +307,48 @@ async def generate_fines_report(
                     if month_idx < 2:
                         infracciones_previas_trimestre[row['id_eot_vmt_hex']] += 1
 
-            # Conteo de franjas Nivel B (Pico y Pos Pico) en el mes check
+            # Conteo de franjas Nivel B (Pico y Pos Pico) en el mes check excluyendo días con Nivel C en sus respectivas franjas
             cursor.execute("""
+                WITH dias_con_c_pico AS (
+                    SELECT DISTINCT h.id_eot_vmt_hex, h.fecha
+                    FROM control_metricas.ifo_historico h
+                    JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
+                    WHERE h.fecha BETWEEN %s AND %s
+                      AND EXTRACT(ISODOW FROM h.fecha) < 7
+                      AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
+                      AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
+                      AND (UPPER(f.denominacion) LIKE '%%PICO%%' AND UPPER(f.denominacion) NOT LIKE '%%POS%%' AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%' AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%')
+                      AND h.ifo < 0.80
+                ),
+                dias_con_c_pospico AS (
+                    SELECT DISTINCT h.id_eot_vmt_hex, h.fecha
+                    FROM control_metricas.ifo_historico h
+                    JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
+                    WHERE h.fecha BETWEEN %s AND %s
+                      AND EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5
+                      AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
+                      AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
+                      AND (UPPER(f.denominacion) LIKE '%%POS%%PICO%%' OR UPPER(f.denominacion) LIKE '%%POSPICO%%')
+                      AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%' AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%'
+                      AND h.ifo < 0.80
+                )
                 SELECT h.id_eot_vmt_hex,
-                       SUM(CASE WHEN (UPPER(f.denominacion) LIKE '%%PICO%%' AND UPPER(f.denominacion) NOT LIKE '%%POS%%' AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%' AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%') AND (h.ifo >= 0.80 AND h.ifo < 0.90) THEN 1 ELSE 0 END) as b_pico_count,
-                       SUM(CASE WHEN (EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5 AND (UPPER(f.denominacion) LIKE '%%POS%%PICO%%' OR UPPER(f.denominacion) LIKE '%%POSPICO%%') AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%' AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%') AND (h.ifo >= 0.80 AND h.ifo < 0.90) THEN 1 ELSE 0 END) as b_pospico_count
+                       SUM(CASE WHEN (UPPER(f.denominacion) LIKE '%%PICO%%' AND UPPER(f.denominacion) NOT LIKE '%%POS%%' AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%' AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%') 
+                                     AND (h.ifo >= 0.80 AND h.ifo < 0.90) 
+                                     AND cp.fecha IS NULL THEN 1 ELSE 0 END) as b_pico_count,
+                       SUM(CASE WHEN (EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5 AND (UPPER(f.denominacion) LIKE '%%POS%%PICO%%' OR UPPER(f.denominacion) LIKE '%%POSPICO%%') AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%' AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%') 
+                                     AND (h.ifo >= 0.80 AND h.ifo < 0.90) 
+                                     AND cpp.fecha IS NULL THEN 1 ELSE 0 END) as b_pospico_count
                 FROM control_metricas.ifo_historico h
                 JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
+                LEFT JOIN dias_con_c_pico cp ON h.id_eot_vmt_hex = cp.id_eot_vmt_hex AND h.fecha = cp.fecha
+                LEFT JOIN dias_con_c_pospico cpp ON h.id_eot_vmt_hex = cpp.id_eot_vmt_hex AND h.fecha = cpp.fecha
                 WHERE h.fecha BETWEEN %s AND %s
                   AND EXTRACT(ISODOW FROM h.fecha) < 7
                   AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
                   AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
                 GROUP BY h.id_eot_vmt_hex
-            """, (m_start, m_end))
+            """, (m_start, m_end, m_start, m_end, m_start, m_end))
             for row in cursor.fetchall():
                 if (row['b_pico_count'] or 0) >= 5:
                     if evaluar_reincidencia:
@@ -402,6 +431,8 @@ async def generate_fines_report(
                 franjas_dia = dias_data[fecha_eval]
                 
                 fail_15_3, fail_15_5, fail_15_6 = False, False, False
+                b_pico_dia = 0
+                b_pospico_dia = 0
                 
                 for fid, f_res in franjas_dia.items():
                     meta = franjas_metadata.get(fid, {})
@@ -420,13 +451,11 @@ async def generate_fines_report(
                     if cat == 'PICO':
                         if ifo_val < 80: fail_15_3 = True
                         elif ifo_val < 90:
-                            if not trigger_15_2:
-                                acum_b['PICO'] += 1
+                            b_pico_dia += 1
                     elif cat == 'POS_PICO':
                         if ifo_val < 80: fail_15_5 = True
                         elif ifo_val < 90:
-                            if not trigger_15_4:
-                                acum_b['POS_PICO'] += 1
+                            b_pospico_dia += 1
                                 
                 # EVALUACIÓN DE REGLAS (Bajo Res. 21/2026 Nivel C e ICCBDM no tienen agravante pecuniario de reincidencia)
                 # 1. ICCBDM (15.6) - Multa base ordinaria diaria
@@ -443,6 +472,17 @@ async def generate_fines_report(
                 if fail_15_5:
                     if fecha_eval >= start_date:
                         historial_faltas.append({'fecha': fecha_eval, 'base': 'Art. 15.5', 'desc': 'Nivel C en Franja Pos Pico', 'jornales': 20})
+
+                # REGLA DE EXCLUSIÓN NON BIS IN IDEM:
+                # - Si el día tuvo Nivel C en Pico (fail_15_3), se excluyen las franjas Nivel B de Pico de ese día.
+                # - Si el día NO tuvo Nivel C en Pico, se acumulan las franjas Nivel B de Pico.
+                if not fail_15_3 and not trigger_15_2:
+                    acum_b['PICO'] += b_pico_dia
+
+                # - Si el día tuvo Nivel C en Pos Pico (fail_15_5), se excluyen las franjas Nivel B de Pos Pico de ese día.
+                # - Si el día NO tuvo Nivel C en Pos Pico, se acumulan las franjas Nivel B de Pos Pico.
+                if not fail_15_5 and not trigger_15_4:
+                    acum_b['POS_PICO'] += b_pospico_dia
 
                 # 4. ACUMULACIÓN NIVEL B (15.2 / 16.2 y 15.4 / 16.4 - Reincidencia lookback 6 meses)
                 if not trigger_15_2 and acum_b['PICO'] >= 5:

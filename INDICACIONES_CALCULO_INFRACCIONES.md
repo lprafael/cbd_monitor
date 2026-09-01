@@ -46,11 +46,20 @@ Este documento detalla la lógica interna aplicada por el sistema para la detecc
 
 ---
 
-### 4. Flujo de Procesamiento del Sistema
-1.  **Filtro Inicial:** El sistema descarta automáticamente cualquier dato correspondiente a Domingos, Feriados o franjas fuera del espectro Pico/Pos Pico (Madrugada/Nocturna).
-2.  **Identificación:** El sistema clasifica las franjas restantes como Nivel A, B o C según el IFO calculado.
-3.  **Contabilización:**
-    *   Para Niveles C y CBD: Se evalúa el día actual.
-    *   Para Niveles B: Se verifica si se alcanzó el umbral de 5 franjas acumuladas en el mes.
-4.  **Evaluación de Reincidencia:** Se busca retrospectivamente en el historial si ya existía una infracción en la ventana de tiempo definida.
-5.  **Cálculo:** `Cantidad de Jornales * 111,502`.
+### 4. Regla de Exclusión Diaria por Non Bis In Idem (Ley N° 6715/2021)
+Para garantizar el principio de proporcionalidad y evitar la doble sanción sobre una misma jornada operativa:
+*   **Franjas Pico:** Si en un día se aplica sanción directa de Nivel C (**Art. 15.3**), las franjas Pico de esa jornada **no se contabilizan** en el acumulador mensual de Nivel B (**Art. 15.2**). Sin embargo, las franjas Pos Pico en Nivel B de ese día sí se acumulan para el **Art. 15.4** (salvo que también haya Nivel C en Pos Pico).
+*   **Franjas Pos Pico:** Si en un día se aplica sanción directa de Nivel C (**Art. 15.5**), las franjas Pos Pico de esa jornada **no se contabilizan** en el acumulador mensual de Nivel B (**Art. 15.4**). Las franjas Pico en Nivel B siguen acumulando para el **Art. 15.2**.
+*   **ICCBDM (Art. 15.6):** Es independiente y evalúa flota mínima de buses; no interfiere ni es bloqueado por las exclusiones de IFO.
+
+---
+
+### 5. Flujo de Procesamiento del Sistema
+1.  **Filtro Inicial:** El sistema descarta automáticamente cualquier dato correspondiente a Domingos, Feriados, días atípicos o franjas fuera del espectro regulado (Madrugada/Nocturna).
+2.  **Identificación Diaria:** El sistema clasifica las franjas restantes como Nivel A, B o C según el IFO calculado y verifica el ICCBDM.
+3.  **Liquidación y Exclusión Diaria:**
+    *   Se liquidan las faltas diarias directas (Arts. 15.3, 15.5 y 15.6).
+    *   Se aplica el filtro excluyente de días sancionados con Nivel C antes de acumular franjas de Nivel B.
+4.  **Acumulación Mensual:** Se verifica si el acumulador de franjas limpias de Nivel B alcanza el umbral de 5 franjas para gatillar el Art. 15.2 o 15.4.
+5.  **Evaluación de Reincidencias:** Se evalúa el historial en la ventana de 6 meses para aplicar los agravantes de los Arts. 16.1, 16.2 o 16.4.
+6.  **Cálculo:** `Cantidad de Jornales * Valor Jornal Vigente`.

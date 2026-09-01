@@ -24,8 +24,8 @@ Para todos los cálculos se utiliza el jornal mínimo legal vigente de **Gs. 111
    * **Pico (Sábados):** De 06:00 a 15:59.  
    * **Pos Pico (Lunes a Viernes):** Entre Picos (08:00 a 15:59) y Tarde (19:00 a 20:59).  
 2. **Exclusiones:** El sistema descarta automáticamente para el cálculo de infracciones las franjas de **Madrugada**, **Nocturna**, y la operación total de **Domingos y Feriados**.  
-3. **Procesamiento de Niveles B (15.2 y 15.4):** La Dirección Metropolitana de Transporte (DMT) lleva un conteo conjunto de los incumplimientos diarios. Al alcanzar la quinta franja en Nivel B dentro del mismo mes, se emite el acta de infracción.  
+3. **Procesamiento de Niveles B (15.2 y 15.4) y Regla Non Bis In Idem:** La Dirección Metropolitana de Transporte (DMT) lleva un conteo mensual de las franjas en Nivel B. Al alcanzar la quinta franja en Nivel B dentro del mismo mes, se emite el acta de infracción. **Importante:** Si en una jornada diaria se aplica sanción directa de Nivel C (Art. 15.3 o 15.5), las franjas de esa jornada quedan excluidas del cómputo de Nivel B de su respectiva categoría (Pico o Pos Pico) para evitar la doble sanción.  
 4. **Procesamiento de Niveles C y CBD (15.3, 15.5 y 15.6):** Se generan actas de comprobación por cada día calendario donde se detecte la falta.  
-5. **Cálculo del ICCBDM (15.6):** Este índice combina el cumplimiento por hora (70% de peso) y el cumplimiento de la franja completa (30% de peso). Si el resultado final es **menor al 100%**, se aplica la multa de 20 jornales.  
+5. **Cálculo del ICCBDM (15.6):** Este índice evalúa la presencia de flota mínima. Si el resultado final es **menor al 100%**, se aplica la multa de 20 jornales (de forma autónoma e independiente de IFO).  
 6. **Vigencia Gradual:** Cabe recordar que las franjas **Pico** son sancionables desde abril de 2026 (Etapa 2), mientras que las demás franjas operativas se suman al régimen sancionador a partir del 1 de julio de 2026 (Etapa 3).
 

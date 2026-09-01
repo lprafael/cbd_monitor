@@ -480,6 +480,8 @@ def analizar_infracciones_res_120(eot_nombre, datos_mensuales, fecha_referencia)
         franjas_metadata = dia_info['metadata']
         
         fail_15_3 = False; fail_15_5 = False; fail_15_6 = False
+        b_pico_dia = 0
+        b_pospico_dia = 0
 
         for fid, f_res in franjas_dia.items():
             cat = categorizar(franjas_metadata.get(fid, {}).get('denominacion', ''))
@@ -497,12 +499,10 @@ def analizar_infracciones_res_120(eot_nombre, datos_mensuales, fecha_referencia)
             
             if cat == 'PICO':
                 if ifo < 80: fail_15_3 = True
-                elif ifo < 90: 
-                    if not trigger_15_2: acum_b['PICO'] += 1
+                elif ifo < 90: b_pico_dia += 1
             elif cat == 'POS_PICO':
                 if ifo < 80: fail_15_5 = True
-                elif ifo < 90:
-                    if not trigger_15_4: acum_b['POS_PICO'] += 1
+                elif ifo < 90: b_pospico_dia += 1
 
         # EVALUACIÓN DE REGLAS (Bajo Res. 21/2026 Nivel C e ICCBDM no tienen agravante pecuniario de reincidencia)
         # 1. ICCBDM (15.6) - Multa ordinaria diaria
@@ -516,6 +516,17 @@ def analizar_infracciones_res_120(eot_nombre, datos_mensuales, fecha_referencia)
         # 3. NIVEL C POS PICO (15.5) - Multa ordinaria diaria
         if fail_15_5:
             historial_faltas.append({'fecha': fecha, 'base': 'Art. 15.5', 'desc': 'Nivel C en Franja Pos Pico', 'jornales': 20})
+
+        # REGLA DE EXCLUSIÓN NON BIS IN IDEM:
+        # - Si el día tuvo Nivel C en Pico (fail_15_3), se excluyen las franjas Nivel B de Pico de ese día.
+        # - Si el día NO tuvo Nivel C en Pico, se acumulan las franjas Nivel B de Pico.
+        if not fail_15_3 and not trigger_15_2:
+            acum_b['PICO'] += b_pico_dia
+
+        # - Si el día tuvo Nivel C en Pos Pico (fail_15_5), se excluyen las franjas Nivel B de Pos Pico de ese día.
+        # - Si el día NO tuvo Nivel C en Pos Pico, se acumulan las franjas Nivel B de Pos Pico.
+        if not fail_15_5 and not trigger_15_4:
+            acum_b['POS_PICO'] += b_pospico_dia
 
         # 4. ACUMULACIÓN NIVEL B (15.2 y 15.4)
         if not trigger_15_2 and acum_b['PICO'] >= 5:
