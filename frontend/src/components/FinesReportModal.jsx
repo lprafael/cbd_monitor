@@ -9,6 +9,7 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [evaluarReincidencia, setEvaluarReincidencia] = useState(true);
+  const [excluirNivelB, setExcluirNivelB] = useState(false);
   const [actaModalOpen, setActaModalOpen] = useState(false);
   const [selectedEmpresa, setSelectedEmpresa] = useState(null);
   const [numeroActa, setNumeroActa] = useState("");
@@ -32,11 +33,11 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
 
   useEffect(() => {
     if (isOpen && fecha) {
-      fetchFinesData(evaluarReincidencia);
+      fetchFinesData(evaluarReincidencia, excluirNivelB);
     }
-  }, [isOpen, fecha, evaluarReincidencia]);
+  }, [isOpen, fecha, evaluarReincidencia, excluirNivelB]);
 
-  const fetchFinesData = async (withReincidencia = true) => {
+  const fetchFinesData = async (withReincidencia = true, withExcluirNivelB = false) => {
     setLoading(true);
     setError(null);
     try {
@@ -49,7 +50,8 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
         body: JSON.stringify({
           month: parseInt(month, 10),
           year: parseInt(year, 10),
-          evaluar_reincidencia: withReincidencia
+          evaluar_reincidencia: withReincidencia,
+          excluir_nivel_b: withExcluirNivelB
         })
       });
       
@@ -101,7 +103,7 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
             <h2>📜 Reporte de Multas (Res. 21/2026)</h2>
             <span className="current-date">Mes de Referencia: {fecha}</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
             <label className="reincidencia-label-all" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer', fontWeight: 'bold', color: '#1e3a8a', background: '#dbeafe', padding: '6px 12px', borderRadius: '6px', border: '1px solid #bfdbfe' }}>
               <input 
                 type="checkbox" 
@@ -109,6 +111,14 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
                 onChange={(e) => setEvaluarReincidencia(e.target.checked)}
               />
               Calcular con reincidencia (si corresponde)
+            </label>
+            <label className="excluir-nivel-b-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer', fontWeight: 'bold', color: '#854d0e', background: '#fef9c3', padding: '6px 12px', borderRadius: '6px', border: '1px solid #fde047' }}>
+              <input 
+                type="checkbox" 
+                checked={excluirNivelB}
+                onChange={(e) => setExcluirNivelB(e.target.checked)}
+              />
+              Excluir Nivel B(12.2 y 15.4)
             </label>
             <button className="print-btn" onClick={handlePrint} title="Imprimir PDF y Descargar Notificaciones (Word)">🖨️ Generar PDF y Notificaciones</button>
             <button className="close-btn" onClick={onClose} title="Cerrar">✖</button>

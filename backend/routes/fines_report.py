@@ -12,6 +12,7 @@ class FinesReportRequest(BaseModel):
     month: int
     year: int
     evaluar_reincidencia: bool = True
+    excluir_nivel_b: bool = False
 
 def obtener_valor_jornal(fecha_eval: date) -> int:
     """
@@ -44,6 +45,7 @@ async def generate_fines_report(
         month = request.month
         year = request.year
         evaluar_reincidencia = request.evaluar_reincidencia
+        excluir_nivel_b = request.excluir_nivel_b
         
         start_date, end_date = get_month_range(year, month)
         
@@ -353,12 +355,12 @@ async def generate_fines_report(
                 if (row['b_pico_count'] or 0) >= 5:
                     if evaluar_reincidencia:
                         eots_con_incumplimiento_15_2_previo.add(row['id_eot_vmt_hex'])
-                    if month_idx < 2:
+                    if month_idx < 2 and not excluir_nivel_b:
                         infracciones_previas_trimestre[row['id_eot_vmt_hex']] += 1
                 if (row['b_pospico_count'] or 0) >= 5:
                     if evaluar_reincidencia:
                         eots_con_incumplimiento_15_4_previo.add(row['id_eot_vmt_hex'])
-                    if month_idx < 2:
+                    if month_idx < 2 and not excluir_nivel_b:
                         infracciones_previas_trimestre[row['id_eot_vmt_hex']] += 1
 
             if month_idx < 2:
@@ -485,41 +487,42 @@ async def generate_fines_report(
                     acum_b['POS_PICO'] += b_pospico_dia
 
                 # 4. ACUMULACIÓN NIVEL B (15.2 / 16.2 y 15.4 / 16.4 - Reincidencia lookback 6 meses)
-                if not trigger_15_2 and acum_b['PICO'] >= 5:
-                    trigger_15_2 = True
-                    if fecha_eval >= start_date:
-                        if eot_hex in eots_con_incumplimiento_15_2_previo:
-                            historial_faltas.append({
-                                'fecha': fecha_eval, 
-                                'base': 'Art. 16.2', 
-                                'desc': 'Reincidencia Nivel B Pico en últimos 6 meses (5 franjas acumuladas)', 
-                                'jornales': 20
-                            })
-                        else:
-                            historial_faltas.append({
-                                'fecha': fecha_eval, 
-                                'base': 'Art. 15.2', 
-                                'desc': 'Acumulación 5 Franjas Pico Nivel B', 
-                                'jornales': 10
-                            })
+                if not excluir_nivel_b:
+                    if not trigger_15_2 and acum_b['PICO'] >= 5:
+                        trigger_15_2 = True
+                        if fecha_eval >= start_date:
+                            if eot_hex in eots_con_incumplimiento_15_2_previo:
+                                historial_faltas.append({
+                                    'fecha': fecha_eval, 
+                                    'base': 'Art. 16.2', 
+                                    'desc': 'Reincidencia Nivel B Pico en últimos 6 meses (5 franjas acumuladas)', 
+                                    'jornales': 20
+                                })
+                            else:
+                                historial_faltas.append({
+                                    'fecha': fecha_eval, 
+                                    'base': 'Art. 15.2', 
+                                    'desc': 'Acumulación 5 Franjas Pico Nivel B', 
+                                    'jornales': 10
+                                })
 
-                if not trigger_15_4 and acum_b['POS_PICO'] >= 5:
-                    trigger_15_4 = True
-                    if fecha_eval >= start_date:
-                        if eot_hex in eots_con_incumplimiento_15_4_previo:
-                            historial_faltas.append({
-                                'fecha': fecha_eval, 
-                                'base': 'Art. 16.4', 
-                                'desc': 'Reincidencia Nivel B Pos Pico en últimos 6 meses (5 franjas acumuladas)', 
-                                'jornales': 20
-                            })
-                        else:
-                            historial_faltas.append({
-                                'fecha': fecha_eval, 
-                                'base': 'Art. 15.4', 
-                                'desc': 'Acumulación 5 Franjas Pos Pico Nivel B', 
-                                'jornales': 10
-                            })
+                    if not trigger_15_4 and acum_b['POS_PICO'] >= 5:
+                        trigger_15_4 = True
+                        if fecha_eval >= start_date:
+                            if eot_hex in eots_con_incumplimiento_15_4_previo:
+                                historial_faltas.append({
+                                    'fecha': fecha_eval, 
+                                    'base': 'Art. 16.4', 
+                                    'desc': 'Reincidencia Nivel B Pos Pico en últimos 6 meses (5 franjas acumuladas)', 
+                                    'jornales': 20
+                                })
+                            else:
+                                historial_faltas.append({
+                                    'fecha': fecha_eval, 
+                                    'base': 'Art. 15.4', 
+                                    'desc': 'Acumulación 5 Franjas Pos Pico Nivel B', 
+                                    'jornales': 10
+                                })
                             
             if historial_faltas:
                 # Calcular totales
