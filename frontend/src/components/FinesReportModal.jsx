@@ -54,11 +54,11 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
           excluir_nivel_b: withExcluirNivelB
         })
       });
-      
+
       if (!resp.ok) {
         throw new Error('Error al obtener el reporte de multas');
       }
-      
+
       const json = await resp.json();
       setData(json);
     } catch (err) {
@@ -81,7 +81,7 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
   let processedReporte = [];
   if (data && data.reporte) {
     processedReporte = data.reporte.filter(empresa => !empresa.eot_nombre.toUpperCase().includes('ARAPOTI'));
-    
+
     processedReporte.forEach(empresa => {
       if (empresa.total_jornales) grandTotalJornales += empresa.total_jornales;
       if (empresa.total_guaranies) grandTotalMonto += empresa.total_guaranies;
@@ -105,20 +105,20 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
             <label className="reincidencia-label-all" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer', fontWeight: 'bold', color: '#1e3a8a', background: '#dbeafe', padding: '6px 12px', borderRadius: '6px', border: '1px solid #bfdbfe' }}>
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 checked={evaluarReincidencia}
                 onChange={(e) => setEvaluarReincidencia(e.target.checked)}
               />
               Calcular con reincidencia (si corresponde)
             </label>
             <label className="excluir-nivel-b-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer', fontWeight: 'bold', color: '#854d0e', background: '#fef9c3', padding: '6px 12px', borderRadius: '6px', border: '1px solid #fde047' }}>
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 checked={excluirNivelB}
                 onChange={(e) => setExcluirNivelB(e.target.checked)}
               />
-              Excluir Nivel B(12.2 y 15.4)
+              Excluir Nivel B(15.2 y 15.4)
             </label>
             <button className="print-btn" onClick={handlePrint} title="Imprimir PDF y Descargar Notificaciones (Word)">🖨️ Generar PDF y Notificaciones</button>
             <button className="close-btn" onClick={onClose} title="Cerrar">✖</button>
@@ -142,101 +142,101 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
               <tr>
                 <td>
                   {loading ? (
-            <div className="loader-container">
-              <div className="spinner" style={{ borderTopColor: '#ef4444', borderLeftColor: '#ef4444' }}></div>
-              <p>Generando reporte, por favor espere...</p>
-            </div>
-          ) : error ? (
-            <div className="error-container">
-              <p>⚠️ {error}</p>
-            </div>
-          ) : data && data.reporte ? (
-            processedReporte.length === 0 ? (
-              <p className="no-data">No se encontraron datos para este mes.</p>
-            ) : (
-              <>
-                {processedReporte.map((empresa, idx) => {
-                  const tieneReincidencia = empresa.infracciones.some(inf => inf.base.startsWith('Art. 16'));
-                  return (
-                  <div key={idx} className="eot-fines-card">
-                    <div className="eot-fines-header">
-                      <h3>{empresa.eot_nombre}</h3>
-                      <div className="eot-header-actions">
-                        {empresa.infracciones.length > 0 && (
-                          <div className="fines-totals">
-                            <span className="total-jornales">Total Jornales: {empresa.total_jornales}</span>
-                            <span className="total-guaranies">Total Gs: {formatCurrency(empresa.total_guaranies)}</span>
+                    <div className="loader-container">
+                      <div className="spinner" style={{ borderTopColor: '#ef4444', borderLeftColor: '#ef4444' }}></div>
+                      <p>Generando reporte, por favor espere...</p>
+                    </div>
+                  ) : error ? (
+                    <div className="error-container">
+                      <p>⚠️ {error}</p>
+                    </div>
+                  ) : data && data.reporte ? (
+                    processedReporte.length === 0 ? (
+                      <p className="no-data">No se encontraron datos para este mes.</p>
+                    ) : (
+                      <>
+                        {processedReporte.map((empresa, idx) => {
+                          const tieneReincidencia = empresa.infracciones.some(inf => inf.base.startsWith('Art. 16'));
+                          return (
+                            <div key={idx} className="eot-fines-card">
+                              <div className="eot-fines-header">
+                                <h3>{empresa.eot_nombre}</h3>
+                                <div className="eot-header-actions">
+                                  {empresa.infracciones.length > 0 && (
+                                    <div className="fines-totals">
+                                      <span className="total-jornales">Total Jornales: {empresa.total_jornales}</span>
+                                      <span className="total-guaranies">Total Gs: {formatCurrency(empresa.total_guaranies)}</span>
+                                    </div>
+                                  )}
+                                  {tieneReincidencia ? (
+                                    <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#b91c1c', backgroundColor: '#fee2e2', padding: '3px 8px', borderRadius: '4px', border: '1px solid #fca5a5' }}>
+                                      ⚠️ Con Reincidencia
+                                    </span>
+                                  ) : (
+                                    <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#15803d', backgroundColor: '#dcfce7', padding: '3px 8px', borderRadius: '4px', border: '1px solid #86efac' }}>
+                                      ✓ Tarifa Base
+                                    </span>
+                                  )}
+                                  <button
+                                    className="generate-acta-btn"
+                                    onClick={() => handleOpenActaModal(empresa)}
+                                    title="Generar Acta de Infracción"
+                                  >
+                                    📄 Generar Acta
+                                  </button>
+                                </div>
+                              </div>
+
+                              {empresa.alerta_sumario && empresa.motivos_sumario && (
+                                <div className="eot-alertas" style={{ padding: '8px 12px', backgroundColor: '#fee2e2', color: '#b91c1c', borderLeft: '4px solid #ef4444', marginTop: '10px', marginBottom: '10px', fontSize: '13px', fontWeight: 'bold', borderRadius: '4px' }}>
+                                  {empresa.motivos_sumario.map((motivo, mi) => (
+                                    <div key={mi}>⚠️ {motivo}</div>
+                                  ))}
+                                </div>
+                              )}
+
+                              {empresa.infracciones.length === 0 ? (
+                                <div className="no-fines">✅ Sin Infracciones detectadas este mes.</div>
+                              ) : (
+                                <table className="fines-table">
+                                  <thead>
+                                    <tr>
+                                      <th>Fecha</th>
+                                      <th>Infracción</th>
+                                      <th>Descripción</th>
+                                      <th className="td-right">Jornales</th>
+                                      <th className="td-right">Monto (Gs)</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {empresa.infracciones.map((inf, i) => (
+                                      <tr key={i}>
+                                        <td>{inf.fecha}</td>
+                                        <td>{inf.base}</td>
+                                        <td>{inf.desc}</td>
+                                        <td className="td-right">{inf.jornales}</td>
+                                        <td className="td-right">{formatCurrency(inf.monto)}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              )}
+                            </div>
+                          );
+                        })}
+
+                        {grandTotalJornales > 0 && (
+                          <div className="grand-totals">
+                            <h3>Total General Consolidado</h3>
+                            <div className="grand-totals-values">
+                              <span className="total-jornales">Jornales: {grandTotalJornales}</span>
+                              <span className="total-guaranies">Gs: {formatCurrency(grandTotalMonto)}</span>
+                            </div>
                           </div>
                         )}
-                        {tieneReincidencia ? (
-                          <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#b91c1c', backgroundColor: '#fee2e2', padding: '3px 8px', borderRadius: '4px', border: '1px solid #fca5a5' }}>
-                            ⚠️ Con Reincidencia
-                          </span>
-                        ) : (
-                          <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#15803d', backgroundColor: '#dcfce7', padding: '3px 8px', borderRadius: '4px', border: '1px solid #86efac' }}>
-                            ✓ Tarifa Base
-                          </span>
-                        )}
-                        <button 
-                          className="generate-acta-btn" 
-                          onClick={() => handleOpenActaModal(empresa)}
-                          title="Generar Acta de Infracción"
-                        >
-                          📄 Generar Acta
-                        </button>
-                      </div>
-                    </div>
-
-                    {empresa.alerta_sumario && empresa.motivos_sumario && (
-                      <div className="eot-alertas" style={{ padding: '8px 12px', backgroundColor: '#fee2e2', color: '#b91c1c', borderLeft: '4px solid #ef4444', marginTop: '10px', marginBottom: '10px', fontSize: '13px', fontWeight: 'bold', borderRadius: '4px' }}>
-                        {empresa.motivos_sumario.map((motivo, mi) => (
-                          <div key={mi}>⚠️ {motivo}</div>
-                        ))}
-                      </div>
-                    )}
-                    
-                    {empresa.infracciones.length === 0 ? (
-                      <div className="no-fines">✅ Sin Infracciones detectadas este mes.</div>
-                    ) : (
-                      <table className="fines-table">
-                        <thead>
-                          <tr>
-                            <th>Fecha</th>
-                            <th>Infracción</th>
-                            <th>Descripción</th>
-                            <th className="td-right">Jornales</th>
-                            <th className="td-right">Monto (Gs)</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {empresa.infracciones.map((inf, i) => (
-                            <tr key={i}>
-                              <td>{inf.fecha}</td>
-                              <td>{inf.base}</td>
-                              <td>{inf.desc}</td>
-                              <td className="td-right">{inf.jornales}</td>
-                              <td className="td-right">{formatCurrency(inf.monto)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
-                  </div>
-                  );
-                })}
-
-                {grandTotalJornales > 0 && (
-                  <div className="grand-totals">
-                    <h3>Total General Consolidado</h3>
-                    <div className="grand-totals-values">
-                      <span className="total-jornales">Jornales: {grandTotalJornales}</span>
-                      <span className="total-guaranies">Gs: {formatCurrency(grandTotalMonto)}</span>
-                    </div>
-                  </div>
-                )}
-              </>
-            )
-          ) : null}
+                      </>
+                    )
+                  ) : null}
                 </td>
               </tr>
             </tbody>
@@ -259,24 +259,24 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
         <div className="acta-modal-overlay">
           <div className="acta-modal-content">
             <h3>Datos del Acta - {selectedEmpresa?.eot_nombre}</h3>
-            
+
             <div className="form-group">
               <label>Número de Acta:</label>
-              <input 
-                type="text" 
-                placeholder="Ej: 123/2026" 
-                value={numeroActa} 
-                onChange={(e) => setNumeroActa(e.target.value)} 
+              <input
+                type="text"
+                placeholder="Ej: 123/2026"
+                value={numeroActa}
+                onChange={(e) => setNumeroActa(e.target.value)}
               />
               <small>Si se deja en blanco se imprimirá "___/2026"</small>
             </div>
 
             <div className="form-group">
               <label>Fecha de Emisión:</label>
-              <input 
-                type="date" 
-                value={fechaEmision} 
-                onChange={(e) => setFechaEmision(e.target.value)} 
+              <input
+                type="date"
+                value={fechaEmision}
+                onChange={(e) => setFechaEmision(e.target.value)}
                 disabled={isFechaBlanco}
               />
               <small>Si no ingresa, usará la fecha actual.</small>
@@ -284,10 +284,10 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
 
             <div className="form-group-checkbox">
               <label>
-                <input 
-                  type="checkbox" 
-                  checked={isFechaBlanco} 
-                  onChange={(e) => setIsFechaBlanco(e.target.checked)} 
+                <input
+                  type="checkbox"
+                  checked={isFechaBlanco}
+                  onChange={(e) => setIsFechaBlanco(e.target.checked)}
                 />
                 Dejar fecha en blanco
               </label>
