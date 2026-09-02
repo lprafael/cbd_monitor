@@ -79,17 +79,24 @@ def evaluar_mes_simulado(jornadas, umbral_pico=90.0, umbral_pos=90.0):
                 dias_con_b_pos[fecha] = b_pospico_dia
 
     # Reglas 2 y 3: Exclusión mensual de Nivel B si hubo AL MENOS UN Nivel C en el mes
+    # Y si en el mes no hubo C pero incumple 15.2 y 15.4, se aplica UNA SOLA multa mensual (no 2)
     hubo_c_en_mes = len(dias_sancionados_c) > 0
     dias_sancionados_b = set()
 
     if not hubo_c_en_mes:
         total_b_pico = sum(dias_con_b_pico.values())
-        if total_b_pico >= 5:
+        total_b_pos = sum(dias_con_b_pos.values())
+        fail_b_pico = total_b_pico >= 5
+        fail_b_pos = total_b_pos >= 5
+
+        if fail_b_pico and fail_b_pos:
+            dias_sancionados_b.update(dias_con_b_pico.keys())
+            dias_sancionados_b.update(dias_con_b_pos.keys())
+            historial_faltas.append({'fecha': 'FIN_MES', 'base': 'Art. 15.2 / 15.4', 'desc': f'Acumulación Nivel B en Franjas Pico ({total_b_pico}) y Pos Pico ({total_b_pos})', 'jornales': 10})
+        elif fail_b_pico:
             dias_sancionados_b.update(dias_con_b_pico.keys())
             historial_faltas.append({'fecha': 'FIN_MES', 'base': 'Art. 15.2', 'desc': f'Acumulación {total_b_pico} Franjas Pico Nivel B', 'jornales': 10})
-
-        total_b_pos = sum(dias_con_b_pos.values())
-        if total_b_pos >= 5:
+        elif fail_b_pos:
             dias_sancionados_b.update(dias_con_b_pos.keys())
             historial_faltas.append({'fecha': 'FIN_MES', 'base': 'Art. 15.4', 'desc': f'Acumulación {total_b_pos} Franjas Pos Pico Nivel B', 'jornales': 10})
 
@@ -187,18 +194,31 @@ def test_escenarios():
     assert not any(f['base'] == 'Art. 15.2' for f in faltas), "Falla: NO debe aplicar 15.2 porque hubo Nivel C en el mes"
     print("  [OK] Escenario 2: Al haber Nivel C en el mes, ya no se sanciona Nivel B en todo el mes.")
 
-    # Escenario 3: Mes SIN ningún Nivel C con 5 franjas Nivel B en Pico y 5 en Pos Pico -> Aplica 15.2 y 15.4
-    jornadas_3 = [
+    # Escenario 3a: Mes SIN Nivel C con 4 franjas B en Pico y 4 en Pos Pico -> NO corresponde multa por Nivel B
+    jornadas_3a = [
+        {'fecha': '2026-06-01', 'tipo_dia': 5, 'franjas': [{'cat': 'PICO', 'ifo': 85.0}, {'cat': 'POS_PICO', 'ifo': 85.0}]},
+        {'fecha': '2026-06-02', 'tipo_dia': 5, 'franjas': [{'cat': 'PICO', 'ifo': 85.0}, {'cat': 'POS_PICO', 'ifo': 85.0}]},
+        {'fecha': '2026-06-03', 'tipo_dia': 5, 'franjas': [{'cat': 'PICO', 'ifo': 85.0}, {'cat': 'POS_PICO', 'ifo': 85.0}]},
+        {'fecha': '2026-06-04', 'tipo_dia': 5, 'franjas': [{'cat': 'PICO', 'ifo': 85.0}, {'cat': 'POS_PICO', 'ifo': 85.0}]}
+    ]
+    faltas_3a, _, _ = evaluar_mes_simulado(jornadas_3a)
+    assert not any('15.2' in f['base'] or '15.4' in f['base'] for f in faltas_3a), "Falla: 4 franjas B en Pico y 4 en Pos Pico NO deben generar multa de Nivel B"
+    print("  [OK] Escenario 3a: 4 Nivel B en Pico y 4 en Pos Pico no suman entre sí y NO generan multa por Nivel B.")
+
+    # Escenario 3b: Mes SIN Nivel C con 5 franjas B en Pico y 5 en Pos Pico -> Aplica UNA SOLA multa al mes (Art. 15.2 / 15.4 de 10 jornales)
+    jornadas_3b = [
         {'fecha': '2026-06-01', 'tipo_dia': 5, 'franjas': [{'cat': 'PICO', 'ifo': 85.0}, {'cat': 'POS_PICO', 'ifo': 85.0}]},
         {'fecha': '2026-06-02', 'tipo_dia': 5, 'franjas': [{'cat': 'PICO', 'ifo': 85.0}, {'cat': 'POS_PICO', 'ifo': 85.0}]},
         {'fecha': '2026-06-03', 'tipo_dia': 5, 'franjas': [{'cat': 'PICO', 'ifo': 85.0}, {'cat': 'POS_PICO', 'ifo': 85.0}]},
         {'fecha': '2026-06-04', 'tipo_dia': 5, 'franjas': [{'cat': 'PICO', 'ifo': 85.0}, {'cat': 'POS_PICO', 'ifo': 85.0}]},
         {'fecha': '2026-06-05', 'tipo_dia': 5, 'franjas': [{'cat': 'PICO', 'ifo': 85.0}, {'cat': 'POS_PICO', 'ifo': 85.0}]}
     ]
-    faltas, c_days, b_days = evaluar_mes_simulado(jornadas_3)
-    assert any(f['base'] == 'Art. 15.2' for f in faltas), "Falla: Debe aplicar 15.2"
-    assert any(f['base'] == 'Art. 15.4' for f in faltas), "Falla: Debe aplicar 15.4"
-    print("  [OK] Escenario 3: Sin Nivel C en el mes, se computan separadamente 15.2 y 15.4.")
+    faltas_3b, _, _ = evaluar_mes_simulado(jornadas_3b)
+    sanciones_b = [f for f in faltas_3b if '15.2' in f['base'] or '15.4' in f['base']]
+    assert len(sanciones_b) == 1, f"Falla: Debe aplicar exactamente 1 sola multa al mes por Nivel B, pero aplicó {len(sanciones_b)}"
+    assert sanciones_b[0]['base'] == 'Art. 15.2 / 15.4'
+    assert sanciones_b[0]['jornales'] == 10
+    print("  [OK] Escenario 3b: Al incumplir 15.2 y 15.4 a la vez, se aplica una sola multa de 10 jornales (Art. 15.2 / 15.4).")
 
     # Escenario 4: Art. 15.6 es autónomo e independiente
     jornadas_4 = [

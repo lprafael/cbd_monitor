@@ -532,11 +532,16 @@ def analizar_infracciones_res_120(eot_nombre, datos_mensuales, fecha_referencia)
 
     if not hubo_c_en_mes:
         total_b_pico = sum(dias_con_b_pico.values())
-        if total_b_pico >= 5:
-            historial_faltas.append({'fecha': fecha_referencia, 'base': 'Art. 15.2', 'desc': f'Acumulación {total_b_pico} Franjas Pico Nivel B', 'jornales': 10})
-
         total_b_pos = sum(dias_con_b_pos.values())
-        if total_b_pos >= 5:
+        fail_b_pico = total_b_pico >= 5
+        fail_b_pos = total_b_pos >= 5
+
+        # Si incumple 15.2 y 15.4, se aplica una sola multa al mes (no 2)
+        if fail_b_pico and fail_b_pos:
+            historial_faltas.append({'fecha': fecha_referencia, 'base': 'Art. 15.2 / 15.4', 'desc': f'Acumulación Nivel B en Franjas Pico ({total_b_pico}) y Pos Pico ({total_b_pos})', 'jornales': 10})
+        elif fail_b_pico:
+            historial_faltas.append({'fecha': fecha_referencia, 'base': 'Art. 15.2', 'desc': f'Acumulación {total_b_pico} Franjas Pico Nivel B', 'jornales': 10})
+        elif fail_b_pos:
             historial_faltas.append({'fecha': fecha_referencia, 'base': 'Art. 15.4', 'desc': f'Acumulación {total_b_pos} Franjas Pos Pico Nivel B', 'jornales': 10})
 
     # Transformar para el reporte

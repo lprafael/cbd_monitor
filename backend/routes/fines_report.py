@@ -355,16 +355,14 @@ async def generate_fines_report(
                 GROUP BY h.id_eot_vmt_hex
             """, (m_start, m_end, m_start, m_end))
             for row in cursor.fetchall():
-                if (row['b_pico_count'] or 0) >= 5:
-                    if evaluar_reincidencia:
-                        eots_con_incumplimiento_15_2_previo.add(row['id_eot_vmt_hex'])
-                    if month_idx < 2 and not excluir_nivel_b:
-                        infracciones_previas_trimestre[row['id_eot_vmt_hex']] += 1
-                if (row['b_pospico_count'] or 0) >= 5:
-                    if evaluar_reincidencia:
-                        eots_con_incumplimiento_15_4_previo.add(row['id_eot_vmt_hex'])
-                    if month_idx < 2 and not excluir_nivel_b:
-                        infracciones_previas_trimestre[row['id_eot_vmt_hex']] += 1
+                pico_b = (row['b_pico_count'] or 0) >= 5
+                pos_b = (row['b_pospico_count'] or 0) >= 5
+                if pico_b and evaluar_reincidencia:
+                    eots_con_incumplimiento_15_2_previo.add(row['id_eot_vmt_hex'])
+                if pos_b and evaluar_reincidencia:
+                    eots_con_incumplimiento_15_4_previo.add(row['id_eot_vmt_hex'])
+                if (pico_b or pos_b) and month_idx < 2 and not excluir_nivel_b:
+                    infracciones_previas_trimestre[row['id_eot_vmt_hex']] += 1
 
             if month_idx < 2:
                 # Conteo de días con Nivel C (máx 1 por día) o ICCBDM en los meses previos del trimestre
@@ -476,7 +474,25 @@ async def generate_fines_report(
 
             if not hubo_c_en_mes and not excluir_nivel_b:
                 total_b_pico = sum(dias_con_b_pico.values())
-                if total_b_pico >= 5:
+                total_b_pos = sum(dias_con_b_pos.values())
+                fail_b_pico = total_b_pico >= 5
+                fail_b_pos = total_b_pos >= 5
+
+                # Si incumple 15.2 y 15.4, se aplica una sola multa mensual (no 2)
+                if fail_b_pico and fail_b_pos:
+                    dias_sancionados_b.update(dias_con_b_pico.keys())
+                    dias_sancionados_b.update(dias_con_b_pos.keys())
+                    is_reinc = (eot_hex in eots_con_incumplimiento_15_2_previo or eot_hex in eots_con_incumplimiento_15_4_previo)
+                    base_b = 'Art. 16.2 / 16.4' if is_reinc else 'Art. 15.2 / 15.4'
+                    jornales_b = 20 if is_reinc else 10
+                    desc_b = f'Reincidencia Nivel B en Franjas Pico ({total_b_pico}) y Pos Pico ({total_b_pos}) en últimos 6 meses' if is_reinc else f'Acumulación Nivel B en Franjas Pico ({total_b_pico}) y Pos Pico ({total_b_pos})'
+                    historial_faltas.append({
+                        'fecha': end_date,
+                        'base': base_b,
+                        'desc': desc_b,
+                        'jornales': jornales_b
+                    })
+                elif fail_b_pico:
                     dias_sancionados_b.update(dias_con_b_pico.keys())
                     base_b_pico = 'Art. 16.2' if eot_hex in eots_con_incumplimiento_15_2_previo else 'Art. 15.2'
                     jornales_b_pico = 20 if eot_hex in eots_con_incumplimiento_15_2_previo else 10
@@ -487,9 +503,7 @@ async def generate_fines_report(
                         'desc': desc_b_pico,
                         'jornales': jornales_b_pico
                     })
-
-                total_b_pos = sum(dias_con_b_pos.values())
-                if total_b_pos >= 5:
+                elif fail_b_pos:
                     dias_sancionados_b.update(dias_con_b_pos.keys())
                     base_b_pos = 'Art. 16.4' if eot_hex in eots_con_incumplimiento_15_4_previo else 'Art. 15.4'
                     jornales_b_pos = 20 if eot_hex in eots_con_incumplimiento_15_4_previo else 10

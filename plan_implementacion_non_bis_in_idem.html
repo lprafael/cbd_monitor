@@ -743,7 +743,8 @@
                     <strong>Reglas Centrales del Régimen de Sanciones (Res. 120/2025 y 21/2026):</strong><br>
                     1. <strong>Nivel C Diario Único:</strong> Si en un día se registra Nivel C en Pico, en Pos Pico o en ambas franjas, se aplica <strong>una sola sanción diaria de 20 jornales</strong>.<br>
                     2. <strong>Absorción de Nivel B:</strong> Al existir al menos un Nivel C en el mes, la gravedad de la falta diaria absorbe las faltas leves y <strong>se cancela toda sanción de Nivel B</strong> (15.2 y 15.4) en el mes.<br>
-                    3. <strong>Exclusión en Art. 15.1:</strong> Los días que ya fueron objeto de sanción (15.2, 15.3, 15.4 o 15.5) <strong>no entran</strong> en el cómputo del IFO mensual para Art. 15.1, evitando el doble castigo.
+                    3. <strong>Sanción Única de Nivel B Mensual (15.2 / 15.4):</strong> Si en un mes sin Nivel C se acumulan ≥ 5 franjas en Pico y ≥ 5 en Pos Pico, se aplica <strong>una sola multa mensual de 10 jornales</strong> (no 2). Los picos y pospicos se contabilizan por separado (por ejemplo, 4 en Pico y 4 en Pos Pico <strong>no suman entre sí</strong> y no configuran sanción).<br>
+                    4. <strong>Exclusión en Art. 15.1:</strong> Los días que ya fueron objeto de sanción (15.2, 15.3, 15.4 o 15.5) <strong>no entran</strong> en el cómputo del IFO mensual para Art. 15.1, evitando el doble castigo.
                 </div>
             </div>
 
@@ -802,21 +803,19 @@ flowchart TD
     DIA_OK --> CHECK_MES_C
 
     CHECK_MES_C -- "SÍ (≥ 1 día con C)" --> BLOCK_MES_B["⛔ ANULACIÓN TOTAL DE NIVEL B\nNo se aplica 15.2 ni 15.4 en el mes"]:::blockNode
-    CHECK_MES_C -- "NO (0 días con C)" --> EVAL_B_PICO{"¿Acumuló ≥ 5 franjas\nNivel B en Pico?"}:::decNode
+    CHECK_MES_C -- "NO (0 días con C)" --> EVAL_B{"¿Acumuló ≥ 5 franjas Nivel B?\n(Cómputo separado por franja)"}:::decNode
 
-    EVAL_B_PICO -- "SÍ (≥ 5)" --> MULTA_15_2["🚨 MULTA MENSUAL: Art. 15.2\n(10 o 20 Jornales)"]:::fineNode
-    EVAL_B_PICO -- "NO (< 5)" --> LIBRE_15_2["✅ Sin Multa Nivel B Pico"]:::passNode
-
-    CHECK_MES_C -- "NO (0 días con C)" --> EVAL_B_POS{"¿Acumuló ≥ 5 franjas\nNivel B en Pos Pico?"}:::decNode
-    EVAL_B_POS -- "SÍ (≥ 5)" --> MULTA_15_4["🚨 MULTA MENSUAL: Art. 15.4\n(10 o 20 Jornales)"]:::fineNode
-    EVAL_B_POS -- "NO (< 5)" --> LIBRE_15_4["✅ Sin Multa Nivel B Pos Pico"]:::passNode
+    EVAL_B -- "≥ 5 en Pico Y ≥ 5 en Pos Pico" --> MULTA_15_2_4["🚨 MULTA MENSUAL ÚNICA: Art. 15.2 / 15.4\n(10 o 20 Jornales - Sanción Única)"]:::fineNode
+    EVAL_B -- "Solo en Pico (≥ 5)" --> MULTA_15_2["🚨 MULTA MENSUAL: Art. 15.2\n(10 o 20 Jornales)"]:::fineNode
+    EVAL_B -- "Solo en Pos Pico (≥ 5)" --> MULTA_15_4["🚨 MULTA MENSUAL: Art. 15.4\n(10 o 20 Jornales)"]:::fineNode
+    EVAL_B -- "< 5 en cada franja" --> LIBRE_B["✅ Sin Multa Nivel B\n(Ej: 4 en Pico y 4 en Pos Pico NO suman)"]:::passNode
 
     %% Cierre de Mes Art. 15.1
     BLOCK_MES_B --> EVAL_15_1["📊 CÁLCULO ART. 15.1 MENSUAL\nExcluyendo días ya sancionados (15.2-15.5)"]:::accumNode
+    MULTA_15_2_4 --> EVAL_15_1
     MULTA_15_2 --> EVAL_15_1
     MULTA_15_4 --> EVAL_15_1
-    LIBRE_15_2 --> EVAL_15_1
-    LIBRE_15_4 --> EVAL_15_1
+    LIBRE_B --> EVAL_15_1
 
     EVAL_15_1 --> COMPARA_15_1{"Días No Sancionados:\n¿IFO < Umbral Sistema?"}:::decNode
     COMPARA_15_1 -- "Pico < Umbral Pico" --> MULTA_15_1_PICO["⚖️ MULTA MENSUAL: Art. 15.1 (Pico)\n(173 Jornales - Gravísima)"]:::fineNode
@@ -841,8 +840,8 @@ flowchart TD
                 </div>
                 <div class="step-card">
                     <div class="step-number">Paso 3</div>
-                    <h4>Acumulación Mensual Condicionada</h4>
-                    <p><strong>Únicamente si hubo 0 días con Nivel C</strong> en todo el mes, se verifica si acumuló ≥ 5 franjas Nivel B en Pico (Art. 15.2) o en Pos Pico (Art. 15.4), de forma separada.</p>
+                    <h4>Acumulación Separada y Sanción Única Nivel B</h4>
+                    <p><strong>Únicamente con 0 Nivel C en el mes</strong>, se evalúan por separado: deben alcanzar ≥ 5 franjas cada una (4 en Pico y 4 en Pos Pico <strong>no suman entre sí</strong>). Si incumple ambas, se aplica <strong>una sola multa mensual de 10 jornales</strong> (Art. 15.2 / 15.4).</p>
                 </div>
                 <div class="step-card">
                     <div class="step-number">Paso 4</div>
@@ -900,12 +899,20 @@ flowchart TD
                             <td><strong>Sanción única diaria de 20 jornales</strong>. Si hay ≥ 1 en el mes, <strong>ANULA todo Nivel B</strong> en el mes.</td>
                         </tr>
                         <tr>
+                            <td><strong>Art. 15.2 / 15.4</strong></td>
+                            <td>IFO Pico y Pos Pico (Nivel B)</td>
+                            <td>Acumular ≥ 5 franjas Pico y ≥ 5 franjas Pos Pico en el mes</td>
+                            <td><span class="tag-pill tag-warning">Leve / Mensual</span></td>
+                            <td>10 Jornales (Reinc. 20)</td>
+                            <td><strong>Sanción única mensual</strong> si incumple en ambas franjas. Solo con 0 Nivel C en el mes.</td>
+                        </tr>
+                        <tr>
                             <td><strong>Art. 15.2</strong></td>
                             <td>IFO Franja Pico (Nivel B)</td>
                             <td>Acumular ≥ 5 franjas Pico (80% ≤ IFO &lt; 90%) en el mes</td>
                             <td><span class="tag-pill tag-warning">Leve / Mensual</span></td>
                             <td>10 Jornales (Reinc. 20)</td>
-                            <td><strong>Solo se computa si NO hubo Nivel C</strong> en todo el mes.</td>
+                            <td><strong>Cómputo separado</strong> (4 Pico + 4 Pos Pico NO suman). Solo con 0 Nivel C.</td>
                         </tr>
                         <tr>
                             <td><strong>Art. 15.4</strong></td>
@@ -913,7 +920,7 @@ flowchart TD
                             <td>Acumular ≥ 5 franjas Pos Pico (80% ≤ IFO &lt; 90%) en el mes</td>
                             <td><span class="tag-pill tag-warning">Leve / Mensual</span></td>
                             <td>10 Jornales (Reinc. 20)</td>
-                            <td><strong>Solo se computa si NO hubo Nivel C</strong> en todo el mes.</td>
+                            <td><strong>Cómputo separado</strong> (4 Pico + 4 Pos Pico NO suman). Solo con 0 Nivel C.</td>
                         </tr>
                         <tr>
                             <td><strong>Art. 15.6</strong></td>
@@ -1053,11 +1060,18 @@ flowchart TD
     <span class="kw">if</span> b_pospico_dia > <span class="num">0</span>: dias_con_b_pos[fecha_eval] = b_pospico_dia
 
 <span class="comm"># 3. REGLAS #2 y #3: EXCLUSIÓN MENSUAL DE NIVEL B (Si hubo ≥ 1 día con C, NO hay Nivel B)</span>
+<span class="comm"># Y si incumple 15.2 y 15.4 a la vez en mes sin C, se aplica UNA SOLA multa mensual de 10 jornales</span>
 <span class="kw">if len</span>(dias_sancionados_c) == <span class="num">0</span>:
-    <span class="kw">if sum</span>(dias_con_b_pico.values()) >= <span class="num">5</span>:
+    fail_pico = <span class="func">sum</span>(dias_con_b_pico.values()) >= <span class="num">5</span>
+    fail_pos = <span class="func">sum</span>(dias_con_b_pos.values()) >= <span class="num">5</span>
+    <span class="kw">if</span> fail_pico <span class="kw">and</span> fail_pos:
+        dias_sancionados_b.update(dias_con_b_pico.keys())
+        dias_sancionados_b.update(dias_con_b_pos.keys())
+        historial_faltas.append({<span class="str">'fecha'</span>: end_date, <span class="str">'base'</span>: <span class="str">'Art. 15.2 / 15.4'</span>, <span class="str">'desc'</span>: <span class="str">'Acumulación Nivel B en Pico y Pos Pico'</span>, <span class="str">'jornales'</span>: <span class="num">10</span>})
+    <span class="kw">elif</span> fail_pico:
         dias_sancionados_b.update(dias_con_b_pico.keys())
         historial_faltas.append({<span class="str">'fecha'</span>: end_date, <span class="str">'base'</span>: <span class="str">'Art. 15.2'</span>, <span class="str">'desc'</span>: <span class="str">'Acumulación 5 Franjas Pico Nivel B'</span>, <span class="str">'jornales'</span>: <span class="num">10</span>})
-    <span class="kw">if sum</span>(dias_con_b_pos.values()) >= <span class="num">5</span>:
+    <span class="kw">elif</span> fail_pos:
         dias_sancionados_b.update(dias_con_b_pos.keys())
         historial_faltas.append({<span class="str">'fecha'</span>: end_date, <span class="str">'base'</span>: <span class="str">'Art. 15.4'</span>, <span class="str">'desc'</span>: <span class="str">'Acumulación 5 Franjas Pos Pico Nivel B'</span>, <span class="str">'jornales'</span>: <span class="num">10</span>})
 
