@@ -467,9 +467,10 @@ def analizar_infracciones_res_120(eot_nombre, datos_mensuales, fecha_referencia)
     
     fechas_ordenadas = sorted(todas_fechas_dict.keys())
     
-    # Acumuladores y estado Art 15.2-15.6
-    trigger_15_2 = False
-    trigger_15_4 = False
+    historial_faltas = []
+    dias_sancionados_c = set()
+    dias_con_b_pico = {}
+    dias_con_b_pos = {}
 
     for fecha in fechas_ordenadas:
         if fecha < FECHA_INICIO_ETAPA2:
@@ -505,37 +506,38 @@ def analizar_infracciones_res_120(eot_nombre, datos_mensuales, fecha_referencia)
                 elif ifo < 90: b_pospico_dia += 1
 
         # EVALUACIÓN DE REGLAS (Bajo Res. 21/2026 Nivel C e ICCBDM no tienen agravante pecuniario de reincidencia)
-        # 1. ICCBDM (15.6) - Multa ordinaria diaria
+        # 1. ICCBDM (15.6) - Multa ordinaria diaria (autónomo e independiente)
         if fail_15_6:
             historial_faltas.append({'fecha': fecha, 'base': 'Art. 15.6', 'desc': 'Incumplimiento ICCBDM (Buses Mínimos)', 'jornales': 20})
 
-        # 2. NIVEL C PICO (15.3) - Multa ordinaria diaria
-        if fail_15_3:
+        # 2. NIVEL C DIARIO (Regla #1: una sola sanción de 20 jornales por día, aunque fallen 15.3 y 15.5 a la vez)
+        if fail_15_3 and fail_15_5:
+            dias_sancionados_c.add(fecha)
+            historial_faltas.append({'fecha': fecha, 'base': 'Art. 15.3 / 15.5', 'desc': 'Nivel C en Franjas Pico y Pos Pico', 'jornales': 20})
+        elif fail_15_3:
+            dias_sancionados_c.add(fecha)
             historial_faltas.append({'fecha': fecha, 'base': 'Art. 15.3', 'desc': 'Nivel C en Franja Pico', 'jornales': 20})
-
-        # 3. NIVEL C POS PICO (15.5) - Multa ordinaria diaria
-        if fail_15_5:
+        elif fail_15_5:
+            dias_sancionados_c.add(fecha)
             historial_faltas.append({'fecha': fecha, 'base': 'Art. 15.5', 'desc': 'Nivel C en Franja Pos Pico', 'jornales': 20})
+        else:
+            # Solo en días sin Nivel C se registran franjas Nivel B
+            if b_pico_dia > 0:
+                dias_con_b_pico[fecha] = b_pico_dia
+            if b_pospico_dia > 0:
+                dias_con_b_pos[fecha] = b_pospico_dia
 
-        # REGLA DE EXCLUSIÓN NON BIS IN IDEM:
-        # - Si el día tuvo Nivel C en Pico (fail_15_3), se excluyen las franjas Nivel B de Pico de ese día.
-        # - Si el día NO tuvo Nivel C en Pico, se acumulan las franjas Nivel B de Pico.
-        if not fail_15_3 and not trigger_15_2:
-            acum_b['PICO'] += b_pico_dia
+    # REGLAS #2 y #3: Exclusión mensual de Nivel B ante presencia de al menos un Nivel C en el mes
+    hubo_c_en_mes = len(dias_sancionados_c) > 0
 
-        # - Si el día tuvo Nivel C en Pos Pico (fail_15_5), se excluyen las franjas Nivel B de Pos Pico de ese día.
-        # - Si el día NO tuvo Nivel C en Pos Pico, se acumulan las franjas Nivel B de Pos Pico.
-        if not fail_15_5 and not trigger_15_4:
-            acum_b['POS_PICO'] += b_pospico_dia
+    if not hubo_c_en_mes:
+        total_b_pico = sum(dias_con_b_pico.values())
+        if total_b_pico >= 5:
+            historial_faltas.append({'fecha': fecha_referencia, 'base': 'Art. 15.2', 'desc': f'Acumulación {total_b_pico} Franjas Pico Nivel B', 'jornales': 10})
 
-        # 4. ACUMULACIÓN NIVEL B (15.2 y 15.4)
-        if not trigger_15_2 and acum_b['PICO'] >= 5:
-            historial_faltas.append({'fecha': fecha, 'base': 'Art. 15.2', 'desc': 'Acumulación 5 Franjas Pico Nivel B', 'jornales': 10})
-            trigger_15_2 = True
-
-        if not trigger_15_4 and acum_b['POS_PICO'] >= 5:
-            historial_faltas.append({'fecha': fecha, 'base': 'Art. 15.4', 'desc': 'Acumulación 5 Franjas Pos Pico Nivel B', 'jornales': 10})
-            trigger_15_4 = True
+        total_b_pos = sum(dias_con_b_pos.values())
+        if total_b_pos >= 5:
+            historial_faltas.append({'fecha': fecha_referencia, 'base': 'Art. 15.4', 'desc': f'Acumulación {total_b_pos} Franjas Pos Pico Nivel B', 'jornales': 10})
 
     # Transformar para el reporte
     sanciones = []
