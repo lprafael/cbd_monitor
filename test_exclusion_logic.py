@@ -3,16 +3,10 @@ Script de validación unitaria de la lógica de exclusión Non Bis In Idem
 para Artículos 15.1, 15.2, 15.3, 15.4, 15.5 y 15.6 (Resolución GVMT N° 120/2025 y 21/2026).
 """
 
-def evaluar_mes_simulado(jornadas, umbral_pico=90.0, umbral_pos=90.0):
+def evaluar_mes_simulado(jornadas, umbral_pico=90.0, umbral_pos=90.0, aplicar_non_bis_in_idem=True):
     """
     Simula la lógica de evaluación implementada en fines_report.py y enviar_informe_infraccion.py:
-    1. Máximo 1 sanción de Nivel C por día (20 jornales), ya sea por Pico (15.3), Pos Pico (15.5) o ambas (15.3/15.5).
-    2. Si en el mes hay al menos un día con Nivel C, NO se sanciona por Nivel B (ni 15.2 ni 15.4).
-    3. Solo si en el mes NO hubo Nivel C, se evalúan las franjas Nivel B (>= 5 franjas) por separado para Picos (15.2) y Pos Picos (15.4).
-    4. Art. 15.6 (ICCBDM) se evalúa diariamente de forma autónoma (20 jornales por día).
-    5. Para Art. 15.1, los días ya sancionados (por Nivel C o Nivel B) quedan EXCLUIDOS de la medición mensual.
-       Se evalúa Picos y Pos Picos por separado frente a sus respectivos umbrales.
-    6. Franjas válidas: L-V picos y pospicos, sábados únicamente picos.
+    Permite alternar entre la metodología estándar y el criterio 'Non bis in quo' (aplicar_non_bis_in_idem).
     """
     historial_faltas = []
     dias_sancionados_c = set()
@@ -57,51 +51,73 @@ def evaluar_mes_simulado(jornadas, umbral_pico=90.0, umbral_pos=90.0):
                     elif ifo < 90.0:
                         b_pospico_dia += 1
 
-        # Regla 4: ICCBDM (15.6) independiente diario
-        if fail_15_6:
-            historial_faltas.append({'fecha': fecha, 'base': 'Art. 15.6', 'desc': 'Incumplimiento ICCBDM', 'jornales': 20})
-
-        # Regla 1: Nivel C diario (máximo 1 sanción de 20 jornales por día)
-        if fail_15_3 and fail_15_5:
-            dias_sancionados_c.add(fecha)
-            historial_faltas.append({'fecha': fecha, 'base': 'Art. 15.3 / 15.5', 'desc': 'Nivel C en Franjas Pico y Pos Pico', 'jornales': 20})
-        elif fail_15_3:
-            dias_sancionados_c.add(fecha)
-            historial_faltas.append({'fecha': fecha, 'base': 'Art. 15.3', 'desc': 'Nivel C en Franja Pico', 'jornales': 20})
-        elif fail_15_5:
-            dias_sancionados_c.add(fecha)
-            historial_faltas.append({'fecha': fecha, 'base': 'Art. 15.5', 'desc': 'Nivel C en Franja Pos Pico', 'jornales': 20})
+        if not aplicar_non_bis_in_idem:
+            # Metodología Estándar
+            if fail_15_6:
+                historial_faltas.append({'fecha': fecha, 'base': 'Art. 15.6', 'desc': 'Incumplimiento ICCBDM', 'jornales': 20})
+            if fail_15_3:
+                historial_faltas.append({'fecha': fecha, 'base': 'Art. 15.3', 'desc': 'Nivel C en Franja Pico', 'jornales': 20})
+            if fail_15_5:
+                historial_faltas.append({'fecha': fecha, 'base': 'Art. 15.5', 'desc': 'Nivel C en Franja Pos Pico', 'jornales': 20})
+            if not fail_15_3 and b_pico_dia > 0:
+                dias_con_b_pico[fecha] = dias_con_b_pico.get(fecha, 0) + b_pico_dia
+            if not fail_15_5 and b_pospico_dia > 0:
+                dias_con_b_pos[fecha] = dias_con_b_pos.get(fecha, 0) + b_pospico_dia
         else:
-            # Si el día no tuvo Nivel C, las franjas Nivel B pueden sumar
-            if b_pico_dia > 0:
-                dias_con_b_pico[fecha] = b_pico_dia
-            if b_pospico_dia > 0:
-                dias_con_b_pos[fecha] = b_pospico_dia
+            # Metodología Non bis in quo (Res. 120/2025)
+            # Regla 4: ICCBDM (15.6) independiente diario
+            if fail_15_6:
+                historial_faltas.append({'fecha': fecha, 'base': 'Art. 15.6', 'desc': 'Incumplimiento ICCBDM', 'jornales': 20})
 
-    # Reglas 2 y 3: Exclusión mensual de Nivel B si hubo AL MENOS UN Nivel C en el mes
-    # Y si en el mes no hubo C pero incumple 15.2 y 15.4, se aplica UNA SOLA multa mensual (no 2)
-    hubo_c_en_mes = len(dias_sancionados_c) > 0
+            # Regla 1: Nivel C diario (máximo 1 sanción de 20 jornales por día)
+            if fail_15_3 and fail_15_5:
+                dias_sancionados_c.add(fecha)
+                historial_faltas.append({'fecha': fecha, 'base': 'Art. 15.3 / 15.5', 'desc': 'Nivel C en Franjas Pico y Pos Pico', 'jornales': 20})
+            elif fail_15_3:
+                dias_sancionados_c.add(fecha)
+                historial_faltas.append({'fecha': fecha, 'base': 'Art. 15.3', 'desc': 'Nivel C en Franja Pico', 'jornales': 20})
+            elif fail_15_5:
+                dias_sancionados_c.add(fecha)
+                historial_faltas.append({'fecha': fecha, 'base': 'Art. 15.5', 'desc': 'Nivel C en Franja Pos Pico', 'jornales': 20})
+            else:
+                if b_pico_dia > 0:
+                    dias_con_b_pico[fecha] = b_pico_dia
+                if b_pospico_dia > 0:
+                    dias_con_b_pos[fecha] = b_pospico_dia
+
     dias_sancionados_b = set()
 
-    if not hubo_c_en_mes:
+    if not aplicar_non_bis_in_idem:
+        # Metodología Estándar de Nivel B
         total_b_pico = sum(dias_con_b_pico.values())
         total_b_pos = sum(dias_con_b_pos.values())
-        fail_b_pico = total_b_pico >= 5
-        fail_b_pos = total_b_pos >= 5
-
-        if fail_b_pico and fail_b_pos:
-            dias_sancionados_b.update(dias_con_b_pico.keys())
-            dias_sancionados_b.update(dias_con_b_pos.keys())
-            historial_faltas.append({'fecha': 'FIN_MES', 'base': 'Art. 15.2 / 15.4', 'desc': f'Acumulación Nivel B en Franjas Pico ({total_b_pico}) y Pos Pico ({total_b_pos})', 'jornales': 10})
-        elif fail_b_pico:
-            dias_sancionados_b.update(dias_con_b_pico.keys())
+        if total_b_pico >= 5:
             historial_faltas.append({'fecha': 'FIN_MES', 'base': 'Art. 15.2', 'desc': f'Acumulación {total_b_pico} Franjas Pico Nivel B', 'jornales': 10})
-        elif fail_b_pos:
-            dias_sancionados_b.update(dias_con_b_pos.keys())
+        if total_b_pos >= 5:
             historial_faltas.append({'fecha': 'FIN_MES', 'base': 'Art. 15.4', 'desc': f'Acumulación {total_b_pos} Franjas Pos Pico Nivel B', 'jornales': 10})
+    else:
+        # Reglas 2 y 3: Exclusión mensual de Nivel B si hubo AL MENOS UN Nivel C en el mes
+        # Y si en el mes no hubo C pero incumple 15.2 y 15.4, se aplica UNA SOLA multa mensual (no 2)
+        hubo_c_en_mes = len(dias_sancionados_c) > 0
+        if not hubo_c_en_mes:
+            total_b_pico = sum(dias_con_b_pico.values())
+            total_b_pos = sum(dias_con_b_pos.values())
+            fail_b_pico = total_b_pico >= 5
+            fail_b_pos = total_b_pos >= 5
 
-    # Regla 5: Art. 15.1 Mensual (Picos y Pos Picos por separado, excluyendo días ya sancionados)
-    dias_excluidos_15_1 = dias_sancionados_c.union(dias_sancionados_b)
+            if fail_b_pico and fail_b_pos:
+                dias_sancionados_b.update(dias_con_b_pico.keys())
+                dias_sancionados_b.update(dias_con_b_pos.keys())
+                historial_faltas.append({'fecha': 'FIN_MES', 'base': 'Art. 15.2 / 15.4', 'desc': f'Acumulación Nivel B en Franjas Pico ({total_b_pico}) y Pos Pico ({total_b_pos})', 'jornales': 10})
+            elif fail_b_pico:
+                dias_sancionados_b.update(dias_con_b_pico.keys())
+                historial_faltas.append({'fecha': 'FIN_MES', 'base': 'Art. 15.2', 'desc': f'Acumulación {total_b_pico} Franjas Pico Nivel B', 'jornales': 10})
+            elif fail_b_pos:
+                dias_sancionados_b.update(dias_con_b_pos.keys())
+                historial_faltas.append({'fecha': 'FIN_MES', 'base': 'Art. 15.4', 'desc': f'Acumulación {total_b_pos} Franjas Pos Pico Nivel B', 'jornales': 10})
+
+    # Regla 5: Art. 15.1 Mensual
+    dias_excluidos_15_1 = dias_sancionados_c.union(dias_sancionados_b) if aplicar_non_bis_in_idem else set()
 
     daily_pico_clean = []
     daily_pos_clean = []
@@ -280,7 +296,37 @@ def test_escenarios():
     assert len(faltas) == 0, f"Falla: Pos Pico de sábado y domingos deben ser descartados, pero generó {faltas}"
     print("  [OK] Escenario 7: Pos Pico de sábado y domingos/feriados correctamente excluidos.")
 
-    print("\n>>> TODOS LOS TESTS UNITARIOS PASARON CON ÉXITO (7/7).")
+    # Escenario 8: Verificación del flag opcional aplicar_non_bis_in_idem (False vs True)
+    # Jornada con Nivel C en Pico y Pos Pico el mismo día + 5 franjas B en Pico en otros días
+    jornadas_8 = [
+        {'fecha': '2026-06-01', 'tipo_dia': 5, 'franjas': [{'cat': 'PICO', 'ifo': 70.0}, {'cat': 'POS_PICO', 'ifo': 65.0}]},
+        {'fecha': '2026-06-02', 'tipo_dia': 5, 'franjas': [{'cat': 'PICO', 'ifo': 85.0}]},
+        {'fecha': '2026-06-03', 'tipo_dia': 5, 'franjas': [{'cat': 'PICO', 'ifo': 85.0}]},
+        {'fecha': '2026-06-04', 'tipo_dia': 5, 'franjas': [{'cat': 'PICO', 'ifo': 85.0}]},
+        {'fecha': '2026-06-05', 'tipo_dia': 5, 'franjas': [{'cat': 'PICO', 'ifo': 85.0}]},
+        {'fecha': '2026-06-06', 'tipo_dia': 6, 'franjas': [{'cat': 'PICO', 'ifo': 85.0}]},
+    ]
+    # Con aplicar_non_bis_in_idem=False (Metodología estándar previa):
+    # - Día 1 genera 2 sanciones de Nivel C: 15.3 (20 j) y 15.5 (20 j) -> 40 j
+    # - Además genera sanción de Nivel B 15.2 (10 j) porque en la estándar no se cancela Nivel B mensual
+    faltas_std, _, _ = evaluar_mes_simulado(jornadas_8, umbral_pico=50.0, umbral_pos=50.0, aplicar_non_bis_in_idem=False)
+    assert any(f['base'] == 'Art. 15.3' for f in faltas_std), "Std: debe tener 15.3"
+    assert any(f['base'] == 'Art. 15.5' for f in faltas_std), "Std: debe tener 15.5"
+    assert any(f['base'] == 'Art. 15.2' for f in faltas_std), "Std: debe tener 15.2"
+    jornales_std = sum(f['jornales'] for f in faltas_std)
+    assert jornales_std == 50, f"Std: debe sumar 50 jornales (20 + 20 + 10), sumó {jornales_std}"
+
+    # Con aplicar_non_bis_in_idem=True (Nueva metodología Non bis in quo):
+    # - Día 1 genera 1 sola sanción de Nivel C: 15.3 / 15.5 (20 j)
+    # - Nivel B queda anulado por haber Nivel C en el mes -> 0 j
+    # Total = 20 jornales
+    faltas_non_bis, _, _ = evaluar_mes_simulado(jornadas_8, umbral_pico=50.0, umbral_pos=50.0, aplicar_non_bis_in_idem=True)
+    assert len(faltas_non_bis) == 1, f"Non bis: debe tener 1 sola falta, tuvo {len(faltas_non_bis)}"
+    assert faltas_non_bis[0]['base'] == 'Art. 15.3 / 15.5'
+    assert faltas_non_bis[0]['jornales'] == 20
+    print("  [OK] Escenario 8: Flag opcional aplicar_non_bis_in_idem distingue correctamente entre Metodología Estándar (50 jornales) y Non bis in quo (20 jornales).")
+
+    print("\n>>> TODOS LOS TESTS UNITARIOS PASARON CON ÉXITO (8/8).")
 
 if __name__ == "__main__":
     test_escenarios()

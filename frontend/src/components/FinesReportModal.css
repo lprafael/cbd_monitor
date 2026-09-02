@@ -62,6 +62,10 @@
   color: #0f172a;
 }
 
+.non-bis-label:hover {
+  background-color: #bbf7d0 !important;
+}
+
 .fines-modal-body {
   flex: 1;
   overflow-y: auto;

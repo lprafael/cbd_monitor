@@ -989,6 +989,14 @@ flowchart TD
                                 <option value="0.8">0.80 - Incumple Flota Mínima (Falta Art. 15.6)</option>
                             </select>
                         </div>
+
+                        <div class="input-group" style="background: #e0f2fe; padding: 10px 12px; border-radius: 8px; border: 1px solid #7dd3fc;">
+                            <label style="color: #0369a1; font-weight: 700;">Selector de Metodología (Modal Check):</label>
+                            <select id="sim_metodologia" onchange="calcularSimulador()" style="background: white; border-color: #0284c7; font-weight: 600;">
+                                <option value="non_bis" selected>☑️ Metodología "Non bis in quo" (Check Marcado)</option>
+                                <option value="estandar">⬜ Metodología Estándar Previa (Check Desmarcado)</option>
+                            </select>
+                        </div>
                     </div>
 
                     <!-- Panel de Resultados -->
@@ -1252,6 +1260,7 @@ eots_con_c <span class="kw">AS</span> (
             const picoT = parseFloat(document.getElementById('sim_pico_t').value);
             const posM = parseFloat(document.getElementById('sim_pos_m').value);
             const cbdVal = parseFloat(document.getElementById('sim_cbd').value);
+            const metodologia = document.getElementById('sim_metodologia').value;
 
             let fail153 = (picoM < 80 || picoT < 80);
             let bPicoCount = (picoM >= 80 && picoM < 90 ? 1 : 0) + (picoT >= 80 && picoT < 90 ? 1 : 0);
@@ -1263,61 +1272,100 @@ eots_con_c <span class="kw">AS</span> (
 
             let totalJornales = 0;
 
-            // 1. Sanción Nivel C Diario Único (Regla #1: una sola sanción de 20 jornales por día)
             const elNivelC = document.getElementById('res_nivel_c');
+            const elNivelB = document.getElementById('res_nivel_b_status');
+            const el156 = document.getElementById('res_15_6');
+            const el151 = document.getElementById('res_15_1_status');
+
             let huboNivelC = (fail153 || fail155);
 
-            if (fail153 && fail155) {
-                elNivelC.innerText = "🚨 Art. 15.3 / 15.5 (20 Jornales - Sanción Única)";
-                elNivelC.className = "res-val active";
-                totalJornales += 20;
-            } else if (fail153) {
-                elNivelC.innerText = "🚨 Art. 15.3 Pico (20 Jornales)";
-                elNivelC.className = "res-val active";
-                totalJornales += 20;
-            } else if (fail155) {
-                elNivelC.innerText = "🚨 Art. 15.5 Pos Pico (20 Jornales)";
-                elNivelC.className = "res-val active";
-                totalJornales += 20;
-            } else {
-                elNivelC.innerText = "✅ Sin falta Nivel C hoy (0)";
-                elNivelC.className = "res-val ok";
-            }
-
-            // 2. Estatus Nivel B Mensual (Reglas #2 y #3: Nivel C en el mes anula todo Nivel B)
-            const elNivelB = document.getElementById('res_nivel_b_status');
-            if (huboNivelC) {
-                elNivelB.innerText = "⛔ ANULADO EN EL MES (Falta C absorbe y cancela Nivel B)";
-                elNivelB.className = "res-val blocked";
-            } else {
-                let totalB = bPicoCount + bPosCount;
-                if (totalB > 0) {
-                    elNivelB.innerText = `➕ Registra +${bPicoCount} B-Pico y +${bPosCount} B-Pos Pico (Habilitado para mes)`;
-                    elNivelB.className = "res-val ok";
+            if (metodologia === 'non_bis') {
+                // 1. Sanción Nivel C Diario Único (Non bis in quo)
+                if (fail153 && fail155) {
+                    elNivelC.innerText = "🚨 Art. 15.3 / 15.5 (20 Jornales - Sanción Única)";
+                    elNivelC.className = "res-val active";
+                    totalJornales += 20;
+                } else if (fail153) {
+                    elNivelC.innerText = "🚨 Art. 15.3 Pico (20 Jornales)";
+                    elNivelC.className = "res-val active";
+                    totalJornales += 20;
+                } else if (fail155) {
+                    elNivelC.innerText = "🚨 Art. 15.5 Pos Pico (20 Jornales)";
+                    elNivelC.className = "res-val active";
+                    totalJornales += 20;
                 } else {
-                    elNivelB.innerText = "0 franjas Nivel B hoy (Mes limpio)";
-                    elNivelB.className = "res-val";
+                    elNivelC.innerText = "✅ Sin falta Nivel C hoy (0)";
+                    elNivelC.className = "res-val ok";
                 }
-            }
 
-            // 3. 15.6 (ICCBDM) Autónomo
-            const el156 = document.getElementById('res_15_6');
-            if (hasCbdFail) {
-                el156.innerText = "🚨 APLICA: Art. 15.6 (20 Jornales)";
-                el156.className = "res-val active";
-                totalJornales += 20;
-            } else {
-                el156.innerText = "✅ Cumple Flota Mínima (0)";
-                el156.className = "res-val ok";
-            }
+                // 2. Estatus Nivel B Mensual (Absorción Non bis in quo)
+                if (huboNivelC) {
+                    elNivelB.innerText = "⛔ ANULADO EN EL MES (Falta C absorbe y cancela Nivel B)";
+                    elNivelB.className = "res-val blocked";
+                } else {
+                    let totalB = bPicoCount + bPosCount;
+                    if (totalB > 0) {
+                        elNivelB.innerText = `➕ Registra +${bPicoCount} B-Pico y +${bPosCount} B-Pos Pico (Cómputo separado)`;
+                        elNivelB.className = "res-val ok";
+                    } else {
+                        elNivelB.innerText = "0 franjas Nivel B hoy (Mes limpio)";
+                        elNivelB.className = "res-val";
+                    }
+                }
 
-            // 4. Estatus Día en Art. 15.1 Mensual (Regla #5)
-            const el151 = document.getElementById('res_15_1_status');
-            if (huboNivelC) {
-                el151.innerText = "⛔ EXCLUIDO (Día sancionado por C no entra en Art. 15.1)";
-                el151.className = "res-val blocked";
+                // 3. 15.6 (ICCBDM) Autónomo
+                if (hasCbdFail) {
+                    el156.innerText = "🚨 APLICA: Art. 15.6 (20 Jornales)";
+                    el156.className = "res-val active";
+                    totalJornales += 20;
+                } else {
+                    el156.innerText = "✅ Cumple Flota Mínima (0)";
+                    el156.className = "res-val ok";
+                }
+
+                // 4. Estatus Día en Art. 15.1 Mensual (Exclusión días sancionados)
+                if (huboNivelC) {
+                    el151.innerText = "⛔ EXCLUIDO (Día sancionado por C no entra en Art. 15.1)";
+                    el151.className = "res-val blocked";
+                } else {
+                    el151.innerText = "✅ INCLUIDO (Día no sancionado computa para Art. 15.1)";
+                    el151.className = "res-val ok";
+                }
             } else {
-                el151.innerText = "✅ INCLUIDO (Día no sancionado computa para Art. 15.1)";
+                // Metodología Estándar Previa
+                if (fail153 && fail155) {
+                    elNivelC.innerText = "🚨 Art. 15.3 (20) + Art. 15.5 (20) = 40 Jornales (Doble sanción)";
+                    elNivelC.className = "res-val active";
+                    totalJornales += 40;
+                } else if (fail153) {
+                    elNivelC.innerText = "🚨 Art. 15.3 Pico (20 Jornales)";
+                    elNivelC.className = "res-val active";
+                    totalJornales += 20;
+                } else if (fail155) {
+                    elNivelC.innerText = "🚨 Art. 15.5 Pos Pico (20 Jornales)";
+                    elNivelC.className = "res-val active";
+                    totalJornales += 20;
+                } else {
+                    elNivelC.innerText = "✅ Sin falta Nivel C hoy (0)";
+                    elNivelC.className = "res-val ok";
+                }
+
+                // Nivel B estándar: no se cancela en el mes, suma franjas de días sin C en esa categoría
+                elNivelB.innerText = `⚠️ Estándar: Nivel B se mide normalmente en el mes (no absorbe)`;
+                elNivelB.className = "res-val";
+
+                // 15.6 Autónomo
+                if (hasCbdFail) {
+                    el156.innerText = "🚨 APLICA: Art. 15.6 (20 Jornales)";
+                    el156.className = "res-val active";
+                    totalJornales += 20;
+                } else {
+                    el156.innerText = "✅ Cumple Flota Mínima (0)";
+                    el156.className = "res-val ok";
+                }
+
+                // 15.1 Estándar: todos los días computan
+                el151.innerText = "📊 INCLUIDO (En estándar todos los días promedian para Art. 15.1)";
                 el151.className = "res-val ok";
             }
 
