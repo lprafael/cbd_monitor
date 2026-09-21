@@ -868,8 +868,10 @@ async def generate_fines_report(
                             'jornales': jornales_b_pos
                         })
 
-                # REGLA #5: Art. 15.1 Mensual (Picos y Pos Picos separados, excluyendo días ya sancionados)
-                dias_excluidos_15_1 = dias_sancionados_c.union(dias_sancionados_b)
+                # REGLA #4 (Res. GVMT N° 104/2026): Art. 15.1 Mensual (Picos y Pos Picos separados).
+                # Medición Integral del Cumplimiento Mensual: Se computa la totalidad de jornadas
+                # evaluables del mes calendario, independientemente de que hayan sido objeto de
+                # sanción diaria previa (Nivel B o C). Únicas exclusiones: domingos, feriados y días atípicos.
 
                 daily_pico_clean = []
                 daily_pos_clean = []
@@ -879,7 +881,6 @@ async def generate_fines_report(
                     if fecha_eval < FECHA_INICIO_ETAPA2: continue
                     id_tipo_dia = get_tipo_dia_id(fecha_eval, db_feriados)
                     if id_tipo_dia == 7 or fecha_eval in db_atipicos: continue
-                    if fecha_eval in dias_excluidos_15_1: continue # EXCLUSIÓN de días ya sancionados (Regla #5)
                     
                     franjas_dia = dias_data[fecha_eval]
                     pico_vals = []
@@ -913,7 +914,7 @@ async def generate_fines_report(
                             historial_faltas.append({
                                 'fecha': end_date,
                                 'base': 'Art. 15.1',
-                                'desc': f'IFO Mensual Picos ({ifo_mensual_pico:.2f}%) inferior al Umbral ({umbral_pico:.2f}%) en días no sancionados',
+                                'desc': f'IFO Mensual Picos ({ifo_mensual_pico:.2f}%) inferior al Umbral ({umbral_pico:.2f}%)',
                                 'jornales': 173
                             })
                         fallas_ifo_6meses[eot_hex] += 1
@@ -932,7 +933,7 @@ async def generate_fines_report(
                             historial_faltas.append({
                                 'fecha': end_date,
                                 'base': 'Art. 15.1',
-                                'desc': f'IFO Mensual Pos Picos ({ifo_mensual_pos:.2f}%) inferior al Umbral ({umbral_pospico:.2f}%) en días no sancionados',
+                                'desc': f'IFO Mensual Pos Picos ({ifo_mensual_pos:.2f}%) inferior al Umbral ({umbral_pospico:.2f}%)',
                                 'jornales': 173
                             })
                         fallas_ifo_6meses[eot_hex] += 1

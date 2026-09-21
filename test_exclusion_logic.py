@@ -116,9 +116,8 @@ def evaluar_mes_simulado(jornadas, umbral_pico=90.0, umbral_pos=90.0, aplicar_no
                 dias_sancionados_b.update(dias_con_b_pos.keys())
                 historial_faltas.append({'fecha': 'FIN_MES', 'base': 'Art. 15.4', 'desc': f'Acumulación {total_b_pos} Franjas Pos Pico Nivel B', 'jornales': 10})
 
-    # Regla 5: Art. 15.1 Mensual
-    dias_excluidos_15_1 = dias_sancionados_c.union(dias_sancionados_b) if aplicar_non_bis_in_idem else set()
-
+    # Regla 4 (Res. GVMT N° 104/2026): Art. 15.1 Mensual computa la totalidad de jornadas
+    # evaluables, sin excluir días ya sancionados previamente (Nivel B o C).
     daily_pico_clean = []
     daily_pos_clean = []
 
@@ -127,8 +126,6 @@ def evaluar_mes_simulado(jornadas, umbral_pico=90.0, umbral_pos=90.0, aplicar_no
         tipo_dia = dia.get('tipo_dia', 5)
         if tipo_dia == 7 or dia.get('atipico', False):
             continue
-        if fecha in dias_excluidos_15_1:
-            continue # EXCLUIDO porque ya fue sancionado
 
         franjas = dia['franjas']
         p_vals = []
@@ -251,10 +248,11 @@ def test_escenarios():
     assert not any(f['base'] in ['Art. 15.2', 'Art. 15.3', 'Art. 15.4', 'Art. 15.5'] for f in faltas)
     print("  [OK] Escenario 4: Art. 15.6 se computa de forma independiente.")
 
-    # Escenario 5: Exclusión de días ya sancionados para medición de Art. 15.1
+    # Escenario 5 (Regla 4 Res. GVMT N° 104/2026): Medición integral de Art. 15.1 (INCLUYE días ya sancionados)
     # Día 1: Nivel C en Pico (70%) -> sancionado con 15.3.
-    # Días 2 al 10: Días limpios con IFO 92% (por encima del umbral de 90%).
-    # Si el día 1 entrara al promedio, el promedio bajaría. Al excluirse el día 1, el promedio de los días limpios es 92% y NO debe gatillar 15.1.
+    # Días 2 al 10 (9 días): Días con IFO 92%.
+    # El promedio mensual computa la totalidad de las 10 jornadas: (70 + 9 * 92) / 10 = 89.8%
+    # Al ser 89.8% < 90.0% (umbral), corresponde sanción por 15.1 además de la sanción diaria previa.
     jornadas_5 = [
         {'fecha': '2026-06-01', 'tipo_dia': 5, 'franjas': [{'cat': 'PICO', 'ifo': 70.0}]}, # Sancionado con 15.3
     ]
@@ -262,12 +260,12 @@ def test_escenarios():
         jornadas_5.append({
             'fecha': f'2026-06-{d:02d}',
             'tipo_dia': 5,
-            'franjas': [{'cat': 'PICO', 'ifo': 92.0}] # Días limpios
+            'franjas': [{'cat': 'PICO', 'ifo': 92.0}]
         })
     faltas, c_days, b_days = evaluar_mes_simulado(jornadas_5, umbral_pico=90.0)
     assert any(f['base'] == 'Art. 15.3' for f in faltas), "Falla: Día 1 debe tener 15.3"
-    assert not any(f['base'] == 'Art. 15.1 (Pico)' for f in faltas), "Falla: Días no sancionados promedian 92% >= 90%, NO debe gatillar 15.1"
-    print("  [OK] Escenario 5: Días ya sancionados con Nivel C quedan excluidos del cálculo para 15.1.")
+    assert any(f['base'] == 'Art. 15.1 (Pico)' for f in faltas), "Falla: Promedio mensual computando todas las jornadas es 89.8% < 90%, DEBE gatillar 15.1 (Regla 4 Res. 104/2026)"
+    print("  [OK] Escenario 5: Cómputo integral de 15.1 incluye días con sanciones previas (Regla 4 Res. 104/2026).")
 
     # Escenario 6: Desdoblamiento de 15.1 (Pico cumple pero Pos Pico incumple)
     jornadas_6 = [
