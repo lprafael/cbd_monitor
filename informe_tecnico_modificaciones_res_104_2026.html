@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Informe Técnico de Modificaciones al Sistema - Res. GVMT N° 104/2026</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #1e3a8a;
+            --primary-dark: #0f172a;
+            --primary-light: #3b82f6;
+            --accent: #d97706;
+            --success: #059669;
+            --success-bg: #ecfdf5;
+            --danger: #dc2626;
+            --danger-bg: #fef2f2;
+            --warning-bg: #fffbeb;
+            --neutral-bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -2px rgba(0,0,0,0.05);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f1f5f9;
+            color: var(--text-main);
+            line-height: 1.6;
+            padding: 40px 20px;
+        }
+
+        .document-container {
+            max-width: 1080px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        /* Institutional Header */
+        .inst-header {
+            background: linear-gradient(135deg, #091e42 0%, #0f2b5c 50%, #1e3a8a 100%);
+            color: white;
+            padding: 36px 48px;
+            position: relative;
+            border-bottom: 4px solid #c2410c;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 24px;
+            border-bottom: 1px solid rgba(255,255,255,0.15);
+            padding-bottom: 18px;
+        }
+
+        .entity-title {
+            font-size: 13px;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            font-weight: 700;
+            line-height: 1.4;
+            color: #93c5fd;
+        }
+
+        .entity-sub {
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .doc-meta-badge {
+            text-align: right;
+            font-size: 13px;
+            color: #e2e8f0;
+        }
+
+        .doc-meta-badge strong {
+            display: block;
+            color: #38bdf8;
+            font-size: 14px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .report-title-area h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 26px;
+            font-weight: 800;
+            line-height: 1.25;
+            margin-bottom: 10px;
+            letter-spacing: -0.5px;
+        }
+
+        .report-title-area h2 {
+            font-size: 16px;
+            font-weight: 500;
+            color: #cbd5e1;
+            line-height: 1.4;
+        }
+
+        /* Content Area */
+        .content-area {
+            padding: 44px 48px;
+        }
+
+        /* Summary Box */
+        .summary-card {
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-left: 5px solid var(--primary-light);
+            border-radius: 8px;
+            padding: 24px 28px;
+            margin-bottom: 36px;
+        }
+
+        .summary-card h3 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 16px;
+            color: var(--primary-dark);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            font-size: 14px;
+        }
+
+        .summary-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .summary-item .label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .summary-item .value {
+            font-weight: 600;
+            color: var(--text-main);
+            margin-top: 2px;
+        }
+
+        .badge-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--success-bg);
+            color: var(--success);
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 700;
+            width: fit-content;
+            border: 1px solid #a7f3d0;
+        }
+
+        /* Section Headings */
+        h2.section-heading {
+            font-family: 'Outfit', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary-dark);
+            margin: 36px 0 16px 0;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h3.sub-heading {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1e293b;
+            margin: 24px 0 10px 0;
+        }
+
+        p {
+            margin-bottom: 14px;
+            color: #334155;
+            font-size: 14.5px;
+            text-align: justify;
+        }
+
+        /* Alert Callouts */
+        .callout {
+            border-radius: 8px;
+            padding: 18px 22px;
+            margin: 20px 0;
+            font-size: 14px;
+            border-left: 4px solid;
+        }
+
+        .callout-warning {
+            background-color: var(--warning-bg);
+            border-color: var(--accent);
+            color: #92400e;
+        }
+
+        .callout-success {
+            background-color: var(--success-bg);
+            border-color: var(--success);
+            color: #065f46;
+        }
+
+        .callout-danger {
+            background-color: var(--danger-bg);
+            border-color: var(--danger);
+            color: #991b1b;
+        }
+
+        /* Flow Diagrams */
+        .rule-card {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 18px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            border-left: 4px solid var(--primary);
+        }
+
+        .rule-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .rule-title {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            font-size: 15px;
+            color: var(--primary-dark);
+        }
+
+        .rule-badge {
+            background: #e0f2fe;
+            color: #0369a1;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 4px;
+        }
+
+        /* Tables */
+        table.custom-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 22px 0;
+            font-size: 13.5px;
+        }
+
+        table.custom-table th {
+            background-color: #0f172a;
+            color: white;
+            padding: 12px 14px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 12.5px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        table.custom-table td {
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+
+        table.custom-table tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        table.custom-table tr:hover {
+            background-color: #f1f5f9;
+        }
+
+        .badge-ok {
+            background-color: #dcfce7;
+            color: #15803d;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11.5px;
+            display: inline-block;
+        }
+
+        /* Code Blocks */
+        pre {
+            background: #0f172a;
+            color: #e2e8f0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12.5px;
+            padding: 18px 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 18px 0;
+            border: 1px solid #334155;
+            line-height: 1.5;
+        }
+
+        .code-add {
+            color: #4ade80;
+            background-color: rgba(74, 222, 128, 0.1);
+            display: block;
+        }
+
+        .code-del {
+            color: #f87171;
+            background-color: rgba(248, 113, 113, 0.1);
+            display: block;
+            text-decoration: line-through;
+        }
+
+        /* Signatures Area */
+        .signatures-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-top: 60px;
+            padding-top: 20px;
+        }
+
+        .sig-block {
+            text-align: center;
+            padding-top: 50px;
+            border-top: 1px solid #475569;
+        }
+
+        .sig-title {
+            font-weight: 700;
+            font-size: 13.5px;
+            color: #0f172a;
+            text-transform: uppercase;
+        }
+
+        .sig-sub {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* Print Settings */
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .document-container {
+                box-shadow: none;
+                border: none;
+                max-width: 100%;
+            }
+            .inst-header {
+                background: #0f2b5c !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .page-break {
+                page-break-before: always;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="document-container">
+    <!-- Institutional Header -->
+    <header class="inst-header">
+        <div class="header-top">
+            <div>
+                <div class="entity-title">Gobierno del Paraguay &bull; MOPC</div>
+                <div class="entity-sub">Viceministerio de Transporte &bull; Dirección Metropolitana de Transporte</div>
+                <div style="font-size: 12px; color: #93c5fd; margin-top: 2px;">Coordinación de Innovación y Desarrollo (CID)</div>
+            </div>
+            <div class="doc-meta-badge">
+                <span>DICTAMEN TÉCNICO</span>
+                <strong>CID-DMT-IT-024/2026</strong>
+                <span>Fecha: 22/09/2026</span>
+            </div>
+        </div>
+        <div class="report-title-area">
+            <h1>INFORME TÉCNICO DE IMPLEMENTACIÓN Y VALIDACIÓN DE SOFTWARE</h1>
+            <h2>Adecuación del Motor de Reglas Sancionatorias del SICOM conforme a la Resolución GVMT N° 104/2026</h2>
+        </div>
+    </header>
+
+    <div class="content-area">
+        <!-- Sumario Ejecutivo -->
+        <div class="summary-card">
+            <h3><i class="fa-solid fa-clipboard-check"></i> Sumario Ejecutivo y Control de Calidad</h3>
+            <div class="summary-grid">
+                <div class="summary-item">
+                    <span class="label">Norma de Sustento:</span>
+                    <span class="value">Resolución GVMT N° 104/2026 (Extensión Etapa 2)</span>
+                </div>
+                <div class="summary-item">
+                    <span class="label">Garantía Jurídica:</span>
+                    <span class="value">Ley N° 6715/2021 (Art. 74 - Non Bis In Idem)</span>
+                </div>
+                <div class="summary-item">
+                    <span class="label">Módulo Afectado:</span>
+                    <span class="value"><code>backend/routes/fines_report.py</code> (/api/fines-report)</span>
+                </div>
+                <div class="summary-item">
+                    <span class="label">Suite de Pruebas:</span>
+                    <span class="value"><code>test_exclusion_logic.py</code></span>
+                </div>
+                <div class="summary-item">
+                    <span class="label">Alcance Temporal:</span>
+                    <span class="value">Operativa de JULIO/2026 en adelante</span>
+                </div>
+                <div class="summary-item">
+                    <span class="label">Estado de Validación:</span>
+                    <span class="badge-status"><i class="fa-solid fa-circle-check"></i> 8/8 PRUEBAS APROBADAS (100%)</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección 1 -->
+        <h2 class="section-heading"><i class="fa-solid fa-scale-balanced"></i> 1. Antecedentes y Mandato de la Resolución GVMT N° 104/2026</h2>
+        <p>
+            El régimen sancionatorio del transporte público metropolitano establecido en la Resolución GVMT N° 120/2025 y sus modificatorias fijó la medición automatizada del Índice de Flota Operativa (IFO) y la Cantidad Mínima de Buses Diferentes (CBDmín) dividida en etapas de gradualidad. Cumplido el plazo inicial de tres meses de la Etapa 2 de implementación parcial, la Dirección Metropolitana de Transporte (DMT) y la Coordinación de Innovación y Desarrollo (CID) detectaron la necesidad de perfeccionar el motor de software para evitar superposiciones metodológicas entre sanciones diarias y mensuales.
+        </p>
+        <p>
+            En respuesta, la máxima autoridad institucional dictó la <strong>Resolución GVMT N° 104/2026</strong>, disponiendo la extensión temporal de la Etapa 2 y aprobando formalmente en su anexo la <em>Especificación Técnica de Consolidación Mensual Automatizada</em> bajo el principio de <strong>Non Bis In Idem</strong> (Art. 74, Ley N° 6715/2021). Asimismo, sus Artículos 4° y 7° instruyen a la CID a programar, validar y emitir el presente informe de certificación previo a la emisión de las Actas de Comprobación definitivas.
+        </p>
+
+        <!-- Sección 2 -->
+        <h2 class="section-heading"><i class="fa-solid fa-magnifying-glass-chart"></i> 2. Diagnóstico del Sistema Previo y Detección del Desvío en Regla 4</h2>
+        <p>
+            El análisis forense y de aseguramiento de calidad del código fuente reveló dos áreas de intervención imperativa en el archivo <code>backend/routes/fines_report.py</code>:
+        </p>
+        <div class="callout callout-warning">
+            <strong>1. Riesgo Previo de Duplicidad Sancionatoria (Subsanado):</strong> Bajo el esquema inicial, la coincidencia de déficit de flota en picos y pos picos generaba sanciones fragmentadas e inconexas, o computaba franjas con IFO deficitario simultáneamente como falta grave del día y componente de la falta leve acumulada del mes.
+        </div>
+        <div class="callout callout-danger">
+            <strong>2. Desvío Crítico en el Cálculo de IFO Mensual (Regla 4):</strong> En la rama preliminar del cálculo de la infracción del Artículo 15.1, el algoritmo construía una lista de exclusión:
+            <br><code>dias_excluidos_15_1 = dias_sancionados_c.union(dias_sancionados_b)</code> y saltaba dichas jornadas mediante <code>continue</code>.
+            <br><strong>Efecto adverso:</strong> Al descartar los días con peor desempeño (sancionados con Nivel C), el promedio mensual se calculaba únicamente sobre las jornadas regulares de la empresa, distorsionando al alza el IFO mensual y permitiendo que concesionarias con incumplimientos reiterados eludieran la sanción gravísima de 173 jornales mínimos.
+        </div>
+        <p>
+            La <strong>Regla 4</strong> de la Resolución GVMT N° 104/2026 corrige este criterio de forma categórica: <em>el IFO Mensual se calcula promediando la totalidad de jornadas hábiles evaluables del mes, independientemente de que hayan sido sancionadas previamente de forma diaria</em>.
+        </p>
+
+        <!-- Sección 3 -->
+        <h2 class="section-heading"><i class="fa-solid fa-cogs"></i> 3. Arquitectura Lógica de las 4 Reglas Algorítmicas Implementadas</h2>
+
+        <div class="rule-card">
+            <div class="rule-header">
+                <span class="rule-title">REGLA N° 1: Sanción Única por Nivel C Diario (Arts. 15.3 y 15.5)</span>
+                <span class="rule-badge">Sanción Diaria Consolidada</span>
+            </div>
+            <p>
+                Si en una misma fecha calendario una empresa registra IFO &lt; 80,00% tanto en franjas pico como pos pico, el motor emite <strong>una sola Acta de Comprobación diaria de 20 jornales mínimos</strong> (Gs. 2.230.040) bajo la tipificación unificada <code>'Art. 15.3 / 15.5'</code>, evitando sancionar el déficit de frecuencia dos veces en un mismo día.
+            </p>
+        </div>
+
+        <div class="rule-card">
+            <div class="rule-header">
+                <span class="rule-title">REGLA N° 2: Absorción Mensual de Nivel B ante Nivel C (Arts. 15.2 y 15.4)</span>
+                <span class="rule-badge">Principio de Absorción</span>
+            </div>
+            <p>
+                Si una empresa acumula al menos un (1) día con sanción por Nivel C en el mes calendario, <strong>queda bloqueada y extinguida toda posibilidad de sanción por Nivel B</strong> (acumulación de 5 franjas con 80.00% &le; IFO &lt; 89.99%). La falta más grave absorbe los desvíos menores en el período mensual.
+            </p>
+        </div>
+
+        <div class="rule-card">
+            <div class="rule-header">
+                <span class="rule-title">REGLA N° 3: Acumulación Separada y Sanción Única de Nivel B (Arts. 15.2 y 15.4)</span>
+                <span class="rule-badge">Tolerancia Condicionada</span>
+            </div>
+            <p>
+                Exclusivamente aplicable en meses con cero (0) Nivel C. Las franjas pico y pos pico se computan en compartimentos estrictamente separados (deben sumar &ge; 5 de su propia clase). Si una empresa acumula &ge; 5 en picos y a la vez &ge; 5 en pos picos, se impone <strong>una única multa unificada de 10 jornales</strong> (Gs. 1.115.020) bajo <code>'Art. 15.2 / 15.4'</code>.
+            </p>
+        </div>
+
+        <div class="rule-card" style="border-left-color: #059669;">
+            <div class="rule-header">
+                <span class="rule-title">REGLA N° 4: Cómputo Integral de IFO Mensual sobre Todos los Días Evaluables (Art. 15.1)</span>
+                <span class="rule-badge" style="background:#dcfce7; color:#15803d;">Cómputo Integral sin Exclusiones</span>
+            </div>
+            <p>
+                El promedio mensual de cumplimiento del IFO integra <strong>todas las jornadas hábiles evaluables del mes</strong> (con tope individual de 110%). Se removió completamente el filtro de exclusión de jornadas con Nivel B y C. Únicamente se excluyen domingos, feriados oficiales y días atípicos declarados por lluvias &gt; 5 mm según informes de la DINAC.
+            </p>
+        </div>
+
+        <!-- Sección 4: Diff -->
+        <h2 class="section-heading"><i class="fa-solid fa-code-compare"></i> 4. Modificación de Código Fuente: <code>backend/routes/fines_report.py</code></h2>
+        <pre><code><span class="code-del">- # REGLA #5 (OBSOLETA): Art. 15.1 Mensual excluyendo días ya sancionados</span>
+<span class="code-del">- dias_excluidos_15_1 = dias_sancionados_c.union(dias_sancionados_b)</span>
+<span class="code-add">+ # REGLA #4 (Res. GVMT N° 104/2026): Art. 15.1 Mensual (Picos y Pos Picos separados).</span>
+<span class="code-add">+ # Medición Integral del Cumplimiento Mensual: Se computa la totalidad de jornadas</span>
+<span class="code-add">+ # evaluables del mes calendario, independientemente de que hayan sido objeto de</span>
+<span class="code-add">+ # sanción diaria previa (Nivel B o C). Únicas exclusiones: domingos, feriados y días atípicos.</span>
+
+  daily_pico_clean = []
+  daily_pos_clean = []
+  
+  for fecha_eval in fechas_ordenadas:
+      if fecha_eval &lt; start_date or fecha_eval &gt; end_date: continue
+      if fecha_eval &lt; FECHA_INICIO_ETAPA2: continue
+      id_tipo_dia = get_tipo_dia_id(fecha_eval, db_feriados)
+      if id_tipo_dia == 7 or fecha_eval in db_atipicos: continue
+      
+<span class="code-del">-     if fecha_eval in dias_excluidos_15_1: continue # EXCLUSIÓN INDEBIDA ELIMINADA</span>
+      
+      franjas_dia = dias_data[fecha_eval]
+      pico_vals = []
+      pos_vals = []
+      for fid, f_res in franjas_dia.items():
+          ...
+          if cat == 'PICO':
+              pico_vals.append(ifo_v)
+          elif cat == 'POS_PICO' and id_tipo_dia != 6: # Excluir Pos Pico de Sábado
+              pos_vals.append(ifo_v)
+      
+      if pico_vals:
+          daily_pico_clean.append(min(sum(pico_vals) / len(pico_vals), 1.1))
+      if pos_vals:
+          daily_pos_clean.append(min(sum(pos_vals) / len(pos_vals), 1.1))</code></pre>
+
+        <!-- Sección 5 -->
+        <h2 class="section-heading"><i class="fa-solid fa-vial-circle-check"></i> 5. Resultados de la Suite de Pruebas Unitarias (<code>test_exclusion_logic.py</code>)</h2>
+        <p>
+            Se ejecutó la suite de 8 pruebas de validación automatizada sobre el motor de reglas refactorizado, obteniendo una tasa de asertividad del 100%:
+        </p>
+
+        <table class="custom-table">
+            <thead>
+                <tr>
+                    <th>Escenario</th>
+                    <th>Regla Evaluada</th>
+                    <th>Comportamiento Validado</th>
+                    <th>Sanción Obtenida</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Escenario 1</strong></td>
+                    <td>Regla 1 (Arts. 15.3 / 15.5)</td>
+                    <td>IFO &lt; 80% en Pico y Pos Pico el mismo día calendario.</td>
+                    <td>1 sanción unificada de 20 jornales</td>
+                    <td><span class="badge-ok"><i class="fa-solid fa-check"></i> APROBADO</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Escenario 2</strong></td>
+                    <td>Regla 2 (Absorción de B)</td>
+                    <td>Día 1 con Nivel C + Días 2 al 6 con franjas Nivel B.</td>
+                    <td>Multa 15.3 (20j). Cero multas Nivel B</td>
+                    <td><span class="badge-ok"><i class="fa-solid fa-check"></i> APROBADO</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Escenario 3a</strong></td>
+                    <td>Regla 3 (Tolerancia B)</td>
+                    <td>Mes sin Nivel C con 4 franjas B en Pico y 4 en Pos Pico.</td>
+                    <td>Cero sanciones (Tolerancia respetada)</td>
+                    <td><span class="badge-ok"><i class="fa-solid fa-check"></i> APROBADO</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Escenario 3b</strong></td>
+                    <td>Regla 3 (Unificación B)</td>
+                    <td>Mes sin Nivel C con 5 franjas B en Pico y 5 en Pos Pico.</td>
+                    <td>1 sola multa unificada de 10 jornales</td>
+                    <td><span class="badge-ok"><i class="fa-solid fa-check"></i> APROBADO</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Escenario 4</strong></td>
+                    <td>Art. 15.6 (ICCBDM)</td>
+                    <td>Jornada con IFO cumplido pero Buses Mínimos deficitario.</td>
+                    <td>Sanción autónoma de 20 jornales</td>
+                    <td><span class="badge-ok"><i class="fa-solid fa-check"></i> APROBADO</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Escenario 5</strong></td>
+                    <td><strong>Regla 4 (IFO Mensual)</strong></td>
+                    <td>Día 1 con Nivel C (70%) computado en la muestra mensual.</td>
+                    <td><strong>Aplica 15.3 diario Y 15.1 mensual (173j)</strong></td>
+                    <td><span class="badge-ok"><i class="fa-solid fa-check"></i> APROBADO</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Escenario 6</strong></td>
+                    <td>Desdoblamiento 15.1</td>
+                    <td>Pico mensual cumple (95%), Pos Pico incumple (82%).</td>
+                    <td>Sanción de 173 jornales solo en Pos Pico</td>
+                    <td><span class="badge-ok"><i class="fa-solid fa-check"></i> APROBADO</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Escenario 7</strong></td>
+                    <td>Exclusiones Etapa 2</td>
+                    <td>Pos Pico en día Sábado y Domingos evaluados.</td>
+                    <td>Cero sanciones (Descarte correcto)</td>
+                    <td><span class="badge-ok"><i class="fa-solid fa-check"></i> APROBADO</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Escenario 8</strong></td>
+                    <td>Comparativa de Flags</td>
+                    <td>Metodología Estándar (50j) vs. Non bis in idem (20j).</td>
+                    <td>Diferenciación exacta y verificable</td>
+                    <td><span class="badge-ok"><i class="fa-solid fa-check"></i> APROBADO</span></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Sección 6 -->
+        <h2 class="section-heading"><i class="fa-solid fa-table-list"></i> 6. Escala Sancionatoria Concordada (Jornal Legal: Gs. 111.502)</h2>
+        <table class="custom-table">
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Infracción / Parámetro Operativo</th>
+                    <th>Gravedad</th>
+                    <th>Jornales</th>
+                    <th>Importe (Gs.)</th>
+                    <th>Tratamiento Res. 104/2026</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>15.1</strong></td>
+                    <td>Incumplimiento IFO Mensual (Pico o Pos Pico)</td>
+                    <td>Gravísima</td>
+                    <td>173</td>
+                    <td>Gs. 19.289.846</td>
+                    <td>Cálculo integral sobre todos los días hábiles del mes.</td>
+                </tr>
+                <tr>
+                    <td><strong>15.2</strong></td>
+                    <td>Acumulación 5+ franjas Pico con Nivel B</td>
+                    <td>Leve</td>
+                    <td>10</td>
+                    <td>Gs. 1.115.020</td>
+                    <td>Absorbido por Nivel C. Unificado con 15.4.</td>
+                </tr>
+                <tr>
+                    <td><strong>15.3</strong></td>
+                    <td>Nivel C en Franja Pico en el día</td>
+                    <td>Intermedia</td>
+                    <td>20</td>
+                    <td>Gs. 2.230.040</td>
+                    <td>Sanción única diaria unificada si coincide con 15.5.</td>
+                </tr>
+                <tr>
+                    <td><strong>15.4</strong></td>
+                    <td>Acumulación 5+ franjas Pos Pico con Nivel B</td>
+                    <td>Leve</td>
+                    <td>10</td>
+                    <td>Gs. 1.115.020</td>
+                    <td>Absorbido por Nivel C. Unificado con 15.2.</td>
+                </tr>
+                <tr>
+                    <td><strong>15.5</strong></td>
+                    <td>Nivel C en Franja Pos Pico en el día</td>
+                    <td>Intermedia</td>
+                    <td>20</td>
+                    <td>Gs. 2.230.040</td>
+                    <td>Sanción única diaria unificada si coincide con 15.3.</td>
+                </tr>
+                <tr>
+                    <td><strong>15.6</strong></td>
+                    <td>Incumplimiento Flota Buses Mínimos (ICCBDM)</td>
+                    <td>Intermedia</td>
+                    <td>20</td>
+                    <td>Gs. 2.230.040</td>
+                    <td>Cómputo diario independiente y acumulativo.</td>
+                </tr>
+                <tr>
+                    <td><strong>16.1</strong></td>
+                    <td>Reincidencia IFO Mensual en últimos 6 meses</td>
+                    <td>Gravísima</td>
+                    <td>224.9</td>
+                    <td>Gs. 25.076.800</td>
+                    <td>Recargo automático del 30% s/ 173 jornales.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Sección 7 -->
+        <h2 class="section-heading"><i class="fa-solid fa-stamp"></i> 7. Dictamen de Homologación y Recomendación Final</h2>
+        <div class="callout callout-success">
+            <strong>DICTAMEN DE CONFORMIDAD TÉCNICA:</strong>
+            <br>
+            Habiéndose subsanado las omisiones lógicas en la Regla 4 y acreditada la efectividad del 100% en las 8 pruebas de validación, la Coordinación de Innovación y Desarrollo (CID) certifica que el software SICOM se encuentra plenamente adaptado a los lineamientos de la Resolución GVMT N° 104/2026 y la Ley N° 6715/2021.
+            <br><br>
+            <strong>RECOMENDACIÓN:</strong> Se recomienda a la Dirección Metropolitana de Transporte (DMT) autorizar el reprocesamiento informático del período operativo de <strong>JULIO/2026 en adelante</strong> y dar curso a la emisión y notificación de las Actas de Comprobación correspondientes.
+        </div>
+
+        <!-- Firmas -->
+        <div class="signatures-grid">
+            <div class="sig-block">
+                <div class="sig-title">Coordinación de Innovación y Desarrollo (CID)</div>
+                <div class="sig-sub">Viceministerio de Transporte &bull; MOPC</div>
+            </div>
+            <div class="sig-block">
+                <div class="sig-title">Dirección Metropolitana de Transporte (DMT)</div>
+                <div class="sig-sub">Viceministerio de Transporte &bull; MOPC</div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+</body>
+</html>
