@@ -544,6 +544,7 @@ const IFODetailModal = ({ data, onClose, onEmail, onPrint, onDownload }) => {
                 <span
                   key={idx}
                   className={`historico-date-tag ${item.usada ? 'historico-date-used' : 'historico-date-discarded'}`}
+                  title={item.motivo ? `Descartada: ${item.motivo}` : (item.usada ? 'Fecha histórica utilizada' : 'Fecha descartada (día atípico)')}
                 >
                   {formatDateLong(item.fecha)}
                 </span>

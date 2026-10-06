@@ -94,6 +94,7 @@ class IFOFechaHistorica(BaseModel):
     """Fecha histórica con estado de uso."""
     fecha: date
     usada: bool
+    motivo: Optional[str] = None
 
 
 class IFODetailResponse(BaseModel):
@@ -127,10 +128,44 @@ def _es_fecha_atipica(cursor, fecha: date) -> bool:
     return cursor.fetchone() is not None
 
 
-def _ajustar_fecha_no_atipica(cursor, fecha: date, fechas_usadas: set) -> date:
+def _get_motivo_atipico(cursor, fecha: date) -> Optional[str]:
+    cursor.execute(
+        """
+        SELECT tipo_atipico, observacion
+        FROM control_metricas.dias_atipicos
+        WHERE fecha = %s
+        ORDER BY fecha DESC
+        LIMIT 1
+        """,
+        (fecha,)
+    )
+    row = cursor.fetchone()
+    if not row:
+        return None
+    obs = row.get('observacion') if isinstance(row, dict) else row[1] if len(row) > 1 else None
+    tipo = row.get('tipo_atipico') if isinstance(row, dict) else row[0]
+    if obs and tipo:
+        return f"{tipo}: {obs}" if tipo not in obs else obs
+    return obs or tipo or "Día atípico"
+
+
+def _ajustar_fecha_no_atipica(
+    cursor,
+    fecha: date,
+    fechas_usadas: set,
+    fechas_descartadas: dict = None
+) -> date:
     fecha_ajustada = fecha
-    while _es_fecha_atipica(cursor, fecha_ajustada) or fecha_ajustada in fechas_usadas:
-        fecha_ajustada -= timedelta(weeks=1)
+    while True:
+        if fecha_ajustada in fechas_usadas:
+            fecha_ajustada -= timedelta(weeks=1)
+            continue
+        if _es_fecha_atipica(cursor, fecha_ajustada):
+            if fechas_descartadas is not None and fecha_ajustada not in fechas_descartadas:
+                fechas_descartadas[fecha_ajustada] = _get_motivo_atipico(cursor, fecha_ajustada)
+            fecha_ajustada -= timedelta(weeks=1)
+            continue
+        break
     return fecha_ajustada
 
 
@@ -176,28 +211,19 @@ def get_fechas_referencia_detalle(cursor, fecha: date) -> tuple:
     fechas_base = _get_fechas_base_referencia(fecha)
     fechas_ajustadas = []
     fechas_usadas = set()
-    detalle = []
-    index_map = {}
-
-    def _agregar_detalle(fecha_item: date, usada: bool) -> None:
-        if fecha_item in index_map:
-            idx = index_map[fecha_item]
-            if usada and not detalle[idx].usada:
-                detalle[idx].usada = True
-            return
-        index_map[fecha_item] = len(detalle)
-        detalle.append(IFOFechaHistorica(fecha=fecha_item, usada=usada))
+    fechas_descartadas = {}
 
     for fecha_ref in fechas_base:
-        fecha_ajustada = _ajustar_fecha_no_atipica(cursor, fecha_ref, fechas_usadas)
+        fecha_ajustada = _ajustar_fecha_no_atipica(
+            cursor, fecha_ref, fechas_usadas, fechas_descartadas
+        )
         fechas_ajustadas.append(fecha_ajustada)
         fechas_usadas.add(fecha_ajustada)
 
-        if fecha_ajustada == fecha_ref:
-            _agregar_detalle(fecha_ref, True)
-        else:
-            _agregar_detalle(fecha_ref, False)
-            _agregar_detalle(fecha_ajustada, True)
+    detalle = [IFOFechaHistorica(fecha=f, usada=True) for f in fechas_ajustadas]
+    for f, motivo in sorted(fechas_descartadas.items()):
+        if f not in fechas_usadas:
+            detalle.append(IFOFechaHistorica(fecha=f, usada=False, motivo=motivo))
 
     return fechas_ajustadas, detalle
 
