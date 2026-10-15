@@ -13,7 +13,7 @@ class FinesReportRequest(BaseModel):
     year: int
     evaluar_reincidencia: bool = True
     excluir_nivel_b: bool = False
-    aplicar_non_bis_in_idem: bool = False
+    aplicar_non_bis_in_idem: bool = True
 
 def obtener_valor_jornal(fecha_eval: date) -> int:
     """
@@ -127,8 +127,8 @@ async def generate_fines_report(
         prev_start, prev_end = get_month_range(prev_year, prev_month)
 
         if aplicar_non_bis_in_idem:
-            # Metodología Non bis in idem (Non bis in quo)
-            # 5.a IFO Sistema Picos (L-V y Sábados)
+            # Metodología Non bis in idem (Res. 104/2026 y 120/2025)
+            # 5.a IFO Sistema General (mes anterior)
             cursor.execute("""
                 SELECT AVG(eot_monthly_ifo_topeado) as system_ifo_topeado
                 FROM (
@@ -144,8 +144,11 @@ async def generate_fines_report(
                           AND (
                             (
                               EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5
-                              AND UPPER(f.denominacion) LIKE '%%PICO%%'
-                              AND UPPER(f.denominacion) NOT LIKE '%%POS%%'
+                              AND (
+                                UPPER(f.denominacion) LIKE '%%PICO%%'
+                                OR UPPER(f.denominacion) LIKE '%%POS%%PICO%%'
+                                OR UPPER(f.denominacion) LIKE '%%POSPICO%%'
+                              )
                               AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%'
                               AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%'
                             )
@@ -163,45 +166,14 @@ async def generate_fines_report(
                     GROUP BY id_eot_vmt_hex
                 ) eot_avgs
             """, (prev_start, prev_end))
-            res_sys_pico = cursor.fetchone()
-            system_ifo_pico_pct = float((res_sys_pico['system_ifo_topeado'] or 0.0) * 100)
-            if system_ifo_pico_pct > 95: umbral_pico = 95.0
-            elif system_ifo_pico_pct < 90: umbral_pico = 90.0
-            else: umbral_pico = system_ifo_pico_pct
+            res_sys = cursor.fetchone()
+            system_ifo_topeado_pct = float((res_sys['system_ifo_topeado'] or 0.0) * 100)
+            if system_ifo_topeado_pct > 95: umbral_objetivo = 95.0
+            elif system_ifo_topeado_pct < 90: umbral_objetivo = 90.0
+            else: umbral_objetivo = system_ifo_topeado_pct
 
-            # 5.b IFO Sistema Pos Picos (L-V)
-            cursor.execute("""
-                SELECT AVG(eot_monthly_ifo_topeado) as system_ifo_topeado
-                FROM (
-                    SELECT id_eot_vmt_hex, AVG(daily_ifo_topeado) as eot_monthly_ifo_topeado
-                    FROM (
-                        SELECT h.id_eot_vmt_hex, h.fecha, LEAST(AVG(h.ifo), 1.1) as daily_ifo_topeado
-                        FROM control_metricas.ifo_historico h
-                        JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
-                        WHERE h.fecha BETWEEN %s AND %s
-                          AND EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5
-                          AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
-                          AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
-                          AND (
-                            UPPER(f.denominacion) LIKE '%%POS%%PICO%%'
-                            OR UPPER(f.denominacion) LIKE '%%POSPICO%%'
-                          )
-                          AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%'
-                          AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%'
-                        GROUP BY h.id_eot_vmt_hex, h.fecha
-                    ) daily_avgs
-                    GROUP BY id_eot_vmt_hex
-                ) eot_avgs
-            """, (prev_start, prev_end))
-            res_sys_pos = cursor.fetchone()
-            system_ifo_pos_pct = float((res_sys_pos['system_ifo_topeado'] or 0.0) * 100)
-            if system_ifo_pos_pct > 95: umbral_pospico = 95.0
-            elif system_ifo_pos_pct < 90: umbral_pospico = 90.0
-            else: umbral_pospico = system_ifo_pos_pct
-            
-            # 5.c Histórico de los últimos 6 meses (para Reincidencias Art. 16.1, 16.2, 16.4 y Sumario Art. 18.2)
-            eots_con_incumplimiento_15_1_pico_previo = set()
-            eots_con_incumplimiento_15_1_pos_previo = set()
+            # 5.b Histórico de los últimos 6 meses (para Reincidencias Art. 16.1, 16.2, 16.4 y Sumario Art. 18.2)
+            eots_con_incumplimiento_15_1_previo = set()
             eots_con_incumplimiento_15_2_previo = set()
             eots_con_incumplimiento_15_4_previo = set()
             fallas_ifo_6meses = defaultdict(int)
@@ -215,12 +187,12 @@ async def generate_fines_report(
                 if check_y == 2026 and check_m == 5:
                     m_start = max(m_start, FECHA_INICIO_ETAPA2)
                 
-                # Calcular umbrales de Picos y Pos Picos del mes check
+                # Calcular umbral general del mes check
                 prev_check_y, prev_check_m = get_previous_month(check_y, check_m)
                 p_start, p_end = get_month_range(prev_check_y, prev_check_m)
 
                 cursor.execute("""
-                    SELECT AVG(eot_monthly_ifo_topeado) as sys_pico
+                    SELECT AVG(eot_monthly_ifo_topeado) as sys_ifo
                     FROM (
                         SELECT id_eot_vmt_hex, AVG(daily_ifo_topeado) as eot_monthly_ifo_topeado
                         FROM (
@@ -232,7 +204,7 @@ async def generate_fines_report(
                               AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
                               AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
                               AND (
-                                (EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5 AND UPPER(f.denominacion) LIKE '%%PICO%%' AND UPPER(f.denominacion) NOT LIKE '%%POS%%' AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%' AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%')
+                                (EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5 AND (UPPER(f.denominacion) LIKE '%%PICO%%' OR UPPER(f.denominacion) LIKE '%%POS%%PICO%%' OR UPPER(f.denominacion) LIKE '%%POSPICO%%') AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%' AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%')
                                 OR
                                 (EXTRACT(ISODOW FROM h.fecha) = 6 AND UPPER(f.denominacion) LIKE '%%PICO%%' AND UPPER(f.denominacion) NOT LIKE '%%POS%%' AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%' AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%')
                               )
@@ -241,38 +213,11 @@ async def generate_fines_report(
                         GROUP BY id_eot_vmt_hex
                     ) eot_avgs
                 """, (p_start, p_end))
-                p_sys_p = cursor.fetchone()
-                p_sys_pico = float((p_sys_p['sys_pico'] or 0.0) * 100)
-                m_umbral_pico = 95.0 if p_sys_pico > 95 else (90.0 if p_sys_pico < 90 else p_sys_pico)
+                p_sys = cursor.fetchone()
+                p_sys_ifo = float((p_sys['sys_ifo'] or 0.0) * 100)
+                m_umbral = 95.0 if p_sys_ifo > 95 else (90.0 if p_sys_ifo < 90 else p_sys_ifo)
 
-                cursor.execute("""
-                    SELECT AVG(eot_monthly_ifo_topeado) as sys_pos
-                    FROM (
-                        SELECT id_eot_vmt_hex, AVG(daily_ifo_topeado) as eot_monthly_ifo_topeado
-                        FROM (
-                            SELECT h.id_eot_vmt_hex, h.fecha, LEAST(AVG(h.ifo), 1.1) as daily_ifo_topeado
-                            FROM control_metricas.ifo_historico h
-                            JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
-                            WHERE h.fecha BETWEEN %s AND %s
-                              AND EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5
-                              AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
-                              AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
-                              AND (
-                                UPPER(f.denominacion) LIKE '%%POS%%PICO%%'
-                                OR UPPER(f.denominacion) LIKE '%%POSPICO%%'
-                              )
-                              AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%'
-                              AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%'
-                            GROUP BY h.id_eot_vmt_hex, h.fecha
-                        ) daily_avgs
-                        GROUP BY id_eot_vmt_hex
-                    ) eot_avgs
-                """, (p_start, p_end))
-                p_sys_po = cursor.fetchone()
-                p_sys_pos = float((p_sys_po['sys_pos'] or 0.0) * 100)
-                m_umbral_pos = 95.0 if p_sys_pos > 95 else (90.0 if p_sys_pos < 90 else p_sys_pos)
-
-                # Calcular IFO Mensual de Picos por EOT en días limpios (excluyendo días con Nivel C)
+                # Calcular IFO Mensual General por EOT en días limpios (excluyendo días con Nivel C)
                 cursor.execute("""
                     WITH dias_con_c AS (
                         SELECT DISTINCT h.id_eot_vmt_hex, h.fecha
@@ -298,60 +243,20 @@ async def generate_fines_report(
                           AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
                           AND (h.id_eot_vmt_hex, h.fecha) NOT IN (SELECT id_eot_vmt_hex, fecha FROM dias_con_c)
                           AND (
-                            (EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5 AND UPPER(f.denominacion) LIKE '%%PICO%%' AND UPPER(f.denominacion) NOT LIKE '%%POS%%')
-                            OR
-                            (EXTRACT(ISODOW FROM h.fecha) = 6 AND UPPER(f.denominacion) LIKE '%%PICO%%' AND UPPER(f.denominacion) NOT LIKE '%%POS%%')
-                          )
-                          AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%' AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%'
-                        GROUP BY h.id_eot_vmt_hex, h.fecha
-                    ) daily_avgs
-                    GROUP BY id_eot_vmt_hex
-                """, (m_start, m_end, m_start, m_end))
-                for row in cursor.fetchall():
-                    m_ifo = float(row['monthly_ifo_topeado'] * 100)
-                    if m_ifo < m_umbral_pico:
-                        if evaluar_reincidencia:
-                            eots_con_incumplimiento_15_1_pico_previo.add(row['id_eot_vmt_hex'])
-                        fallas_ifo_6meses[row['id_eot_vmt_hex']] += 1
-                        if month_idx < 2:
-                            infracciones_previas_trimestre[row['id_eot_vmt_hex']] += 1
-
-                # Calcular IFO Mensual de Pos Picos por EOT en días limpios (excluyendo días con Nivel C)
-                cursor.execute("""
-                    WITH dias_con_c AS (
-                        SELECT DISTINCT h.id_eot_vmt_hex, h.fecha
-                        FROM control_metricas.ifo_historico h
-                        JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
-                        WHERE h.fecha BETWEEN %s AND %s
-                          AND (
                             (EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5 AND (UPPER(f.denominacion) LIKE '%%PICO%%' OR UPPER(f.denominacion) LIKE '%%POS%%PICO%%' OR UPPER(f.denominacion) LIKE '%%POSPICO%%'))
                             OR
                             (EXTRACT(ISODOW FROM h.fecha) = 6 AND UPPER(f.denominacion) LIKE '%%PICO%%' AND UPPER(f.denominacion) NOT LIKE '%%POS%%')
                           )
                           AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%' AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%'
-                          AND h.ifo < 0.80
-                    )
-                    SELECT id_eot_vmt_hex, AVG(daily_ifo_topeado) as monthly_ifo_topeado
-                    FROM (
-                        SELECT h.id_eot_vmt_hex, h.fecha, LEAST(AVG(h.ifo), 1.1) as daily_ifo_topeado
-                        FROM control_metricas.ifo_historico h
-                        JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
-                        WHERE h.fecha BETWEEN %s AND %s
-                          AND EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5
-                          AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
-                          AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
-                          AND (h.id_eot_vmt_hex, h.fecha) NOT IN (SELECT id_eot_vmt_hex, fecha FROM dias_con_c)
-                          AND (UPPER(f.denominacion) LIKE '%%POS%%PICO%%' OR UPPER(f.denominacion) LIKE '%%POSPICO%%')
-                          AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%' AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%'
                         GROUP BY h.id_eot_vmt_hex, h.fecha
                     ) daily_avgs
                     GROUP BY id_eot_vmt_hex
                 """, (m_start, m_end, m_start, m_end))
                 for row in cursor.fetchall():
                     m_ifo = float(row['monthly_ifo_topeado'] * 100)
-                    if m_ifo < m_umbral_pos:
+                    if m_ifo < m_umbral:
                         if evaluar_reincidencia:
-                            eots_con_incumplimiento_15_1_pos_previo.add(row['id_eot_vmt_hex'])
+                            eots_con_incumplimiento_15_1_previo.add(row['id_eot_vmt_hex'])
                         fallas_ifo_6meses[row['id_eot_vmt_hex']] += 1
                         if month_idx < 2:
                             infracciones_previas_trimestre[row['id_eot_vmt_hex']] += 1
@@ -868,72 +773,46 @@ async def generate_fines_report(
                             'jornales': jornales_b_pos
                         })
 
-                # REGLA #4 (Res. GVMT N° 104/2026): Art. 15.1 Mensual (Picos y Pos Picos separados).
-                # Medición Integral del Cumplimiento Mensual: Se computa la totalidad de jornadas
-                # evaluables del mes calendario, independientemente de que hayan sido objeto de
-                # sanción diaria previa (Nivel B o C). Únicas exclusiones: domingos, feriados y días atípicos.
+                # REGLA #4 (Res. GVMT N° 104/2026 y 120/2025): IFO Mensual General (Art. 15.1).
+                # Indicador global único por empresa para todo el mes (promedio de los IFO diarios válidos).
+                # Excluye domingos, feriados, días atípicos de lluvia y jornadas con Nivel C (Non Bis In Idem).
 
-                daily_pico_clean = []
-                daily_pos_clean = []
+                daily_ifo_clean = []
                 
                 for fecha_eval in fechas_ordenadas:
                     if fecha_eval < start_date or fecha_eval > end_date: continue
                     if fecha_eval < FECHA_INICIO_ETAPA2: continue
                     id_tipo_dia = get_tipo_dia_id(fecha_eval, db_feriados)
                     if id_tipo_dia == 7 or fecha_eval in db_atipicos: continue
+                    if fecha_eval in dias_sancionados_c: continue # Excluir jornadas ya sancionadas con Nivel C
                     
                     franjas_dia = dias_data[fecha_eval]
-                    pico_vals = []
-                    pos_vals = []
+                    franja_vals = []
                     for fid, f_res in franjas_dia.items():
                         meta = franjas_metadata.get(fid, {})
                         cat = categorizar(meta.get('denominacion', ''))
-                        if f_res['ifo'] is None: continue
-                        ifo_v = float(f_res['ifo'])
-                        if cat == 'PICO':
-                            pico_vals.append(ifo_v)
-                        elif cat == 'POS_PICO' and id_tipo_dia != 6: # Excluir Pos Pico de Sábado
-                            pos_vals.append(ifo_v)
+                        if f_res['ifo'] is None or cat == 'OTRO': continue
+                        if id_tipo_dia == 6 and cat == 'POS_PICO': continue # Excluir Pos Pico de Sábado
+                        franja_vals.append(float(f_res['ifo']))
                     
-                    if pico_vals:
-                        daily_pico_clean.append(min(sum(pico_vals) / len(pico_vals), 1.1))
-                    if pos_vals:
-                        daily_pos_clean.append(min(sum(pos_vals) / len(pos_vals), 1.1))
+                    if franja_vals:
+                        daily_ifo_clean.append(min(sum(franja_vals) / len(franja_vals), 1.1))
 
-                if daily_pico_clean:
-                    ifo_mensual_pico = (sum(daily_pico_clean) / len(daily_pico_clean)) * 100
-                    if ifo_mensual_pico < umbral_pico:
-                        if eot_hex in eots_con_incumplimiento_15_1_pico_previo:
+                if daily_ifo_clean:
+                    ifo_mensual_eot = (sum(daily_ifo_clean) / len(daily_ifo_clean)) * 100
+                    if ifo_mensual_eot < umbral_objetivo:
+                        if eot_hex in eots_con_incumplimiento_15_1_previo:
                             historial_faltas.append({
                                 'fecha': end_date,
                                 'base': 'Art. 16.1',
-                                'desc': f'Reincidencia IFO Mensual Picos ({ifo_mensual_pico:.2f}%) en últimos 6 meses - 30% recargo',
+                                'desc': f'Reincidencia IFO Mensual ({ifo_mensual_eot:.2f}%) en últimos 6 meses - 30% recargo',
                                 'jornales': round(173 * 1.3, 1)
                             })
                         else:
                             historial_faltas.append({
                                 'fecha': end_date,
                                 'base': 'Art. 15.1',
-                                'desc': f'IFO Mensual Picos ({ifo_mensual_pico:.2f}%) inferior al Umbral ({umbral_pico:.2f}%)',
-                                'jornales': 173
-                            })
-                        fallas_ifo_6meses[eot_hex] += 1
-
-                if daily_pos_clean:
-                    ifo_mensual_pos = (sum(daily_pos_clean) / len(daily_pos_clean)) * 100
-                    if ifo_mensual_pos < umbral_pospico:
-                        if eot_hex in eots_con_incumplimiento_15_1_pos_previo:
-                            historial_faltas.append({
-                                'fecha': end_date,
-                                'base': 'Art. 16.1',
-                                'desc': f'Reincidencia IFO Mensual Pos Picos ({ifo_mensual_pos:.2f}%) en últimos 6 meses - 30% recargo',
-                                'jornales': round(173 * 1.3, 1)
-                            })
-                        else:
-                            historial_faltas.append({
-                                'fecha': end_date,
-                                'base': 'Art. 15.1',
-                                'desc': f'IFO Mensual Pos Picos ({ifo_mensual_pos:.2f}%) inferior al Umbral ({umbral_pospico:.2f}%)',
+                                'desc': f'IFO Mensual ({ifo_mensual_eot:.2f}%) inferior al Umbral ({umbral_objetivo:.2f}%)',
                                 'jornales': 173
                             })
                         fallas_ifo_6meses[eot_hex] += 1

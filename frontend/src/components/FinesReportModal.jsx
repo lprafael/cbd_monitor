@@ -10,7 +10,7 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
   const [error, setError] = useState(null);
   const [evaluarReincidencia, setEvaluarReincidencia] = useState(true);
   const [excluirNivelB, setExcluirNivelB] = useState(false);
-  const [aplicarNonBisInIdem, setAplicarNonBisInIdem] = useState(false);
+  const [aplicarNonBisInIdem, setAplicarNonBisInIdem] = useState(true);
   const [actaModalOpen, setActaModalOpen] = useState(false);
   const [selectedEmpresa, setSelectedEmpresa] = useState(null);
   const [numeroActa, setNumeroActa] = useState("");
@@ -38,7 +38,7 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
     }
   }, [isOpen, fecha, evaluarReincidencia, excluirNivelB, aplicarNonBisInIdem]);
 
-  const fetchFinesData = async (withReincidencia = true, withExcluirNivelB = false, withNonBisInIdem = false) => {
+  const fetchFinesData = async (withReincidencia = true, withExcluirNivelB = false, withNonBisInIdem = true) => {
     setLoading(true);
     setError(null);
     try {
@@ -128,7 +128,7 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
                 checked={aplicarNonBisInIdem}
                 onChange={(e) => setAplicarNonBisInIdem(e.target.checked)}
               />
-              Metodología "Non bis in quo" (Res. 120/2025)
+              Resolución GVMT N° 104/2026 (Consolidación / Non Bis In Idem)
             </label>
             <button className="print-btn" onClick={handlePrint} title="Imprimir PDF y Descargar Notificaciones (Word)">🖨️ Generar PDF y Notificaciones</button>
             <button className="close-btn" onClick={onClose} title="Cerrar">✖</button>

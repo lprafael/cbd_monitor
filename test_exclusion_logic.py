@@ -3,11 +3,14 @@ Script de validación unitaria de la lógica de exclusión Non Bis In Idem
 para Artículos 15.1, 15.2, 15.3, 15.4, 15.5 y 15.6 (Resolución GVMT N° 120/2025 y 21/2026).
 """
 
-def evaluar_mes_simulado(jornadas, umbral_pico=90.0, umbral_pos=90.0, aplicar_non_bis_in_idem=True):
+def evaluar_mes_simulado(jornadas, umbral_general=90.0, aplicar_non_bis_in_idem=True, **kwargs):
     """
     Simula la lógica de evaluación implementada en fines_report.py y enviar_informe_infraccion.py:
     Permite alternar entre la metodología estándar y el criterio 'Non bis in quo' (aplicar_non_bis_in_idem).
     """
+    if 'umbral_pico' in kwargs:
+        umbral_general = kwargs['umbral_pico']
+
     historial_faltas = []
     dias_sancionados_c = set()
     dias_con_b_pico = {}
@@ -116,20 +119,21 @@ def evaluar_mes_simulado(jornadas, umbral_pico=90.0, umbral_pos=90.0, aplicar_no
                 dias_sancionados_b.update(dias_con_b_pos.keys())
                 historial_faltas.append({'fecha': 'FIN_MES', 'base': 'Art. 15.4', 'desc': f'Acumulación {total_b_pos} Franjas Pos Pico Nivel B', 'jornales': 10})
 
-    # Regla 4 (Res. GVMT N° 104/2026): Art. 15.1 Mensual computa la totalidad de jornadas
-    # evaluables, sin excluir días ya sancionados previamente (Nivel B o C).
-    daily_pico_clean = []
-    daily_pos_clean = []
+    # Regla 4 (Res. GVMT N° 104/2026 y 120/2025): Art. 15.1 Mensual General
+    # Se calcula como el promedio de los IFO diarios del mes (con tope 110%).
+    # Si aplicar_non_bis_in_idem es True: se excluyen los días con sanción directa de Nivel C.
+    daily_ifo_clean = []
 
     for dia in jornadas:
         fecha = dia['fecha']
         tipo_dia = dia.get('tipo_dia', 5)
         if tipo_dia == 7 or dia.get('atipico', False):
             continue
+        if aplicar_non_bis_in_idem and fecha in dias_sancionados_c:
+            continue
 
         franjas = dia['franjas']
-        p_vals = []
-        pos_vals = []
+        vals = []
         for f in franjas:
             cat = f['cat']
             ifo = f.get('ifo')
@@ -137,33 +141,19 @@ def evaluar_mes_simulado(jornadas, umbral_pico=90.0, umbral_pos=90.0, aplicar_no
                 continue
             if tipo_dia == 6 and cat == 'POS_PICO':
                 continue
-            if cat == 'PICO':
-                p_vals.append(ifo)
-            elif cat == 'POS_PICO':
-                pos_vals.append(ifo)
+            if cat in ['PICO', 'POS_PICO']:
+                vals.append(ifo)
 
-        if p_vals:
-            daily_pico_clean.append(min(sum(p_vals) / len(p_vals), 110.0))
-        if pos_vals:
-            daily_pos_clean.append(min(sum(pos_vals) / len(pos_vals), 110.0))
+        if vals:
+            daily_ifo_clean.append(min(sum(vals) / len(vals), 110.0))
 
-    if daily_pico_clean:
-        ifo_mensual_pico = sum(daily_pico_clean) / len(daily_pico_clean)
-        if ifo_mensual_pico < umbral_pico:
+    if daily_ifo_clean:
+        ifo_mensual = sum(daily_ifo_clean) / len(daily_ifo_clean)
+        if ifo_mensual < umbral_general:
             historial_faltas.append({
                 'fecha': 'FIN_MES',
-                'base': 'Art. 15.1 (Pico)',
-                'desc': f'IFO Mensual Picos ({ifo_mensual_pico:.2f}%) < Umbral ({umbral_pico:.2f}%) en días no sancionados',
-                'jornales': 173
-            })
-
-    if daily_pos_clean:
-        ifo_mensual_pos = sum(daily_pos_clean) / len(daily_pos_clean)
-        if ifo_mensual_pos < umbral_pos:
-            historial_faltas.append({
-                'fecha': 'FIN_MES',
-                'base': 'Art. 15.1 (Pos Pico)',
-                'desc': f'IFO Mensual Pos Picos ({ifo_mensual_pos:.2f}%) < Umbral ({umbral_pos:.2f}%) en días no sancionados',
+                'base': 'Art. 15.1',
+                'desc': f'IFO Mensual ({ifo_mensual:.2f}%) < Umbral ({umbral_general:.2f}%)',
                 'jornales': 173
             })
 
@@ -248,11 +238,12 @@ def test_escenarios():
     assert not any(f['base'] in ['Art. 15.2', 'Art. 15.3', 'Art. 15.4', 'Art. 15.5'] for f in faltas)
     print("  [OK] Escenario 4: Art. 15.6 se computa de forma independiente.")
 
-    # Escenario 5 (Regla 4 Res. GVMT N° 104/2026): Medición integral de Art. 15.1 (INCLUYE días ya sancionados)
+    # Escenario 5: Exclusión de días con Nivel C en Art. 15.1 bajo Non Bis In Idem
     # Día 1: Nivel C en Pico (70%) -> sancionado con 15.3.
     # Días 2 al 10 (9 días): Días con IFO 92%.
-    # El promedio mensual computa la totalidad de las 10 jornadas: (70 + 9 * 92) / 10 = 89.8%
-    # Al ser 89.8% < 90.0% (umbral), corresponde sanción por 15.1 además de la sanción diaria previa.
+    # Con Non Bis In Idem: El día 1 se excluye de la muestra mensual, quedando el promedio en 92% (>= 90%).
+    # No genera sanción de 15.1, evitando el doble castigo por el mismo déficit de flota.
+    # Con Metodología Estándar: Computa los 10 días -> promedio 89.8% (< 90%), generando 15.1.
     jornadas_5 = [
         {'fecha': '2026-06-01', 'tipo_dia': 5, 'franjas': [{'cat': 'PICO', 'ifo': 70.0}]}, # Sancionado con 15.3
     ]
@@ -262,26 +253,33 @@ def test_escenarios():
             'tipo_dia': 5,
             'franjas': [{'cat': 'PICO', 'ifo': 92.0}]
         })
-    faltas, c_days, b_days = evaluar_mes_simulado(jornadas_5, umbral_pico=90.0)
-    assert any(f['base'] == 'Art. 15.3' for f in faltas), "Falla: Día 1 debe tener 15.3"
-    assert any(f['base'] == 'Art. 15.1 (Pico)' for f in faltas), "Falla: Promedio mensual computando todas las jornadas es 89.8% < 90%, DEBE gatillar 15.1 (Regla 4 Res. 104/2026)"
-    print("  [OK] Escenario 5: Cómputo integral de 15.1 incluye días con sanciones previas (Regla 4 Res. 104/2026).")
+    faltas_5_non_bis, _, _ = evaluar_mes_simulado(jornadas_5, umbral_general=90.0, aplicar_non_bis_in_idem=True)
+    assert any(f['base'] == 'Art. 15.3' for f in faltas_5_non_bis), "Falla: Día 1 debe tener 15.3"
+    assert not any('15.1' in f['base'] for f in faltas_5_non_bis), "Falla: Non Bis In Idem excluye el día con Nivel C de la muestra de 15.1"
+    
+    faltas_5_std, _, _ = evaluar_mes_simulado(jornadas_5, umbral_general=90.0, aplicar_non_bis_in_idem=False)
+    assert any('15.1' in f['base'] for f in faltas_5_std), "Falla: Metodología estándar debe gatillar 15.1 (89.8% < 90%)"
+    print("  [OK] Escenario 5: Exclusión de días con Nivel C en IFO Mensual bajo Non Bis In Idem (evita doble sanción).")
 
-    # Escenario 6: Desdoblamiento de 15.1 (Pico cumple pero Pos Pico incumple)
+    # Escenario 6: IFO Mensual General (una única sanción consolidada, no desdoblada por franja)
+    # Día con Pico (95%) y Pos Pico (82%). Promedio diario general = (95 + 82) / 2 = 88.5% (< 90%).
+    # Aplica EXACTAMENTE 1 sola sanción de 173 jornales por Art. 15.1, NUNCA dos sanciones desdobladas.
     jornadas_6 = [
         {
             'fecha': '2026-06-01',
             'tipo_dia': 5,
             'franjas': [
-                {'cat': 'PICO', 'ifo': 95.0},     # Pico cumple (95% >= 90%)
-                {'cat': 'POS_PICO', 'ifo': 82.0}  # Pos Pico no sancionado (82% Nivel B pero no llega a 5), pero mensual < umbral 90%
+                {'cat': 'PICO', 'ifo': 95.0},     # Pico 95%
+                {'cat': 'POS_PICO', 'ifo': 82.0}  # Pos Pico 82%
             ]
         }
     ]
-    faltas, c_days, b_days = evaluar_mes_simulado(jornadas_6, umbral_pico=90.0, umbral_pos=90.0)
-    assert not any(f['base'] == 'Art. 15.1 (Pico)' for f in faltas), "Falla: Pico no debe gatillar 15.1"
-    assert any(f['base'] == 'Art. 15.1 (Pos Pico)' for f in faltas), "Falla: Pos Pico debe gatillar 15.1 (Pos Pico)"
-    print("  [OK] Escenario 6: Art. 15.1 evalúa Picos y Pos Picos de forma independiente.")
+    faltas_6, _, _ = evaluar_mes_simulado(jornadas_6, umbral_general=90.0)
+    sanciones_15_1 = [f for f in faltas_6 if '15.1' in f['base']]
+    assert len(sanciones_15_1) == 1, f"Falla: Debe emitir exactamente 1 sanción general por Art. 15.1, emitió {len(sanciones_15_1)}"
+    assert sanciones_15_1[0]['base'] == 'Art. 15.1'
+    assert sanciones_15_1[0]['jornales'] == 173
+    print("  [OK] Escenario 6: IFO Mensual se calcula de forma general (1 sola sanción unificada de 173 jornales).")
 
     # Escenario 7: Franjas válidas (Sábado Pos Pico no entra, Domingo no entra)
     jornadas_7 = [
