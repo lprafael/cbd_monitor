@@ -119,17 +119,15 @@ def evaluar_mes_simulado(jornadas, umbral_general=90.0, aplicar_non_bis_in_idem=
                 dias_sancionados_b.update(dias_con_b_pos.keys())
                 historial_faltas.append({'fecha': 'FIN_MES', 'base': 'Art. 15.4', 'desc': f'Acumulación {total_b_pos} Franjas Pos Pico Nivel B', 'jornales': 10})
 
-    # Regla 4 (Res. GVMT N° 104/2026 y 120/2025): Art. 15.1 Mensual General
-    # Se calcula como el promedio de los IFO diarios del mes (con tope 110%).
-    # Si aplicar_non_bis_in_idem es True: se excluyen los días con sanción directa de Nivel C.
+    # Regla 4 (Res. GVMT N° 104/2026 oficial): Art. 15.1 Mensual General
+    # Se computa la totalidad de las jornadas evaluables del mes (con tope 110%),
+    # con independencia de que hubieren sido objeto de sanciones previas (Nivel B o Nivel C).
     daily_ifo_clean = []
 
     for dia in jornadas:
         fecha = dia['fecha']
         tipo_dia = dia.get('tipo_dia', 5)
         if tipo_dia == 7 or dia.get('atipico', False):
-            continue
-        if aplicar_non_bis_in_idem and fecha in dias_sancionados_c:
             continue
 
         franjas = dia['franjas']
@@ -238,12 +236,11 @@ def test_escenarios():
     assert not any(f['base'] in ['Art. 15.2', 'Art. 15.3', 'Art. 15.4', 'Art. 15.5'] for f in faltas)
     print("  [OK] Escenario 4: Art. 15.6 se computa de forma independiente.")
 
-    # Escenario 5: Exclusión de días con Nivel C en Art. 15.1 bajo Non Bis In Idem
+    # Escenario 5: Cómputo sobre totalidad de días evaluables en Art. 15.1 (Regla 4 oficial Res. 104/2026)
     # Día 1: Nivel C en Pico (70%) -> sancionado con 15.3.
     # Días 2 al 10 (9 días): Días con IFO 92%.
-    # Con Non Bis In Idem: El día 1 se excluye de la muestra mensual, quedando el promedio en 92% (>= 90%).
-    # No genera sanción de 15.1, evitando el doble castigo por el mismo déficit de flota.
-    # Con Metodología Estándar: Computa los 10 días -> promedio 89.8% (< 90%), generando 15.1.
+    # Con Regla 4 oficial: Se computan los 10 días completos -> promedio 89.8% (< 90%), generando sanción del Art. 15.1
+    # con independencia de que el Día 1 ya hubiese sido sancionado por Nivel C.
     jornadas_5 = [
         {'fecha': '2026-06-01', 'tipo_dia': 5, 'franjas': [{'cat': 'PICO', 'ifo': 70.0}]}, # Sancionado con 15.3
     ]
@@ -255,11 +252,11 @@ def test_escenarios():
         })
     faltas_5_non_bis, _, _ = evaluar_mes_simulado(jornadas_5, umbral_general=90.0, aplicar_non_bis_in_idem=True)
     assert any(f['base'] == 'Art. 15.3' for f in faltas_5_non_bis), "Falla: Día 1 debe tener 15.3"
-    assert not any('15.1' in f['base'] for f in faltas_5_non_bis), "Falla: Non Bis In Idem excluye el día con Nivel C de la muestra de 15.1"
+    assert any('15.1' in f['base'] for f in faltas_5_non_bis), "Falla: Regla 4 oficial debe computar todos los días y gatillar 15.1"
     
     faltas_5_std, _, _ = evaluar_mes_simulado(jornadas_5, umbral_general=90.0, aplicar_non_bis_in_idem=False)
     assert any('15.1' in f['base'] for f in faltas_5_std), "Falla: Metodología estándar debe gatillar 15.1 (89.8% < 90%)"
-    print("  [OK] Escenario 5: Exclusión de días con Nivel C en IFO Mensual bajo Non Bis In Idem (evita doble sanción).")
+    print("  [OK] Escenario 5: Art. 15.1 evalúa todos los días evaluables del mes conforme a la Regla 4 oficial.")
 
     # Escenario 6: IFO Mensual General (una única sanción consolidada, no desdoblada por franja)
     # Día con Pico (95%) y Pos Pico (82%). Promedio diario general = (95 + 82) / 2 = 88.5% (< 90%).

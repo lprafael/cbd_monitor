@@ -217,21 +217,8 @@ async def generate_fines_report(
                 p_sys_ifo = float((p_sys['sys_ifo'] or 0.0) * 100)
                 m_umbral = 95.0 if p_sys_ifo > 95 else (90.0 if p_sys_ifo < 90 else p_sys_ifo)
 
-                # Calcular IFO Mensual General por EOT en días limpios (excluyendo días con Nivel C)
+                # Calcular IFO Mensual General por EOT (Regla 4 oficial: computa totalidad de jornadas evaluables)
                 cursor.execute("""
-                    WITH dias_con_c AS (
-                        SELECT DISTINCT h.id_eot_vmt_hex, h.fecha
-                        FROM control_metricas.ifo_historico h
-                        JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
-                        WHERE h.fecha BETWEEN %s AND %s
-                          AND (
-                            (EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5 AND (UPPER(f.denominacion) LIKE '%%PICO%%' OR UPPER(f.denominacion) LIKE '%%POS%%PICO%%' OR UPPER(f.denominacion) LIKE '%%POSPICO%%'))
-                            OR
-                            (EXTRACT(ISODOW FROM h.fecha) = 6 AND UPPER(f.denominacion) LIKE '%%PICO%%' AND UPPER(f.denominacion) NOT LIKE '%%POS%%')
-                          )
-                          AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%' AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%'
-                          AND h.ifo < 0.80
-                    )
                     SELECT id_eot_vmt_hex, AVG(daily_ifo_topeado) as monthly_ifo_topeado
                     FROM (
                         SELECT h.id_eot_vmt_hex, h.fecha, LEAST(AVG(h.ifo), 1.1) as daily_ifo_topeado
@@ -241,7 +228,6 @@ async def generate_fines_report(
                           AND EXTRACT(ISODOW FROM h.fecha) < 7
                           AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
                           AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
-                          AND (h.id_eot_vmt_hex, h.fecha) NOT IN (SELECT id_eot_vmt_hex, fecha FROM dias_con_c)
                           AND (
                             (EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5 AND (UPPER(f.denominacion) LIKE '%%PICO%%' OR UPPER(f.denominacion) LIKE '%%POS%%PICO%%' OR UPPER(f.denominacion) LIKE '%%POSPICO%%'))
                             OR
@@ -251,7 +237,7 @@ async def generate_fines_report(
                         GROUP BY h.id_eot_vmt_hex, h.fecha
                     ) daily_avgs
                     GROUP BY id_eot_vmt_hex
-                """, (m_start, m_end, m_start, m_end))
+                """, (m_start, m_end))
                 for row in cursor.fetchall():
                     m_ifo = float(row['monthly_ifo_topeado'] * 100)
                     if m_ifo < m_umbral:
@@ -773,18 +759,18 @@ async def generate_fines_report(
                             'jornales': jornales_b_pos
                         })
 
-                # REGLA #4 (Res. GVMT N° 104/2026 y 120/2025): IFO Mensual General (Art. 15.1).
-                # Indicador global único por empresa para todo el mes (promedio de los IFO diarios válidos).
-                # Excluye domingos, feriados, días atípicos de lluvia y jornadas con Nivel C (Non Bis In Idem).
+                # REGLA #4 (Res. GVMT N° 104/2026 oficial): IFO Mensual General (Art. 15.1).
+                # Se computa la totalidad de las jornadas diarias evaluables del mes calendario,
+                # con exclusión de feriados y días atípicos, con independencia de que dichas jornadas
+                # hubieren sido objeto de sanciones previas (Nivel B o Nivel C).
 
-                daily_ifo_clean = []
+                daily_ifo_mensual = []
                 
                 for fecha_eval in fechas_ordenadas:
                     if fecha_eval < start_date or fecha_eval > end_date: continue
                     if fecha_eval < FECHA_INICIO_ETAPA2: continue
                     id_tipo_dia = get_tipo_dia_id(fecha_eval, db_feriados)
                     if id_tipo_dia == 7 or fecha_eval in db_atipicos: continue
-                    if fecha_eval in dias_sancionados_c: continue # Excluir jornadas ya sancionadas con Nivel C
                     
                     franjas_dia = dias_data[fecha_eval]
                     franja_vals = []
@@ -796,10 +782,10 @@ async def generate_fines_report(
                         franja_vals.append(float(f_res['ifo']))
                     
                     if franja_vals:
-                        daily_ifo_clean.append(min(sum(franja_vals) / len(franja_vals), 1.1))
+                        daily_ifo_mensual.append(min(sum(franja_vals) / len(franja_vals), 1.1))
 
-                if daily_ifo_clean:
-                    ifo_mensual_eot = (sum(daily_ifo_clean) / len(daily_ifo_clean)) * 100
+                if daily_ifo_mensual:
+                    ifo_mensual_eot = (sum(daily_ifo_mensual) / len(daily_ifo_mensual)) * 100
                     if ifo_mensual_eot < umbral_objetivo:
                         if eot_hex in eots_con_incumplimiento_15_1_previo:
                             historial_faltas.append({
