@@ -86,6 +86,12 @@ async def get_monthly_summary(
         )
         feriados_set = {str(row['fecha']) for row in cursor.fetchall()}
 
+        cursor.execute(
+            "SELECT fecha FROM control_metricas.dias_atipicos WHERE fecha >= %s AND fecha <= %s",
+            (primer_dia_mes, fecha_referencia)
+        )
+        atipicos_set = {str(row['fecha']) for row in cursor.fetchall()}
+
         fecha_actual = primer_dia_mes
         while fecha_actual <= fecha_referencia:
             td_id = get_tipo_dia_id(fecha_actual, feriados_set)
@@ -115,7 +121,7 @@ async def get_monthly_summary(
                     'cbd_cantidad': int(row['cbd_cantidad']) if row['cbd_cantidad'] is not None else 0
                 }
 
-        ifos_diarios_mes = []
+        # Calcular ifo_diario para cada día del reporte
         for td_id, td_data in tipos_dia_info.items():
             for f_str, dia_data in td_data['dias'].items():
                 franjas_dia = dia_data['franjas']
@@ -123,9 +129,45 @@ async def get_monthly_summary(
                 if ifos:
                     avg_diario = min(sum(ifos) / len(ifos), 110.0)
                     dia_data['ifo_diario'] = avg_diario
-                    ifos_diarios_mes.append(avg_diario)
 
-        ifo_mes = sum(ifos_diarios_mes) / len(ifos_diarios_mes) if ifos_diarios_mes else 0
+        # IFO Mes normativo (Res. 120/2025 y 104/2026):
+        # Excluye domingos, feriados y días atípicos, evaluando franjas normativas con tope 110% diario
+        cursor.execute("""
+            SELECT AVG(daily_ifo_topeado) as ifo_mes
+            FROM (
+                SELECT h.fecha, LEAST(AVG(h.ifo), 1.1) * 100 as daily_ifo_topeado
+                FROM control_metricas.ifo_historico h
+                JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
+                WHERE h.id_eot_vmt_hex = %s
+                  AND h.fecha >= %s AND h.fecha <= %s
+                  AND EXTRACT(ISODOW FROM h.fecha) < 7
+                  AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
+                  AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
+                  AND (
+                    (
+                      EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5
+                      AND (
+                        UPPER(f.denominacion) LIKE '%%PICO%%'
+                        OR UPPER(f.denominacion) LIKE '%%POS%%PICO%%'
+                        OR UPPER(f.denominacion) LIKE '%%POSPICO%%'
+                      )
+                      AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%'
+                      AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%'
+                    )
+                    OR
+                    (
+                      EXTRACT(ISODOW FROM h.fecha) = 6
+                      AND UPPER(f.denominacion) LIKE '%%PICO%%'
+                      AND UPPER(f.denominacion) NOT LIKE '%%POS%%'
+                      AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%'
+                      AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%'
+                    )
+                  )
+                GROUP BY h.fecha
+            ) daily_avgs
+        """, (id_eot_vmt_hex, primer_dia_mes, fecha_referencia))
+        row_ifo = cursor.fetchone()
+        ifo_mes = float(row_ifo['ifo_mes']) if row_ifo and row_ifo['ifo_mes'] is not None else 0.0
         
         return MonthlyReportResponse(
             tipos_dia=tipos_dia_info,
@@ -178,6 +220,7 @@ async def get_system_ifo_baseline(fecha: date, db: DatabaseConnection = Depends(
             WHERE h.fecha >= %s AND h.fecha <= %s
               AND EXTRACT(ISODOW FROM h.fecha) < 7
               AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
+              AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
               AND (
                 (
                   EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5
@@ -315,6 +358,7 @@ async def get_system_ifo_breakdown(
             WHERE h.fecha >= %s AND h.fecha <= %s
               AND EXTRACT(ISODOW FROM h.fecha) < 7
               AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
+              AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
               AND (
                 (
                   EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5
@@ -356,6 +400,7 @@ async def get_system_ifo_breakdown(
             WHERE h.fecha >= %s AND h.fecha <= %s
               AND EXTRACT(ISODOW FROM h.fecha) < 7
               AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
+              AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
               AND (
                 (
                   EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5
@@ -436,6 +481,7 @@ async def get_system_ifo_breakdown(
                 WHERE h.fecha >= %s AND h.fecha <= %s
                   AND EXTRACT(ISODOW FROM h.fecha) < 7
                   AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
+                  AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
                   AND (
                     (
                       EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5
@@ -651,6 +697,7 @@ async def get_subsidy_breakdown(
             WHERE h.fecha >= %s AND h.fecha <= %s
               AND EXTRACT(ISODOW FROM h.fecha) < 7
               AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
+              AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
               AND (
                 (
                   EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5
@@ -774,6 +821,7 @@ async def get_eot_subsidy_breakdown(eot_id: str, year: int, month: int, db: Data
             WHERE h.id_eot_vmt_hex = %s AND h.fecha BETWEEN %s AND %s
               AND EXTRACT(ISODOW FROM h.fecha) < 7
               AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
+              AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
               AND (
                 (
                   EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5

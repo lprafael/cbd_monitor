@@ -83,7 +83,7 @@ const CalculationMethodologyModal = ({ isOpen, onClose }) => {
                                 <ul>
                                     <li><strong>Lunes a Viernes:</strong> Solo se consideran franjas Pico y Pos Pico.</li>
                                     <li><strong>Sábados:</strong> Solo se considera franja Pico.</li>
-                                    <li>❌ <strong>Domingos y Feriados:</strong> Excluidos del cálculo del IFO Mensual.</li>
+                                    <li>❌ <strong>Domingos, Feriados y Días Atípicos:</strong> Excluidos del cálculo del IFO Mensual.</li>
                                 </ul>
                             </div>
                             <div className="exclusion-card">
@@ -174,7 +174,9 @@ FROM (
             JOIN control_metricas.franjas_operativas f 
                 ON h.id_franja = f.id_franja
             WHERE h.fecha BETWEEN :inicio_mes AND :fin_mes
-            -- Nota: Se incluyen domingos, feriados y atípicos en el cálculo
+              AND extract(isodow from h.fecha) < 7  -- Excluir domingos
+              AND h.fecha NOT IN (SELECT fecha FROM public.feriados)  -- Excluir feriados
+              AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)  -- Excluir atípicos
             GROUP BY id_eot_vmt_hex, fecha, h.id_franja
         ) franja_level
         GROUP BY id_eot_vmt_hex, fecha

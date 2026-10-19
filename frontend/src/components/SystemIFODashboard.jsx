@@ -492,7 +492,7 @@ const SystemIFODashboard = ({ year, month }) => {
                 <ol>
                     <li><strong>IFO Franja:</strong> Valor base almacenado en la base de datos</li>
                     <li><strong>IFO Día:</strong> Promedio de IFO Franja por día</li>
-                    <li><strong>IFO Mensual EOT:</strong> Promedio de IFO Día (incluyendo todos los días del mes sin exclusión)</li>
+                    <li><strong>IFO Mensual EOT:</strong> Promedio de IFO Día sobre días válidos (excluyendo domingos, feriados y días atípicos)</li>
                     <li><strong>IFO Sistema:</strong> Promedio de IFO Mensual de todas las EOTs</li>
                 </ol>
                 <p className="formula">

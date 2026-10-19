@@ -84,6 +84,7 @@ async def get_monthly_performance(
                       AND h.fecha BETWEEN %s AND %s
                       AND EXTRACT(ISODOW FROM h.fecha) < 7
                       AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
+                      AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
                       AND (
                         (
                           EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5
@@ -138,6 +139,7 @@ async def get_monthly_performance(
                   AND h.fecha BETWEEN %s AND %s
                   AND EXTRACT(ISODOW FROM h.fecha) < 7
                   AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
+                  AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
                   AND (
                     (
                       EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5
@@ -203,6 +205,7 @@ async def get_monthly_performance(
                         WHERE h.fecha BETWEEN %s AND %s
                           AND EXTRACT(ISODOW FROM h.fecha) < 7
                           AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
+                          AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
                           AND (
                             (
                               EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5

@@ -248,14 +248,44 @@ def obtener_datos_mensuales_eot(id_eot_vmt_hex: str, fecha_referencia: date):
         # Los datos ya se cargaron desde la BD arriba
         print(f"  ✓ Datos obtenidos directamente de BD (optimizado)")
         
-        # Calcular IFO MES (promedio de IFO diario del mes, todos los tipos de día)
-        ifos_diarios = []
-        for tipo_data in tipos_dia_info.values():
-            for dia_data in tipo_data['dias'].values():
-                if dia_data.get('ifo_diario') is not None:
-                    ifos_diarios.append(dia_data['ifo_diario'])
-        
-        ifo_mes = sum(ifos_diarios) / len(ifos_diarios) if ifos_diarios else 0
+        # Calcular IFO MES normativo (Res. 120/2025 y 104/2026):
+        # Excluye domingos, feriados y días atípicos, evaluando franjas normativas con tope 110% diario
+        cur.execute("""
+            SELECT AVG(daily_ifo_topeado) as ifo_mes
+            FROM (
+                SELECT h.fecha, LEAST(AVG(h.ifo), 1.1) * 100 as daily_ifo_topeado
+                FROM control_metricas.ifo_historico h
+                JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
+                WHERE h.id_eot_vmt_hex = %s
+                  AND h.fecha >= %s AND h.fecha <= %s
+                  AND EXTRACT(ISODOW FROM h.fecha) < 7
+                  AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
+                  AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
+                  AND (
+                    (
+                      EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5
+                      AND (
+                        UPPER(f.denominacion) LIKE '%%PICO%%'
+                        OR UPPER(f.denominacion) LIKE '%%POS%%PICO%%'
+                        OR UPPER(f.denominacion) LIKE '%%POSPICO%%'
+                      )
+                      AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%'
+                      AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%'
+                    )
+                    OR
+                    (
+                      EXTRACT(ISODOW FROM h.fecha) = 6
+                      AND UPPER(f.denominacion) LIKE '%%PICO%%'
+                      AND UPPER(f.denominacion) NOT LIKE '%%POS%%'
+                      AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%'
+                      AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%'
+                    )
+                  )
+                GROUP BY h.fecha
+            ) daily_avgs
+        """, (id_eot_vmt_hex, primer_dia_mes, fecha_referencia))
+        row_ifo = cur.fetchone()
+        ifo_mes = float(row_ifo['ifo_mes']) if row_ifo and row_ifo['ifo_mes'] is not None else 0.0
         
         # Retornar datos agrupados por tipo de día
         resultado = {
