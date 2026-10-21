@@ -15,6 +15,15 @@ class FinesReportRequest(BaseModel):
     excluir_nivel_b: bool = False
     aplicar_non_bis_in_idem: bool = True
 
+class FinesCumulativeRequest(BaseModel):
+    start_month: int
+    start_year: int
+    end_month: int
+    end_year: int
+    evaluar_reincidencia: bool = True
+    excluir_nivel_b: bool = False
+    aplicar_non_bis_in_idem: bool = True
+
 def obtener_valor_jornal(fecha_eval: date) -> int:
     """
     Retorna el valor del jornal mínimo según la vigencia de la fecha.
@@ -36,19 +45,15 @@ def get_tipo_dia_id(fecha_obj, db_feriados):
     else:
         return 5
 
-@router.post("")
-async def generate_fines_report(
-    request: FinesReportRequest,
-    db: DatabaseConnection = Depends(get_db_connection)
-):
-    cursor = db.get_cursor()
+def compute_fines_report_for_month(
+    cursor,
+    year: int,
+    month: int,
+    evaluar_reincidencia: bool = True,
+    excluir_nivel_b: bool = False,
+    aplicar_non_bis_in_idem: bool = True
+) -> dict:
     try:
-        month = request.month
-        year = request.year
-        evaluar_reincidencia = request.evaluar_reincidencia
-        excluir_nivel_b = request.excluir_nivel_b
-        aplicar_non_bis_in_idem = request.aplicar_non_bis_in_idem
-        
         start_date, end_date = get_month_range(year, month)
         
         FECHA_INICIO_ETAPA2 = date(2026, 5, 19)
@@ -846,7 +851,25 @@ async def generate_fines_report(
             'aplicar_non_bis_in_idem': aplicar_non_bis_in_idem,
             'reporte': reporte_final
         }
-        
+    except Exception as e:
+        print(f"Error computing fines for {year}-{month}: {e}")
+        raise
+
+@router.post("")
+async def generate_fines_report(
+    request: FinesReportRequest,
+    db: DatabaseConnection = Depends(get_db_connection)
+):
+    cursor = db.get_cursor()
+    try:
+        return compute_fines_report_for_month(
+            cursor=cursor,
+            year=request.year,
+            month=request.month,
+            evaluar_reincidencia=request.evaluar_reincidencia,
+            excluir_nivel_b=request.excluir_nivel_b,
+            aplicar_non_bis_in_idem=request.aplicar_non_bis_in_idem
+        )
     except Exception as e:
         print(f"Error generating fines report: {e}")
         import traceback
@@ -854,3 +877,161 @@ async def generate_fines_report(
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         cursor.close()
+
+@router.post("/cumulative")
+async def generate_cumulative_fines_report(
+    request: FinesCumulativeRequest,
+    db: DatabaseConnection = Depends(get_db_connection)
+):
+    cursor = db.get_cursor()
+    try:
+        # Generar lista de (year, month) desde (start_year, start_month) hasta (end_year, end_month)
+        months_to_eval = []
+        curr_y, curr_m = request.start_year, request.start_month
+        end_y, end_m = request.end_year, request.end_month
+        
+        while (curr_y < end_y) or (curr_y == end_y and curr_m <= end_m):
+            months_to_eval.append((curr_y, curr_m))
+            if curr_m == 12:
+                curr_y += 1
+                curr_m = 1
+            else:
+                curr_m += 1
+
+        MESES_NOMBRES = {
+            1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril",
+            5: "Mayo", 6: "Junio", 7: "Julio", 8: "Agosto",
+            9: "Setiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre"
+        }
+
+        meses_resumen = []
+        empresas_acum = {}
+
+        for y, m in months_to_eval:
+            month_data = compute_fines_report_for_month(
+                cursor, y, m,
+                request.evaluar_reincidencia,
+                request.excluir_nivel_b,
+                request.aplicar_non_bis_in_idem
+            )
+            rep = month_data.get('reporte', [])
+            
+            m_jornales = sum(e['total_jornales'] for e in rep)
+            m_monto = sum(e['total_guaranies'] for e in rep)
+            m_empresas = len(rep)
+            
+            m_label = f"{MESES_NOMBRES.get(m, str(m))} {y}"
+            m_key = f"{y}-{m:02d}"
+
+            meses_resumen.append({
+                'year': y,
+                'month': m,
+                'key': m_key,
+                'label': m_label,
+                'total_jornales': m_jornales,
+                'total_guaranies': m_monto,
+                'empresas_sancionadas': m_empresas
+            })
+
+            for emp in rep:
+                hex_id = emp['eot_hex']
+                if hex_id not in empresas_acum:
+                    empresas_acum[hex_id] = {
+                        'eot_nombre': emp['eot_nombre'],
+                        'eot_hex': hex_id,
+                        'total_jornales': 0,
+                        'total_guaranies': 0,
+                        'total_infracciones': 0,
+                        'meses': {},
+                        'por_articulo': defaultdict(lambda: {'jornales': 0, 'monto': 0, 'conteo': 0}),
+                        'alerta_sumario': False,
+                        'motivos_sumario': [],
+                        'infracciones': []
+                    }
+                
+                e_entry = empresas_acum[hex_id]
+                e_entry['total_jornales'] += emp['total_jornales']
+                e_entry['total_guaranies'] += emp['total_guaranies']
+                e_entry['total_infracciones'] += emp['total_infracciones']
+                
+                if emp.get('alerta_sumario'):
+                    e_entry['alerta_sumario'] = True
+                    for mot in emp.get('motivos_sumario', []):
+                        if mot not in e_entry['motivos_sumario']:
+                            e_entry['motivos_sumario'].append(mot)
+                
+                e_entry['meses'][m_key] = {
+                    'jornales': emp['total_jornales'],
+                    'monto': emp['total_guaranies'],
+                    'infracciones': emp['total_infracciones']
+                }
+
+                for inf in emp.get('infracciones', []):
+                    e_entry['infracciones'].append({
+                        **inf,
+                        'mes': m_key,
+                        'mes_label': m_label
+                    })
+                    base = inf.get('base', 'Otros')
+                    e_entry['por_articulo'][base]['jornales'] += inf.get('jornales', 0)
+                    e_entry['por_articulo'][base]['monto'] += inf.get('monto', 0)
+                    e_entry['por_articulo'][base]['conteo'] += 1
+
+        lista_empresas = list(empresas_acum.values())
+        for e in lista_empresas:
+            e['por_articulo'] = dict(e['por_articulo'])
+            for mr in meses_resumen:
+                mk = mr['key']
+                if mk not in e['meses']:
+                    e['meses'][mk] = {'jornales': 0, 'monto': 0, 'infracciones': 0}
+
+        lista_empresas.sort(key=lambda x: x['total_jornales'], reverse=True)
+
+        gran_total_jornales = sum(e['total_jornales'] for e in lista_empresas)
+        gran_total_guaranies = sum(e['total_guaranies'] for e in lista_empresas)
+        gran_total_infracciones = sum(e['total_infracciones'] for e in lista_empresas)
+
+        articulos_global = defaultdict(lambda: {'jornales': 0, 'monto': 0, 'conteo': 0})
+        for e in lista_empresas:
+            for art, vals in e['por_articulo'].items():
+                articulos_global[art]['jornales'] += vals['jornales']
+                articulos_global[art]['monto'] += vals['monto']
+                articulos_global[art]['conteo'] += vals['conteo']
+
+        return {
+            'periodo': {
+                'start_year': request.start_year,
+                'start_month': request.start_month,
+                'end_year': request.end_year,
+                'end_month': request.end_month,
+                'total_meses': len(meses_resumen)
+            },
+            'meses': meses_resumen,
+            'totales_generales': {
+                'total_jornales': gran_total_jornales,
+                'total_guaranies': gran_total_guaranies,
+                'total_infracciones': gran_total_infracciones,
+                'empresas_sancionadas': len(lista_empresas),
+                'empresas_sumario': sum(1 for e in lista_empresas if e['alerta_sumario']),
+                'por_articulo': dict(articulos_global),
+                'top_empresas': [
+                    {
+                        'eot_nombre': e['eot_nombre'],
+                        'eot_hex': e['eot_hex'],
+                        'total_jornales': e['total_jornales'],
+                        'total_guaranies': e['total_guaranies']
+                    }
+                    for e in lista_empresas[:10]
+                ]
+            },
+            'empresas': lista_empresas
+        }
+        
+    except Exception as e:
+        print(f"Error generating cumulative fines report: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+

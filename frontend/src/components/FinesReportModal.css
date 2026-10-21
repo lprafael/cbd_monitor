@@ -234,6 +234,30 @@
   background-color: #2563eb;
 }
 
+.stats-btn {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.stats-btn:hover {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  color: white;
+  border-color: #38bdf8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(56, 189, 248, 0.25);
+}
+
 .print-only {
   display: none;
 }
@@ -270,7 +294,7 @@
     overflow-y: visible;
     background-color: white;
   }
-  .close-btn, .print-btn, .fines-modal-header, .select-all-container {
+  .close-btn, .print-btn, .stats-btn, .fines-modal-header, .select-all-container {
     display: none !important;
   }
   @page {

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config';
 import { generateActaPdf } from '../utils/generateActaPdf';
 import { generateNotificacionesWord } from '../utils/generateNotificacionesWord';
+import FinesCumulativeModal from './FinesCumulativeModal';
 import './FinesReportModal.css';
 
 const FinesReportModal = ({ isOpen, onClose, fecha }) => {
@@ -12,6 +13,7 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
   const [excluirNivelB, setExcluirNivelB] = useState(false);
   const [aplicarNonBisInIdem, setAplicarNonBisInIdem] = useState(true);
   const [actaModalOpen, setActaModalOpen] = useState(false);
+  const [cumulativeModalOpen, setCumulativeModalOpen] = useState(false);
   const [selectedEmpresa, setSelectedEmpresa] = useState(null);
   const [numeroActa, setNumeroActa] = useState("");
   const [fechaEmision, setFechaEmision] = useState("");
@@ -130,6 +132,14 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
               />
               Resolución GVMT N° 104/2026 (Consolidación / Non Bis In Idem)
             </label>
+            <button
+              id="btn-open-cumulative-stats"
+              className="stats-btn"
+              onClick={() => setCumulativeModalOpen(true)}
+              title="Ver estadísticas y acumulado multi-mes (por empresa)"
+            >
+              📊 Estadísticas Acumuladas
+            </button>
             <button className="print-btn" onClick={handlePrint} title="Imprimir PDF y Descargar Notificaciones (Word)">🖨️ Generar PDF y Notificaciones</button>
             <button className="close-btn" onClick={onClose} title="Cerrar">✖</button>
           </div>
@@ -309,6 +319,17 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
             </div>
           </div>
         </div>
+      )}
+
+      {cumulativeModalOpen && (
+        <FinesCumulativeModal
+          isOpen={cumulativeModalOpen}
+          onClose={() => setCumulativeModalOpen(false)}
+          initialStartMonth={7}
+          initialStartYear={fecha ? parseInt(fecha.split('-')[0], 10) : 2026}
+          initialEndMonth={fecha ? parseInt(fecha.split('-')[1], 10) : 9}
+          initialEndYear={fecha ? parseInt(fecha.split('-')[0], 10) : 2026}
+        />
       )}
     </div>
   );
