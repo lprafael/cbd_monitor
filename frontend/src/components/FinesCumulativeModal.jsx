@@ -19,7 +19,7 @@ const MESES = [
 
 const ANIOS = [2026, 2025, 2024];
 
-const FinesCumulativeModal = ({ isOpen, onClose, initialStartMonth = 7, initialStartYear = 2026, initialEndMonth = 9, initialEndYear = 2026 }) => {
+const FinesCumulativeModal = ({ isOpen, onClose, initialStartMonth = 7, initialStartYear = 2026, initialEndMonth = 9, initialEndYear = 2026, initialConsiderarTodosDiasIfo = false }) => {
   // Rango de fechas
   const [startMonth, setStartMonth] = useState(initialStartMonth);
   const [startYear, setStartYear] = useState(initialStartYear);
@@ -31,6 +31,7 @@ const FinesCumulativeModal = ({ isOpen, onClose, initialStartMonth = 7, initialS
   const [excluirNivelB, setExcluirNivelB] = useState(false);
   const [aplicarNonBisInIdem, setAplicarNonBisInIdem] = useState(true);
   const [excluirArapoti, setExcluirArapoti] = useState(true);
+  const [considerarTodosDiasIfo, setConsiderarTodosDiasIfo] = useState(initialConsiderarTodosDiasIfo);
 
   // Estado de datos
   const [loading, setLoading] = useState(false);
@@ -99,7 +100,9 @@ const FinesCumulativeModal = ({ isOpen, onClose, initialStartMonth = 7, initialS
       end_year: parseInt(endYear, 10),
       evaluar_reincidencia: evaluarReincidencia,
       excluir_nivel_b: excluirNivelB,
-      aplicar_non_bis_in_idem: aplicarNonBisInIdem
+      aplicar_non_bis_in_idem: aplicarNonBisInIdem,
+      excluir_arapoti: excluirArapoti,
+      considerar_todos_dias_ifo: considerarTodosDiasIfo
     };
 
     try {
@@ -129,7 +132,8 @@ const FinesCumulativeModal = ({ isOpen, onClose, initialStartMonth = 7, initialS
             year: m.year,
             evaluar_reincidencia: evaluarReincidencia,
             excluir_nivel_b: excluirNivelB,
-            aplicar_non_bis_in_idem: aplicarNonBisInIdem
+            aplicar_non_bis_in_idem: aplicarNonBisInIdem,
+            considerar_todos_dias_ifo: considerarTodosDiasIfo
           })
         });
         if (!mResp.ok) throw new Error(`Error en mes ${m.label}`);
@@ -273,7 +277,7 @@ const FinesCumulativeModal = ({ isOpen, onClose, initialStartMonth = 7, initialS
     } finally {
       setLoading(false);
     }
-  }, [isOpen, startMonth, startYear, endMonth, endYear, evaluarReincidencia, excluirNivelB, aplicarNonBisInIdem, excluirArapoti, getMonthsList]);
+  }, [isOpen, startMonth, startYear, endMonth, endYear, evaluarReincidencia, excluirNivelB, aplicarNonBisInIdem, excluirArapoti, considerarTodosDiasIfo, getMonthsList]);
 
   // Cargar datos al abrir el modal
   useEffect(() => {
@@ -535,6 +539,14 @@ const FinesCumulativeModal = ({ isOpen, onClose, initialStartMonth = 7, initialS
                 onChange={(e) => setExcluirArapoti(e.target.checked)}
               />
               Excluir Arapotí (Intervención)
+            </label>
+            <label className="checkbox-pill todos-dias">
+              <input
+                type="checkbox"
+                checked={considerarTodosDiasIfo}
+                onChange={(e) => setConsiderarTodosDiasIfo(e.target.checked)}
+              />
+              Considerar todos los días (IFO Mes)
             </label>
           </div>
         </section>

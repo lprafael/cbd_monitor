@@ -284,6 +284,13 @@
 }
 .checkbox-pill.arapoti:hover { background: #e2e8f0; }
 
+.checkbox-pill.todos-dias {
+  background: #f3e8ff;
+  color: #6b21a8;
+  border: 1px solid #d8b4fe;
+}
+.checkbox-pill.todos-dias:hover { background: #ede9fe; }
+
 /* BODY */
 .fines-cumulative-body {
   flex: 1;

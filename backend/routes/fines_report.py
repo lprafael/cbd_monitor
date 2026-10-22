@@ -14,6 +14,7 @@ class FinesReportRequest(BaseModel):
     evaluar_reincidencia: bool = True
     excluir_nivel_b: bool = False
     aplicar_non_bis_in_idem: bool = True
+    considerar_todos_dias_ifo: bool = False
 
 class FinesCumulativeRequest(BaseModel):
     start_month: int
@@ -23,6 +24,8 @@ class FinesCumulativeRequest(BaseModel):
     evaluar_reincidencia: bool = True
     excluir_nivel_b: bool = False
     aplicar_non_bis_in_idem: bool = True
+    excluir_arapoti: bool = True
+    considerar_todos_dias_ifo: bool = False
 
 def obtener_valor_jornal(fecha_eval: date) -> int:
     """
@@ -51,7 +54,8 @@ def compute_fines_report_for_month(
     month: int,
     evaluar_reincidencia: bool = True,
     excluir_nivel_b: bool = False,
-    aplicar_non_bis_in_idem: bool = True
+    aplicar_non_bis_in_idem: bool = True,
+    considerar_todos_dias_ifo: bool = False
 ) -> dict:
     try:
         start_date, end_date = get_month_range(year, month)
@@ -134,7 +138,14 @@ def compute_fines_report_for_month(
         if aplicar_non_bis_in_idem:
             # Metodología Non bis in idem (Res. 104/2026 y 120/2025)
             # 5.a IFO Sistema General (mes anterior)
-            cursor.execute("""
+            where_sys_excl = ""
+            if not considerar_todos_dias_ifo:
+                where_sys_excl = """
+                  AND EXTRACT(ISODOW FROM h.fecha) < 7
+                  AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
+                  AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
+                """
+            cursor.execute(f"""
                 SELECT AVG(eot_monthly_ifo_topeado) as system_ifo_topeado
                 FROM (
                     SELECT id_eot_vmt_hex, AVG(daily_ifo_topeado) as eot_monthly_ifo_topeado
@@ -143,9 +154,7 @@ def compute_fines_report_for_month(
                         FROM control_metricas.ifo_historico h
                         JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
                         WHERE h.fecha BETWEEN %s AND %s
-                          AND EXTRACT(ISODOW FROM h.fecha) < 7
-                          AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
-                          AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
+                          {where_sys_excl}
                           AND (
                             (
                               EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5
@@ -324,7 +333,14 @@ def compute_fines_report_for_month(
                 check_y, check_m = get_previous_month(check_y, check_m)
         else:
             # Metodología Estándar (Previa)
-            cursor.execute("""
+            where_std_sys_excl = ""
+            if not considerar_todos_dias_ifo:
+                where_std_sys_excl = """
+                  AND EXTRACT(ISODOW FROM h.fecha) < 7
+                  AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
+                  AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
+                """
+            cursor.execute(f"""
                 SELECT AVG(eot_monthly_ifo_topeado) as system_ifo_topeado
                 FROM (
                     SELECT id_eot_vmt_hex, AVG(daily_ifo_topeado) as eot_monthly_ifo_topeado
@@ -333,9 +349,7 @@ def compute_fines_report_for_month(
                         FROM control_metricas.ifo_historico h
                         JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
                         WHERE h.fecha BETWEEN %s AND %s
-                          AND EXTRACT(ISODOW FROM h.fecha) < 7
-                          AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
-                          AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
+                          {where_std_sys_excl}
                           AND (
                             (
                               EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5
@@ -369,16 +383,21 @@ def compute_fines_report_for_month(
             else: umbral_objetivo = system_ifo_topeado_pct
             
             # Calcular IFO mensual por EOT para el mes en curso (start_date a end_date)
-            cursor.execute("""
+            where_std_mes_excl = ""
+            if not considerar_todos_dias_ifo:
+                where_std_mes_excl = """
+                  AND EXTRACT(ISODOW FROM h.fecha) < 7
+                  AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
+                  AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
+                """
+            cursor.execute(f"""
                 SELECT id_eot_vmt_hex, AVG(daily_ifo_topeado) as monthly_ifo_topeado
                 FROM (
                     SELECT h.id_eot_vmt_hex, h.fecha, LEAST(AVG(h.ifo), 1.1) as daily_ifo_topeado
                     FROM control_metricas.ifo_historico h
                     JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
                     WHERE h.fecha BETWEEN %s AND %s
-                      AND EXTRACT(ISODOW FROM h.fecha) < 7
-                      AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
-                      AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
+                      {where_std_mes_excl}
                       AND (
                         (
                           EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5
@@ -775,7 +794,8 @@ def compute_fines_report_for_month(
                     if fecha_eval < start_date or fecha_eval > end_date: continue
                     if fecha_eval < FECHA_INICIO_ETAPA2: continue
                     id_tipo_dia = get_tipo_dia_id(fecha_eval, db_feriados)
-                    if id_tipo_dia == 7 or fecha_eval in db_atipicos: continue
+                    if not considerar_todos_dias_ifo:
+                        if id_tipo_dia == 7 or fecha_eval in db_atipicos: continue
                     
                     franjas_dia = dias_data[fecha_eval]
                     franja_vals = []
@@ -849,6 +869,7 @@ def compute_fines_report_for_month(
             'month': month,
             'year': year,
             'aplicar_non_bis_in_idem': aplicar_non_bis_in_idem,
+            'considerar_todos_dias_ifo': considerar_todos_dias_ifo,
             'reporte': reporte_final
         }
     except Exception as e:
@@ -868,7 +889,8 @@ async def generate_fines_report(
             month=request.month,
             evaluar_reincidencia=request.evaluar_reincidencia,
             excluir_nivel_b=request.excluir_nivel_b,
-            aplicar_non_bis_in_idem=request.aplicar_non_bis_in_idem
+            aplicar_non_bis_in_idem=request.aplicar_non_bis_in_idem,
+            considerar_todos_dias_ifo=request.considerar_todos_dias_ifo
         )
     except Exception as e:
         print(f"Error generating fines report: {e}")
@@ -912,7 +934,8 @@ async def generate_cumulative_fines_report(
                 cursor, y, m,
                 request.evaluar_reincidencia,
                 request.excluir_nivel_b,
-                request.aplicar_non_bis_in_idem
+                request.aplicar_non_bis_in_idem,
+                request.considerar_todos_dias_ifo
             )
             rep = month_data.get('reporte', [])
             

@@ -258,6 +258,15 @@
   box-shadow: 0 4px 10px rgba(56, 189, 248, 0.25);
 }
 
+.todos-dias-ifo-label {
+  transition: all 0.2s ease;
+}
+
+.todos-dias-ifo-label:hover {
+  background: #ede9fe !important;
+  border-color: #c084fc !important;
+}
+
 .print-only {
   display: none;
 }

@@ -12,6 +12,7 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
   const [evaluarReincidencia, setEvaluarReincidencia] = useState(true);
   const [excluirNivelB, setExcluirNivelB] = useState(false);
   const [aplicarNonBisInIdem, setAplicarNonBisInIdem] = useState(true);
+  const [considerarTodosDiasIfo, setConsiderarTodosDiasIfo] = useState(false);
   const [actaModalOpen, setActaModalOpen] = useState(false);
   const [cumulativeModalOpen, setCumulativeModalOpen] = useState(false);
   const [selectedEmpresa, setSelectedEmpresa] = useState(null);
@@ -36,11 +37,11 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
 
   useEffect(() => {
     if (isOpen && fecha) {
-      fetchFinesData(evaluarReincidencia, excluirNivelB, aplicarNonBisInIdem);
+      fetchFinesData(evaluarReincidencia, excluirNivelB, aplicarNonBisInIdem, considerarTodosDiasIfo);
     }
-  }, [isOpen, fecha, evaluarReincidencia, excluirNivelB, aplicarNonBisInIdem]);
+  }, [isOpen, fecha, evaluarReincidencia, excluirNivelB, aplicarNonBisInIdem, considerarTodosDiasIfo]);
 
-  const fetchFinesData = async (withReincidencia = true, withExcluirNivelB = false, withNonBisInIdem = true) => {
+  const fetchFinesData = async (withReincidencia = true, withExcluirNivelB = false, withNonBisInIdem = true, withConsiderarTodosDias = false) => {
     setLoading(true);
     setError(null);
     try {
@@ -55,7 +56,8 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
           year: parseInt(year, 10),
           evaluar_reincidencia: withReincidencia,
           excluir_nivel_b: withExcluirNivelB,
-          aplicar_non_bis_in_idem: withNonBisInIdem
+          aplicar_non_bis_in_idem: withNonBisInIdem,
+          considerar_todos_dias_ifo: withConsiderarTodosDias
         })
       });
 
@@ -131,6 +133,14 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
                 onChange={(e) => setAplicarNonBisInIdem(e.target.checked)}
               />
               Resolución GVMT N° 104/2026 (Consolidación / Non Bis In Idem)
+            </label>
+            <label className="todos-dias-ifo-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer', fontWeight: 'bold', color: '#6b21a8', background: '#f3e8ff', padding: '6px 12px', borderRadius: '6px', border: '1px solid #d8b4fe' }}>
+              <input
+                type="checkbox"
+                checked={considerarTodosDiasIfo}
+                onChange={(e) => setConsiderarTodosDiasIfo(e.target.checked)}
+              />
+              Considerar todos los días (IFO Mes)
             </label>
             <button
               id="btn-open-cumulative-stats"
@@ -329,6 +339,7 @@ const FinesReportModal = ({ isOpen, onClose, fecha }) => {
           initialStartYear={fecha ? parseInt(fecha.split('-')[0], 10) : 2026}
           initialEndMonth={fecha ? parseInt(fecha.split('-')[1], 10) : 9}
           initialEndYear={fecha ? parseInt(fecha.split('-')[0], 10) : 2026}
+          initialConsiderarTodosDiasIfo={considerarTodosDiasIfo}
         />
       )}
     </div>
