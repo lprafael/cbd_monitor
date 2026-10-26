@@ -78,7 +78,7 @@ export const generateActaPdf = async (empresa, fechaReporte, numeroActa, fechaEm
     "* los Manuales vinculantes al SNBE;",
     "* el Artículo 6° de la Resolución GVMT N° 07/2024 que faculta a ésta dependencia a consignar las",
     "  infracciones detectadas a través de los datos obrantes en la CCM, y;",
-    "* la Resolución GVMT N° 120/2025 y su modificatoria N° 21/2026,",
+    "* la Resolución GVMT N° 120/2025 y sus modificatorias N° 21/2026, N° 36/2026 y N° 104/2026,",
     "* así como en concordancia con la información contenida en el Parque Automotor vigente,"
   ];
 
@@ -121,10 +121,25 @@ export const generateActaPdf = async (empresa, fechaReporte, numeroActa, fechaEm
 
   // Tabla 2: Resumen
   const summaryMap = {};
+  const baseJornalesSet = {};
+  let totalInfracciones = 0;
+  let totalJornales = 0;
+
   empresa.infracciones.forEach(inf => {
     const base = inf.base || 'Art. 15.6';
-    if (!summaryMap[base]) summaryMap[base] = 0;
-    summaryMap[base]++;
+    const j = (inf.jornales !== undefined && inf.jornales !== null)
+      ? Number(inf.jornales)
+      : (base.includes('15.1') || base.includes('16.1') ? 173 : (base.includes('15.2') || base.includes('15.4') ? 10 : 20));
+
+    if (!summaryMap[base]) {
+      summaryMap[base] = { count: 0, totalJornales: 0 };
+      baseJornalesSet[base] = new Set();
+    }
+    summaryMap[base].count++;
+    summaryMap[base].totalJornales += j;
+    baseJornalesSet[base].add(j);
+    totalInfracciones++;
+    totalJornales += j;
   });
 
   const getEscala = (key) => {
@@ -133,21 +148,36 @@ export const generateActaPdf = async (empresa, fechaReporte, numeroActa, fechaEm
     return 'Intermedia';
   };
 
+  const formatJornales = (val) => {
+    return Number.isInteger(val) ? val : Number(val.toFixed(1));
+  };
+
   const table2Data = Object.keys(summaryMap).map(key => [
     key,
-    summaryMap[key],
-    getEscala(key)
+    summaryMap[key].count,
+    getEscala(key),
+    Array.from(baseJornalesSet[key]).map(formatJornales).join(' / '),
+    formatJornales(summaryMap[key].totalJornales)
   ]);
 
   autoTable(doc, {
     startY: currentY,
     margin: { left: 60, right: 60, bottom: 110, top: 120 },
-    head: [['Infracción', 'Cantidad de infracción', 'Escala de Infracción']],
+    head: [['Infracción', 'Cantidad de infracción', 'Escala de Infracción', 'Jornales por Infracción', 'Total Jornales']],
     body: table2Data,
+    foot: [['TOTAL', totalInfracciones, '', '', formatJornales(totalJornales)]],
     theme: 'grid',
     headStyles: { fillColor: [210, 210, 210], textColor: [0, 0, 0], halign: 'center', lineWidth: 0.1, lineColor: [0, 0, 0] },
     bodyStyles: { textColor: [0, 0, 0], lineWidth: 0.1, lineColor: [0, 0, 0], halign: 'center' },
-    styles: { fontSize: 9, cellPadding: 3, font: 'helvetica' }
+    footStyles: { fillColor: [210, 210, 210], textColor: [0, 0, 0], fontStyle: 'bold', halign: 'center', lineWidth: 0.1, lineColor: [0, 0, 0] },
+    styles: { fontSize: 9, cellPadding: 3, font: 'helvetica' },
+    columnStyles: {
+      0: { halign: 'center', cellWidth: 80 },
+      1: { halign: 'center', cellWidth: 95 },
+      2: { halign: 'center', cellWidth: 100 },
+      3: { halign: 'center', cellWidth: 100 },
+      4: { halign: 'center', cellWidth: 100 }
+    }
   });
 
   currentY = doc.lastAutoTable.finalY + 25;

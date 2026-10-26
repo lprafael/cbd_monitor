@@ -108,7 +108,7 @@ export const generateNotificacionesWord = async (reporte, fechaReporte) => {
       }),
       new Paragraph({ children: [new TextRun({ text: "PRESENTE", bold: true })], spacing: { after: 400 } }),
       new Paragraph({
-        children: [new TextRun({ text: "El Gabinete del Viceministro de Transporte, por intermedio de la Dirección Metropolitana de Transporte, realiza la notificación de infracción en cumplimiento a lo establecido en la Resolución GVMT N° 120/2025 y su modificatoria N° 21/2026." })],
+        children: [new TextRun({ text: "El Gabinete del Viceministro de Transporte, por intermedio de la Dirección Metropolitana de Transporte, realiza la notificación de infracción en cumplimiento a lo establecido en la Resolución GVMT N° 120/2025 y sus modificatorias N° 21/2026, N° 36/2026 y N° 104/2026." })],
         spacing: { after: 400 },
         alignment: AlignmentType.JUSTIFIED
       }),
@@ -192,7 +192,7 @@ export const generateNotificacionesWord = async (reporte, fechaReporte) => {
 
       new Paragraph({ text: "", spacing: { after: 400 } }),
       new Paragraph({
-        children: [new TextRun({ text: "Que, en la fecha registrada se ha constatado la infracción descrita, de conformidad con la Resolución GVMT N° 120/2025 y su modificatoria N° 21/2026. De acuerdo al Artículo 9° de la Resolución GVMT N° 07/2024, la empresa operadora de transporte deberá abonar al Viceministerio de Transporte dentro de los cinco (5) días hábiles, a partir de la presente notificación." })],
+        children: [new TextRun({ text: "Que, en la fecha registrada se ha constatado la infracción descrita, de conformidad con la Resolución GVMT N° 120/2025 y sus modificatorias N° 21/2026, N° 36/2026 y N° 104/2026. De acuerdo al Artículo 9° de la Resolución GVMT N° 07/2024, la empresa operadora de transporte deberá abonar al Viceministerio de Transporte dentro de los cinco (5) días hábiles, a partir de la presente notificación." })],
         alignment: AlignmentType.JUSTIFIED,
         spacing: { after: 200 }
       }),
