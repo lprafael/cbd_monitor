@@ -78,7 +78,7 @@ export const generateActaPdf = async (empresa, fechaReporte, numeroActa, fechaEm
     "* los Manuales vinculantes al SNBE;",
     "* el Artículo 6° de la Resolución GVMT N° 07/2024 que faculta a ésta dependencia a consignar las",
     "  infracciones detectadas a través de los datos obrantes en la CCM, y;",
-    "* la Resolución GVMT N° 120/2025 y sus modificatorias N° 21/2026, N° 36/2026 y N° 104/2026,",
+    "* la Resolución GVMT N° 120/2025 y sus modificatorias N° 21/2026, N° 26/2026 y N° 104/2026,",
     "* así como en concordancia con la información contenida en el Parque Automotor vigente,"
   ];
 
@@ -185,7 +185,7 @@ export const generateActaPdf = async (empresa, fechaReporte, numeroActa, fechaEm
   doc.setFont("helvetica", "normal");
   const p3 = "Las infracciones y sanciones serán notificadas a la EOT, a los propietarios de las unidades de transporte, quienes deberán abonar en el Viceministerio de Transporte dentro de los 5 (cinco) días de la notificación de la misma (Resolución GVMT 07/24 - Articulo 9).";
   const splitP3 = doc.splitTextToSize(p3, 475);
-  
+
   // Evitar solapamiento con el pie de página
   if (currentY + (splitP3.length * 12) + 100 > 730) {
     doc.addPage();
@@ -210,7 +210,7 @@ export const generateActaPdf = async (empresa, fechaReporte, numeroActa, fechaEm
   const pageCount = doc.internal.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
-    
+
     // Encabezado
     if (logoBase64) {
       doc.addImage(logoBase64, 'PNG', 60, 30, 475, 50);

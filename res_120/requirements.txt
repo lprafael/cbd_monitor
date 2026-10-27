@@ -1,0 +1,7 @@
+# Dependencias para scripts en res_120 (calcular_ifo, servicios_diariosv3, flows de Prefect)
+pandas>=2.0.0
+SQLAlchemy>=2.0.0
+psycopg2-binary>=2.9.0
+python-dotenv>=1.0.0
+requests>=2.28.0
+prefect>=2.14.0
