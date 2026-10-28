@@ -115,7 +115,19 @@ class IFODetailResponse(BaseModel):
     ifo_franja: float  # promedio de ifo_hora
 
 
-def _es_fecha_atipica(cursor, fecha: date) -> bool:
+def _es_fecha_atipica(cursor, fecha: date, descartar_disruptivo: bool = False) -> bool:
+    if not descartar_disruptivo:
+        cursor.execute(
+            """
+            SELECT 1
+            FROM control_metricas.dias_atipicos
+            WHERE fecha = %s
+              AND NOT (tipo_atipico = 'DISRUPTIVO' AND COALESCE(descartar_historico, false) = false)
+            LIMIT 1
+            """,
+            (fecha,)
+        )
+        return cursor.fetchone() is not None
     cursor.execute(
         """
         SELECT 1
@@ -153,14 +165,15 @@ def _ajustar_fecha_no_atipica(
     cursor,
     fecha: date,
     fechas_usadas: set,
-    fechas_descartadas: dict = None
+    fechas_descartadas: dict = None,
+    descartar_disruptivo: bool = False
 ) -> date:
     fecha_ajustada = fecha
     while True:
         if fecha_ajustada in fechas_usadas:
             fecha_ajustada -= timedelta(weeks=1)
             continue
-        if _es_fecha_atipica(cursor, fecha_ajustada):
+        if _es_fecha_atipica(cursor, fecha_ajustada, descartar_disruptivo):
             if fechas_descartadas is not None and fecha_ajustada not in fechas_descartadas:
                 fechas_descartadas[fecha_ajustada] = _get_motivo_atipico(cursor, fecha_ajustada)
             fecha_ajustada -= timedelta(weeks=1)
@@ -207,7 +220,7 @@ def get_fechas_referencia(cursor, fecha: date) -> list:
     return fechas_ajustadas
 
 
-def get_fechas_referencia_detalle(cursor, fecha: date) -> tuple:
+def get_fechas_referencia_detalle(cursor, fecha: date, descartar_disruptivo: bool = False) -> tuple:
     fechas_base = _get_fechas_base_referencia(fecha)
     fechas_ajustadas = []
     fechas_usadas = set()
@@ -215,7 +228,7 @@ def get_fechas_referencia_detalle(cursor, fecha: date) -> tuple:
 
     for fecha_ref in fechas_base:
         fecha_ajustada = _ajustar_fecha_no_atipica(
-            cursor, fecha_ref, fechas_usadas, fechas_descartadas
+            cursor, fecha_ref, fechas_usadas, fechas_descartadas, descartar_disruptivo
         )
         fechas_ajustadas.append(fecha_ajustada)
         fechas_usadas.add(fecha_ajustada)
@@ -600,6 +613,53 @@ async def get_ifo_detail(
         # 6. IFO franja = promedio de IFO hora
         ifo_franja = sum_ifo / count_horas if count_horas > 0 else 0
         
+        # 6.5. Sincronizar con el valor oficial consolidado en control_metricas.ifo_historico si existe
+        if eot_info.get('id_eot_vmt_hex'):
+            cursor.execute("""
+                SELECT ifo FROM control_metricas.ifo_historico
+                WHERE id_eot_vmt_hex = %s AND fecha = %s AND id_franja = %s
+            """, (eot_info['id_eot_vmt_hex'], request.fecha, request.id_franja))
+            row_hist = cursor.fetchone()
+            if row_hist and row_hist.get('ifo') is not None:
+                target_ifo = round(float(row_hist['ifo']) * 100, 2)
+                if abs(round(ifo_franja, 2) - target_ifo) > 0.01:
+                    fechas_alt, fechas_todas_alt = get_fechas_referencia_detalle(cursor, request.fecha, descartar_disruptivo=True)
+                    if fechas_alt != fechas_historicas:
+                        horas_alt = []
+                        sum_ifo_alt = 0
+                        for h_item in horas_data:
+                            hora_cur = h_item.hora
+                            cbd_dia_cur = h_item.cbd_dia_analizado
+                            hist_det_alt = []
+                            sum_h_alt = 0
+                            for f_h in fechas_alt:
+                                cursor.execute("SELECT COUNT(DISTINCT idsam) as cbd FROM public.servicios_diarios WHERE id_eot_catalogo = %s AND fecha = %s AND hora = %s", (request.eot_id, f_h, hora_cur))
+                                c_val = cursor.fetchone()['cbd'] or 0
+                                cursor.execute("SELECT COUNT(DISTINCT mean_id) as cbd FROM control_metricas.cbd_detalle_buses WHERE id_eot_vmt_hex = %s AND fecha = %s AND hora = %s", (eot_info['id_eot_vmt_hex'], f_h, hora_cur))
+                                c_gps = cursor.fetchone()['cbd'] or 0
+                                c_h = max(c_val, c_gps)
+                                hist_det_alt.append(IFOHoraHistorico(fecha=f_h, cbd_observado=c_h))
+                                sum_h_alt += c_h
+                            prom_raw_alt = sum_h_alt / len(fechas_alt) if fechas_alt else 0
+                            prom_aj_alt = round(max(prom_raw_alt * factor_ajuste, cbd_min_hora), 2)
+                            ifo_h_alt = (cbd_dia_cur / prom_aj_alt * 100) if prom_aj_alt > 0 else 0
+                            horas_alt.append(IFOHoraData(
+                                hora=hora_cur,
+                                cbd_dia_analizado=cbd_dia_cur,
+                                promedio_historico=round(prom_raw_alt, 2),
+                                b_dist_ajustado=prom_aj_alt,
+                                historico_detalle=hist_det_alt,
+                                ifo_hora=round(ifo_h_alt, 2)
+                            ))
+                            sum_ifo_alt += ifo_h_alt
+                        ifo_franja_alt = sum_ifo_alt / len(horas_alt) if horas_alt else 0
+                        if abs(round(ifo_franja_alt, 2) - target_ifo) < abs(round(ifo_franja, 2) - target_ifo):
+                            fechas_historicas = fechas_alt
+                            fechas_historicas_todas = fechas_todas_alt
+                            horas_data = horas_alt
+                            ifo_franja = ifo_franja_alt
+                ifo_franja = target_ifo
+
         return IFODetailResponse(
             fecha=request.fecha,
             eot_id=request.eot_id,

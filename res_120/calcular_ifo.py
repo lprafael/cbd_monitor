@@ -208,7 +208,8 @@ def get_performance_data(fecha, eot_ids, max_retries=2):
                     try:
                         payload = {
                             "fecha": fecha.strftime("%Y-%m-%d"),
-                            "eot_ids": lote_actual
+                            "eot_ids": lote_actual,
+                            "forzar_recalculo": True
                         }
                         # Timeout para batch: 150 segundos
                         response = requests.post(f"{API_URL}/performance", json=payload, timeout=150)
@@ -258,7 +259,8 @@ def get_performance_data(fecha, eot_ids, max_retries=2):
                 try:
                     payload = {
                         "fecha": fecha.strftime("%Y-%m-%d"),
-                        "eot_ids": eot_ids
+                        "eot_ids": eot_ids,
+                        "forzar_recalculo": True
                     }
                     # Timeout dinámico: 60s base + 2s por EOT
                     timeout_segundos = 60 + (len(eot_ids) * 2)

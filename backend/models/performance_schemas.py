@@ -44,6 +44,7 @@ class PerformanceRequest(BaseModel):
     """Payload para solicitud de desempeño."""
     fecha: date
     eot_ids: List[int]
+    forzar_recalculo: bool = False
 
 class IFOHistoricoItem(BaseModel):
     """Item individual para guardar en ifo_historico."""

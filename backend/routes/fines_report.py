@@ -83,7 +83,12 @@ def compute_fines_report_for_month(
         
         # 1.b Obtener días atípicos
         cursor.execute("SELECT fecha FROM control_metricas.dias_atipicos WHERE fecha BETWEEN %s AND %s", (eval_start_date, end_date))
-        db_atipicos = set(row['fecha'] for row in cursor.fetchall())
+        atipicos_rows = cursor.fetchall()
+        db_atipicos = set(row['fecha'] for row in atipicos_rows)
+        cursor.execute("SELECT fecha, tipo_atipico FROM control_metricas.dias_atipicos WHERE fecha BETWEEN %s AND %s", (eval_start_date, end_date))
+        atipicos_tipo_rows = cursor.fetchall()
+        db_feriados.update(row['fecha'] for row in atipicos_tipo_rows if (row['tipo_atipico'] or '').upper().startswith('FERIADO'))
+        db_lluvia_prepos = set(row['fecha'] for row in atipicos_tipo_rows if (row['tipo_atipico'] or '').upper() in ('LLUVIA', 'PRE_POS_FERIADO'))
         
         # 2. Obtener EOTs
         cursor.execute("SELECT cod_catalogo, eot_nombre, id_eot_vmt_hex FROM public.eots WHERE cod_catalogo NOT IN (72) AND permisionario IS TRUE")
@@ -292,7 +297,7 @@ def compute_fines_report_for_month(
                     WHERE h.fecha BETWEEN %s AND %s
                       AND EXTRACT(ISODOW FROM h.fecha) < 7
                       AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
-                      AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
+                      AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos WHERE tipo_atipico LIKE 'FERIADO%%')
                       AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%' AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%'
                       AND h.id_eot_vmt_hex NOT IN (SELECT id_eot_vmt_hex FROM eots_con_c)
                     GROUP BY h.id_eot_vmt_hex
@@ -533,7 +538,7 @@ def compute_fines_report_for_month(
                     WHERE h.fecha BETWEEN %s AND %s
                       AND EXTRACT(ISODOW FROM h.fecha) < 7
                       AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
-                      AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
+                      AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos WHERE tipo_atipico LIKE 'FERIADO%%')
                       AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%' AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%'
                     GROUP BY h.id_eot_vmt_hex
                 """, (m_start, m_end, m_start, m_end, m_start, m_end))
@@ -615,7 +620,7 @@ def compute_fines_report_for_month(
                 for fecha_eval in fechas_ordenadas:
                     if fecha_eval < FECHA_INICIO_ETAPA2: continue
                     id_tipo_dia = get_tipo_dia_id(fecha_eval, db_feriados)
-                    if id_tipo_dia == 7 or fecha_eval in db_atipicos: continue
+                    if id_tipo_dia == 7: continue
 
                     franjas_dia = dias_data[fecha_eval]
                     fail_15_3, fail_15_5, fail_15_6 = False, False, False
@@ -629,9 +634,9 @@ def compute_fines_report_for_month(
                         if id_tipo_dia == 6 and cat == 'POS_PICO': continue
 
                         ifo_val = float(f_res['ifo']) * 100
-                        cbd_idx = float(f_res['cbd_indice']) if f_res['cbd_indice'] is not None else 0.0
+                        cbd_idx = float(f_res['cbd_indice']) if f_res['cbd_indice'] is not None else 1.0
 
-                        if cbd_idx < 1.0: fail_15_6 = True
+                        if cbd_idx < 1.0 and fecha_eval not in db_lluvia_prepos: fail_15_6 = True
                         if cat == 'PICO':
                             if ifo_val < 80: fail_15_3 = True
                             elif ifo_val < 90: b_pico_dia += 1
@@ -681,7 +686,7 @@ def compute_fines_report_for_month(
 
                     id_tipo_dia = get_tipo_dia_id(fecha_eval, db_feriados)
                     if id_tipo_dia == 7: continue # Descartar Domingos y Feriados
-                    if fecha_eval in db_atipicos: continue # Descartar Días Atípicos (Lluvia, etc.)
+                    # Res. GVMT N° 104/2026: Lluvia, Pre/Pos Feriado y Eventos Disruptivos SÍ se evalúan con su factor de exigencia reducido (ya aplicado en ifo_historico)
                     
                     franjas_dia = dias_data[fecha_eval]
                     
@@ -699,9 +704,9 @@ def compute_fines_report_for_month(
                             continue
                         
                         ifo_val = float(f_res['ifo']) * 100
-                        cbd_idx = float(f_res['cbd_indice']) if f_res['cbd_indice'] is not None else 0.0
+                        cbd_idx = float(f_res['cbd_indice']) if f_res['cbd_indice'] is not None else 1.0
                         
-                        if cbd_idx < 1.0: fail_15_6 = True
+                        if cbd_idx < 1.0 and fecha_eval not in db_lluvia_prepos: fail_15_6 = True
                         
                         if cat == 'PICO':
                             if ifo_val < 80: fail_15_3 = True

@@ -125,6 +125,7 @@ def _es_fecha_atipica(cursor, fecha: date) -> bool:
         SELECT 1
         FROM control_metricas.dias_atipicos
         WHERE fecha = %s
+          AND NOT (tipo_atipico = 'DISRUPTIVO' AND COALESCE(descartar_historico, false) = false)
         LIMIT 1
         """,
         (fecha,)
@@ -480,6 +481,17 @@ async def get_performance_data(
                 'ifo_min': p_ifo['porc_cumplimiento_minimo'] if p_ifo else 80.0
             }
 
+        # E. Pre-cargar valores consolidados de control_metricas.ifo_historico (si no se fuerza recálculo)
+        cache_ifo_hist = {}
+        if not request.forzar_recalculo and vmt_hexs:
+            cursor.execute("""
+                SELECT id_eot_vmt_hex, id_franja, ifo, cbd_indice, cbd_cantidad
+                FROM control_metricas.ifo_historico
+                WHERE id_eot_vmt_hex = ANY(%s) AND fecha = %s
+            """, (vmt_hexs, request.fecha))
+            for r in cursor.fetchall():
+                cache_ifo_hist[(r['id_eot_vmt_hex'], r['id_franja'])] = r
+
         # 6. Para cada EOT, realizar los cálculos (ahora ultra-rápidos con caché)
         resultados_eots = []
         for eot in eots:
@@ -507,18 +519,35 @@ async def get_performance_data(
                     cache_val, cache_gps
                 )
                 
+                hist_row = cache_ifo_hist.get((eot['id_eot_vmt_hex'], f['id_franja']))
+                ifo_final_pct = (
+                    round(float(hist_row['ifo']) * 100, 2)
+                    if (hist_row and hist_row.get('ifo') is not None)
+                    else round(ifo_res['ifo_franja'], 2)
+                )
+                cbd_indice_final = (
+                    float(hist_row['cbd_indice'])
+                    if (hist_row and hist_row.get('cbd_indice') is not None)
+                    else cbd_res['cbd_indice']
+                )
+                cbd_obs_final = (
+                    float(hist_row['cbd_cantidad'])
+                    if (hist_row and hist_row.get('cbd_cantidad') is not None)
+                    else cbd_res['cbd_obs_franja']
+                )
+
                 res_franjas.append(PerformanceResult(
                     id_franja=f['id_franja'],
                     denominacion_franja=f['denominacion'],
-                    cbd_obs_promedio=round(cbd_res['cbd_obs_franja'], 2),
+                    cbd_obs_promedio=round(cbd_obs_final, 2),
                     cbd_minimo_franja_exigido=float(p['min_f']),
-                    cbd_cumplimiento_franja_indice=round(cbd_res['cbd_indice'], 4),
-                    cbd_estado_cumplimiento=get_estado_cumplimiento_cbd(cbd_res['cbd_indice']),
+                    cbd_cumplimiento_franja_indice=round(cbd_indice_final, 4),
+                    cbd_estado_cumplimiento=get_estado_cumplimiento_cbd(cbd_indice_final),
                     origen_cbd_final=cbd_res['origen'],
                     b_dist_ajustado=ifo_res['b_dist_ajustado'],
-                    ifo_franja_calculado=round(ifo_res['ifo_franja'], 2),
+                    ifo_franja_calculado=ifo_final_pct,
                     ifo_minimo_exigido=float(p['ifo_min']),
-                    ifo_estado_cumplimiento=get_estado_cumplimiento_ifo(ifo_res['ifo_franja']),
+                    ifo_estado_cumplimiento=get_estado_cumplimiento_ifo(ifo_final_pct),
                     ajuste_aplicado=ifo_res['ajuste_aplicado'],
                     cant_horas=ifo_res['cant_horas']
                 ))
