@@ -91,7 +91,7 @@ def compute_fines_report_for_month(
         db_lluvia_prepos = set(row['fecha'] for row in atipicos_tipo_rows if (row['tipo_atipico'] or '').upper() in ('LLUVIA', 'PRE_POS_FERIADO'))
         
         # 2. Obtener EOTs
-        cursor.execute("SELECT cod_catalogo, eot_nombre, id_eot_vmt_hex FROM public.eots WHERE cod_catalogo NOT IN (72) AND permisionario IS TRUE")
+        cursor.execute("SELECT cod_catalogo, eot_nombre, id_eot_vmt_hex FROM public.eots WHERE cod_catalogo NOT IN (72, 75) AND id_eot_vmt_hex != '004B' AND permisionario IS TRUE")
         eots = cursor.fetchall()
         eots_by_hex = {e['id_eot_vmt_hex']: e['eot_nombre'] for e in eots}
         
@@ -158,7 +158,7 @@ def compute_fines_report_for_month(
                         SELECT h.id_eot_vmt_hex, h.fecha, LEAST(AVG(h.ifo), 1.1) as daily_ifo_topeado
                         FROM control_metricas.ifo_historico h
                         JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
-                        WHERE h.fecha BETWEEN %s AND %s
+                        WHERE h.fecha BETWEEN %s AND %s AND h.id_eot_vmt_hex != '004B'
                           {where_sys_excl}
                           AND (
                             (
@@ -218,7 +218,7 @@ def compute_fines_report_for_month(
                             SELECT h.id_eot_vmt_hex, h.fecha, LEAST(AVG(h.ifo), 1.1) as daily_ifo_topeado
                             FROM control_metricas.ifo_historico h
                             JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
-                            WHERE h.fecha BETWEEN %s AND %s
+                            WHERE h.fecha BETWEEN %s AND %s AND h.id_eot_vmt_hex != '004B'
                               AND EXTRACT(ISODOW FROM h.fecha) < 7
                               AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
                               AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
@@ -243,7 +243,7 @@ def compute_fines_report_for_month(
                         SELECT h.id_eot_vmt_hex, h.fecha, LEAST(AVG(h.ifo), 1.1) as daily_ifo_topeado
                         FROM control_metricas.ifo_historico h
                         JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
-                        WHERE h.fecha BETWEEN %s AND %s
+                        WHERE h.fecha BETWEEN %s AND %s AND h.id_eot_vmt_hex != '004B'
                           AND EXTRACT(ISODOW FROM h.fecha) < 7
                           AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
                           AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
@@ -272,7 +272,7 @@ def compute_fines_report_for_month(
                         SELECT DISTINCT h.id_eot_vmt_hex, h.fecha
                         FROM control_metricas.ifo_historico h
                         JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
-                        WHERE h.fecha BETWEEN %s AND %s
+                        WHERE h.fecha BETWEEN %s AND %s AND h.id_eot_vmt_hex != '004B'
                           AND (
                             (EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5 AND (UPPER(f.denominacion) LIKE '%%PICO%%' OR UPPER(f.denominacion) LIKE '%%POS%%PICO%%' OR UPPER(f.denominacion) LIKE '%%POSPICO%%'))
                             OR
@@ -294,7 +294,7 @@ def compute_fines_report_for_month(
                            ) AND (h.ifo >= 0.80 AND h.ifo < 0.90) THEN 1 ELSE 0 END) as b_pospico_count
                     FROM control_metricas.ifo_historico h
                     JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
-                    WHERE h.fecha BETWEEN %s AND %s
+                    WHERE h.fecha BETWEEN %s AND %s AND h.id_eot_vmt_hex != '004B'
                       AND EXTRACT(ISODOW FROM h.fecha) < 7
                       AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
                       AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos WHERE tipo_atipico LIKE 'FERIADO%%')
@@ -323,7 +323,7 @@ def compute_fines_report_for_month(
                                COUNT(DISTINCT CASE WHEN h.cbd_indice IS NOT NULL AND h.cbd_indice < 1.0 THEN h.fecha END) as dias_fail_cbd
                         FROM control_metricas.ifo_historico h
                         JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
-                        WHERE h.fecha BETWEEN %s AND %s
+                        WHERE h.fecha BETWEEN %s AND %s AND h.id_eot_vmt_hex != '004B'
                           AND EXTRACT(ISODOW FROM h.fecha) < 7
                           AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
                           AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
@@ -353,7 +353,7 @@ def compute_fines_report_for_month(
                         SELECT h.id_eot_vmt_hex, h.fecha, LEAST(AVG(h.ifo), 1.1) as daily_ifo_topeado
                         FROM control_metricas.ifo_historico h
                         JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
-                        WHERE h.fecha BETWEEN %s AND %s
+                        WHERE h.fecha BETWEEN %s AND %s AND h.id_eot_vmt_hex != '004B'
                           {where_std_sys_excl}
                           AND (
                             (
@@ -401,7 +401,7 @@ def compute_fines_report_for_month(
                     SELECT h.id_eot_vmt_hex, h.fecha, LEAST(AVG(h.ifo), 1.1) as daily_ifo_topeado
                     FROM control_metricas.ifo_historico h
                     JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
-                    WHERE h.fecha BETWEEN %s AND %s
+                    WHERE h.fecha BETWEEN %s AND %s AND h.id_eot_vmt_hex != '004B'
                       {where_std_mes_excl}
                       AND (
                         (
@@ -454,7 +454,7 @@ def compute_fines_report_for_month(
                             SELECT h.id_eot_vmt_hex, h.fecha, LEAST(AVG(h.ifo), 1.1) as daily_ifo_topeado
                             FROM control_metricas.ifo_historico h
                             JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
-                            WHERE h.fecha BETWEEN %s AND %s
+                            WHERE h.fecha BETWEEN %s AND %s AND h.id_eot_vmt_hex != '004B'
                               AND EXTRACT(ISODOW FROM h.fecha) < 7
                               AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
                               AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
@@ -478,7 +478,7 @@ def compute_fines_report_for_month(
                         SELECT h.id_eot_vmt_hex, h.fecha, LEAST(AVG(h.ifo), 1.1) as daily_ifo_topeado
                         FROM control_metricas.ifo_historico h
                         JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
-                        WHERE h.fecha BETWEEN %s AND %s
+                        WHERE h.fecha BETWEEN %s AND %s AND h.id_eot_vmt_hex != '004B'
                           AND EXTRACT(ISODOW FROM h.fecha) < 7
                           AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
                           AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)
@@ -505,7 +505,7 @@ def compute_fines_report_for_month(
                         SELECT DISTINCT h.id_eot_vmt_hex, h.fecha
                         FROM control_metricas.ifo_historico h
                         JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
-                        WHERE h.fecha BETWEEN %s AND %s
+                        WHERE h.fecha BETWEEN %s AND %s AND h.id_eot_vmt_hex != '004B'
                           AND (
                             (EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5 AND UPPER(f.denominacion) LIKE '%%PICO%%' AND UPPER(f.denominacion) NOT LIKE '%%POS%%')
                             OR (EXTRACT(ISODOW FROM h.fecha) = 6 AND UPPER(f.denominacion) LIKE '%%PICO%%' AND UPPER(f.denominacion) NOT LIKE '%%POS%%')
@@ -517,7 +517,7 @@ def compute_fines_report_for_month(
                         SELECT DISTINCT h.id_eot_vmt_hex, h.fecha
                         FROM control_metricas.ifo_historico h
                         JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
-                        WHERE h.fecha BETWEEN %s AND %s
+                        WHERE h.fecha BETWEEN %s AND %s AND h.id_eot_vmt_hex != '004B'
                           AND EXTRACT(ISODOW FROM h.fecha) BETWEEN 1 AND 5
                           AND (UPPER(f.denominacion) LIKE '%%POS%%PICO%%' OR UPPER(f.denominacion) LIKE '%%POSPICO%%')
                           AND UPPER(f.denominacion) NOT LIKE '%%MADRUGADA%%' AND UPPER(f.denominacion) NOT LIKE '%%NOCTURN%%'
@@ -535,7 +535,7 @@ def compute_fines_report_for_month(
                              AND (h.id_eot_vmt_hex, h.fecha) NOT IN (SELECT id_eot_vmt_hex, fecha FROM dias_c_pos) THEN 1 ELSE 0 END) as b_pospico_count
                     FROM control_metricas.ifo_historico h
                     JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
-                    WHERE h.fecha BETWEEN %s AND %s
+                    WHERE h.fecha BETWEEN %s AND %s AND h.id_eot_vmt_hex != '004B'
                       AND EXTRACT(ISODOW FROM h.fecha) < 7
                       AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
                       AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos WHERE tipo_atipico LIKE 'FERIADO%%')
@@ -564,7 +564,7 @@ def compute_fines_report_for_month(
                                COUNT(DISTINCT CASE WHEN h.cbd_indice IS NOT NULL AND h.cbd_indice < 1.0 THEN h.fecha END) as dias_fail_cbd
                         FROM control_metricas.ifo_historico h
                         JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
-                        WHERE h.fecha BETWEEN %s AND %s
+                        WHERE h.fecha BETWEEN %s AND %s AND h.id_eot_vmt_hex != '004B'
                           AND EXTRACT(ISODOW FROM h.fecha) < 7
                           AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
                           AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)

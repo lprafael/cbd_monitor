@@ -384,7 +384,7 @@ async def get_performance_data(
             SELECT eot_id, cod_catalogo, eot_nombre, id_eot_vmt_hex, gre_id
             FROM public.eots
             WHERE cod_catalogo = ANY(%s)
-            AND cod_catalogo NOT IN (72)
+            AND cod_catalogo NOT IN (72, 75)
             ORDER BY cod_catalogo
         """, (request.eot_ids,))
         eots = cursor.fetchall()

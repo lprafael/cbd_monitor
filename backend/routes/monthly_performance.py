@@ -45,7 +45,7 @@ async def get_monthly_performance(
     cursor = db.get_cursor()
     try:
         # 1. Get EOT Info (need vmt_hex)
-        cursor.execute("SELECT eot_nombre, id_eot_vmt_hex FROM public.eots WHERE cod_catalogo = %s AND cod_catalogo NOT IN (72)", (request.eot_id,))
+        cursor.execute("SELECT eot_nombre, id_eot_vmt_hex FROM public.eots WHERE cod_catalogo = %s AND cod_catalogo NOT IN (72, 75)", (request.eot_id,))
         eot = cursor.fetchone()
         if not eot:
             raise HTTPException(status_code=404, detail="EOT not found")
@@ -202,7 +202,7 @@ async def get_monthly_performance(
                             AVG(h.ifo) as franja_avg
                         FROM control_metricas.ifo_historico h
                         JOIN control_metricas.franjas_operativas f ON h.id_franja = f.id_franja
-                        WHERE h.fecha BETWEEN %s AND %s
+                        WHERE h.fecha BETWEEN %s AND %s AND h.id_eot_vmt_hex != '004B'
                           AND EXTRACT(ISODOW FROM h.fecha) < 7
                           AND h.fecha NOT IN (SELECT fecha FROM public.feriados)
                           AND h.fecha NOT IN (SELECT fecha FROM control_metricas.dias_atipicos)

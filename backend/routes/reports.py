@@ -250,7 +250,7 @@ async def get_system_ifo_baseline(fecha: date, db: DatabaseConnection = Depends(
                 AVG(i.ifo_dia_topeado) * 100 as ifo_mensual_topeado
             FROM ifo_diario i
             JOIN public.eots e ON i.id_eot_vmt_hex = e.id_eot_vmt_hex
-            WHERE e.cod_catalogo NOT IN (72)
+            WHERE e.cod_catalogo NOT IN (72, 75) AND e.id_eot_vmt_hex != '004B'
             GROUP BY i.id_eot_vmt_hex
         )
         SELECT 
@@ -444,7 +444,7 @@ async def get_system_ifo_breakdown(
         FROM public.eots e
         LEFT JOIN ifo_mensual_eot i ON e.id_eot_vmt_hex = i.id_eot_vmt_hex
         LEFT JOIN iccbdm_mensual_cte c ON e.id_eot_vmt_hex = c.id_eot_vmt_hex
-        WHERE e.cod_catalogo NOT IN (72)
+        WHERE e.cod_catalogo NOT IN (72, 75) AND e.id_eot_vmt_hex != '004B'
         AND e.permisionario IS TRUE
         ORDER BY e.eot_nombre;
         """
@@ -533,7 +533,7 @@ async def get_advanced_daily_report(fecha: date, db: DatabaseConnection = Depend
         query_ranking = """
         SELECT e.id_eot_vmt_hex, e.eot_nombre, LEAST(AVG(h.ifo), 1.1) * 100 as ifo_dia
         FROM public.eots e JOIN control_metricas.ifo_historico h ON e.id_eot_vmt_hex = h.id_eot_vmt_hex
-        WHERE h.fecha = %s AND e.cod_catalogo NOT IN (72)
+        WHERE h.fecha = %s AND e.cod_catalogo NOT IN (72, 75) AND e.id_eot_vmt_hex != '004B'
         GROUP BY e.id_eot_vmt_hex, e.eot_nombre ORDER BY ifo_dia DESC;
         """
         cursor.execute(query_ranking, (fecha,))
@@ -743,7 +743,7 @@ async def get_subsidy_breakdown(
             COALESCE(i.dias_validos, 0) as dias_validos
         FROM public.eots e
         LEFT JOIN iccbdm_mensual_eot i ON e.id_eot_vmt_hex = i.id_eot_vmt_hex
-        WHERE e.cod_catalogo NOT IN (72)
+        WHERE e.cod_catalogo NOT IN (72, 75) AND e.id_eot_vmt_hex != '004B'
         AND e.permisionario IS TRUE
         ORDER BY e.eot_nombre;
         """

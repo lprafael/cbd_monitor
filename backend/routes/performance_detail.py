@@ -326,7 +326,7 @@ async def get_cbd_detail(
             SELECT eot_id, cod_catalogo, eot_nombre, id_eot_vmt_hex 
             FROM public.eots 
             WHERE cod_catalogo = %s
-            AND cod_catalogo NOT IN (72)
+            AND cod_catalogo NOT IN (72, 75)
         """, (request.eot_id,))
         eot_info = cursor.fetchone()
         if not eot_info:
